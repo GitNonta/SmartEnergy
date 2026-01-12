@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for smartenergy on 2026-01-12T13:01:46Z
+# fly.toml app configuration file generated for smartenergy-qsc-ja on 2026-01-12T14:51:59Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'smartenergy'
+app = 'smartenergy-qsc-ja'
 primary_region = 'sin'
 
 [build]
