@@ -44,7 +44,7 @@
     "start": "vite",
     "start:lan": "vite --host 0.0.0.0 --port 3000",
     "prebuild": "node scripts/gen-version.js",
-    "build": "tsc && vite build",
+    "build": "npx tsc && npx vite build",
     "preview": "vite preview"
   },
   "browserslist": {
