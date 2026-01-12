@@ -15,8 +15,7 @@
     "test:backend": "cd backend && npm test",
     "test:frontend": "cd frontend && npm test",
     "install:all": "cd backend && npm install && cd ../frontend && npm install",
-    "clean": "rimraf backend/node_modules frontend/node_modules node_modules",
-    "postinstall": "cd backend && npm install && cd ../frontend && npm install"
+    "clean": "rimraf backend/node_modules frontend/node_modules node_modules"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
