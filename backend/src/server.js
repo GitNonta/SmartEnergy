@@ -2672,6 +2672,29 @@ routes.setup(app, { influxService, energyState, firmwareManager: null });
   }
 })();
 
+// ✅ Serve Frontend Static Files (Production Only - or when intended)
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(frontendPath)) {
+  console.log(`📂 Serving frontend from: ${frontendPath}`);
+  app.use(express.static(frontendPath));
+  
+  // Handle SPA routing - send index.html for unknown routes (excluding /api)
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/health')) {
+      res.sendFile(path.join(frontendPath, 'index.html'));
+    } else {
+      res.status(404).json({ error: 'Endpoint not found' });
+    }
+  });
+} else {
+  console.warn(`⚠️ Frontend build not found at: ${frontendPath}`);
+  console.warn('Run "cd frontend && npm run build" to generate static files.');
+}
+
+// Start Server -> REMOVED DUPLICATE LISTEN
+// const PORT = process.env.PORT || 3001;
+// server.listen(PORT, '0.0.0.0', () => { ... });
+
 process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down gracefully...');
   

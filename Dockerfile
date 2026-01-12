@@ -58,8 +58,8 @@ FROM base
 COPY --from=build /app /app
 
 # Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
-EXPOSE 3001
-
 # Start both backend and frontend (using the start script in root package.json)
-CMD [ "npm", "run", "start" ]
+# CMD [ "npm", "run", "start" ] -> OLD
+# NEW: Start only backend (which serves frontend static files)
+EXPOSE 3001
+CMD [ "npm", "run", "start:backend" ]
