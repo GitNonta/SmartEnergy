@@ -2673,7 +2673,7 @@ routes.setup(app, { influxService, energyState, firmwareManager: null });
 })();
 
 // ✅ Serve Frontend Static Files (Production Only - or when intended)
-const frontendPath = path.join(__dirname, '../../frontend/build');
+const frontendPath = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendPath)) {
   console.log(`📂 Serving frontend from: ${frontendPath}`);
   app.use(express.static(frontendPath));
