@@ -39,8 +39,8 @@ RUN cd frontend && npm install --include=dev
 COPY . .
 
 # Build frontend application
-# Explicitly run the frontend build command
-RUN cd frontend && npm run build
+# Run TypeScript and Vite directly via Node to avoid permission issues
+RUN cd frontend && node scripts/gen-version.js && node node_modules/typescript/bin/tsc && node node_modules/vite/bin/vite.js build
 
 # Remove development dependencies to keep image small
 # Prune root
