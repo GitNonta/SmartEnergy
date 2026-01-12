@@ -27,13 +27,13 @@ COPY frontend/package.json frontend/package-lock.json ./frontend/
 
 # Install dependencies
 # 1. Install root dependencies (concurrently, etc.)
-RUN npm ci --include=dev
+RUN npm install --include=dev
 
 # 2. Install backend dependencies
-RUN cd backend && npm ci --include=dev
+RUN cd backend && npm install --include=dev
 
 # 3. Install frontend dependencies (needed for build)
-RUN cd frontend && npm ci --include=dev
+RUN cd frontend && npm install --include=dev
 
 # Copy application code
 COPY . .
