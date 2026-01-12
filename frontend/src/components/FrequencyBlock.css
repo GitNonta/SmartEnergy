@@ -1,0 +1,8 @@
+/* FrequencyBlock.css - Responsive Only */
+
+/* Responsive Logic - Keeping strictly in CSS as requested */
+@media (min-width: 768px) {
+  .voltage-phase-row {
+    margin-bottom: 0.25rem;
+  }
+}

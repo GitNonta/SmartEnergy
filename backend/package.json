@@ -1,0 +1,55 @@
+{
+  "name": "smart-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Smart Energy Monitoring Dashboard",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "start:ingestor": "node src/ingestor.js",
+    "start:api": "node src/server.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop all",
+    "pm2:monit": "pm2 monit",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "api",
+    "mqtt",
+    "energy",
+    "monitoring"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@influxdata/influxdb-client": "^1.35.0",
+    "@influxdata/influxdb-client-apis": "^1.35.0",
+    "@line/bot-sdk": "^10.5.0",
+    "ajv": "^8.17.1",
+    "axios": "^1.13.2",
+    "basic-ftp": "^5.0.5",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-mysql-session": "^3.0.3",
+    "express-session": "^1.18.2",
+    "form-data": "^4.0.5",
+    "ftp": "^0.3.10",
+    "ftp-simple": "^0.3.2",
+    "influxdb-client": "^0.0.1",
+    "jsonwebtoken": "^9.0.3",
+    "mqtt": "^5.14.1",
+    "multer": "^2.0.2",
+    "mysql2": "^3.16.0",
+    "node-cron": "^4.2.1",
+    "openai": "^4.104.0",
+    "ssh2": "^1.17.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

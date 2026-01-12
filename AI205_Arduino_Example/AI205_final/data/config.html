@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI205 Config</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/script.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body data-page="config">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <span>AI205 Monitor</span>
+    </div>
+    <nav class="nav-links">
+      <a href="/dashboard">
+        <i data-lucide="layout-dashboard" class="nav-icon"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/config" class="active">
+        <i data-lucide="settings" class="nav-icon"></i>
+        <span>Config</span>
+      </a>
+      <a href="/advanced">
+        <i data-lucide="sliders-horizontal" class="nav-icon"></i>
+        <span>Advanced</span>
+      </a>
+      <a href="/advanced" id="nav-update-link">
+        <i data-lucide="arrow-up-circle" class="nav-icon"></i>
+        <span>Update</span>
+        <span id="nav-update-badge" class="nav-update-badge hidden">NEW</span>
+      </a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <div style="max-width: 600px; margin: 0 auto;">
+      <section class="card">
+  <h2><i data-lucide="wifi" class="nav-icon"></i> WiFi & MQTT Config</h2>
+  <p class="subtext">ตั้งค่าการเชื่อมต่อเครือข่ายและเซิร์ฟเวอร์ MQTT แยก Save เป็นส่วน ๆ</p>
+
+  <!-- ========== WiFi Section ========== -->
+  <h3 style="font-size:0.9rem; color:var(--primary); margin:1rem 0 0.5rem; letter-spacing:1px; display:flex; align-items:center; gap:0.5rem;">
+    <i data-lucide="router" class="nav-icon" style="width:16px;"></i> WiFi Connection
+  </h3>
+  <form id="wifi-form">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="wifi-ssid">WiFi SSID</label>
+        <input type="text" id="wifi-ssid" name="ssid" placeholder="Enter WiFi Name" />
+      </div>
+      <div class="form-field">
+        <label for="wifi-pass">WiFi Password</label>
+        <input type="password" id="wifi-pass" name="pass" placeholder="••••••••" />
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:0.75rem;">
+      <button type="button" id="btn-wifi-save" class="btn primary">
+        <i data-lucide="save" class="nav-icon" style="width:16px;"></i> Save WiFi
+      </button>
+    </div>
+    <div id="wifi-message" class="form-message"></div>
+  </form>
+
+  <hr style="border:0; border-top:1px dashed var(--border-color); margin: 1.25rem 0;">
+
+  <!-- ========== MQTT Section ========== -->
+  <h3 style="font-size:0.9rem; color:var(--primary); margin:0 0 0.5rem; letter-spacing:1px; display:flex; align-items:center; gap:0.5rem;">
+    <i data-lucide="radio-tower" class="nav-icon" style="width:16px;"></i> MQTT Server
+  </h3>
+  <form id="mqtt-form">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="mqtt-host">Broker Host</label>
+        <input type="text" id="mqtt-host" name="mqtt" placeholder="e.g. 192.168.1.10" />
+      </div>
+      <div class="form-field">
+        <label for="mqtt-port">Port</label>
+        <input type="number" id="mqtt-port" name="port" placeholder="1883" />
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:0.75rem;">
+      <div class="form-field">
+        <label for="mqtt-user">Username</label>
+        <input type="text" id="mqtt-user" name="muser" placeholder="Optional" />
+      </div>
+      <div class="form-field">
+        <label for="mqtt-pass">Password</label>
+        <input type="password" id="mqtt-pass" name="mpass" placeholder="Optional" />
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:0.75rem;">
+      <button type="button" id="btn-mqtt-save" class="btn primary">
+        <i data-lucide="save" class="nav-icon" style="width:16px;"></i> Save MQTT
+      </button>
+    </div>
+    <div id="mqtt-message" class="form-message"></div>
+  </form>
+
+  <hr style="border:0; border-top:1px dashed var(--border-color); margin: 1.25rem 0;">
+
+  <!-- ========== Topic Section ========== -->
+  <h3 style="font-size:0.9rem; color:var(--primary); margin:0 0 0.5rem; letter-spacing:1px; display:flex; align-items:center; gap:0.5rem;">
+    <i data-lucide="message-square" class="nav-icon" style="width:16px;"></i> MQTT Topics
+  </h3>
+  <form id="topic-form">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="topic-data">Topic Data</label>
+        <input type="text" id="topic-data" name="topicData" placeholder="AI205/data" />
+      </div>
+      <div class="form-field">
+        <label for="topic-status">Topic Status</label>
+        <input type="text" id="topic-status" name="topicStatus" placeholder="AI205/status" />
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:0.75rem;">
+      <div class="form-field">
+        <label for="topic-alert">Topic Alert</label>
+        <input type="text" id="topic-alert" name="topicAlert" placeholder="AI205/alert" />
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:0.75rem;">
+      <button type="button" id="btn-topic-save" class="btn primary">
+        <i data-lucide="save" class="nav-icon" style="width:16px;"></i> Save Topics
+      </button>
+    </div>
+    <div id="topic-message" class="form-message"></div>
+  </form>
+
+  <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
+
+  <!-- ========== Global Actions ========== -->
+  <div class="form-actions">
+    <button type="button" id="btn-config-reload" class="btn ghost" style="flex:1;">
+      <i data-lucide="refresh-ccw" class="nav-icon" style="width:16px;"></i> Reload from Device
+    </button>
+    <button type="button" id="btn-config-save" class="btn primary" style="flex:1;">
+      <i data-lucide="save-all" class="nav-icon" style="width:16px;"></i> Save ALL &amp; Reboot
+    </button>
+  </div>
+
+  <div id="config-message" class="form-message"></div>
+</section>
+
+    </div>
+  </main>
+  
+  <script>lucide.createIcons();</script>
+</body>
+</html>

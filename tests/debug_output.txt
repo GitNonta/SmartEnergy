@@ -1,0 +1,183 @@
+﻿Loading from D:\smart\tests\..\backend\.env...
+
+============================================
+Debug InfluxDB Tasks
+============================================
+InfluxDB: http://localhost:8086
+Org: Ennergy
+Time: 2025-12-24 22:09:15
+============================================
+
+[1] ตรวจสอบ InfluxDB Health...
+    ✓ Status: pass
+    ✓ Version: v2.8.0
+
+[2] ดึงรายการ Tasks ทั้งหมด...
+    พบ 5 tasks:
+
+    ┌─────────────────────────────────────────────
+    │ Task: aggregate_daily
+    │ ID: 0ff61a4f7ec5b000
+    │ Status: ✓ active
+    │ Every: 1d
+    │ Offset: 10m
+    │ Created: 2025-12-16T18:28:35Z
+    │ Updated: 2025-12-24T14:20:02Z
+    │
+    │ Last 5 Runs:
+    │   ✓ [success] 2025-12-24 21:25:53
+    │   ✓ [success] 2025-12-24 07:00:00
+    └─────────────────────────────────────────────
+
+    ┌─────────────────────────────────────────────
+    │ Task: aggregate_hourly
+    │ ID: 0ff61a7dcb45b000
+    │ Status: ✓ active
+    │ Every: 1h
+    │ Offset: 5m
+    │ Created: 2025-12-16T18:29:22Z
+    │ Updated: 2025-12-24T14:14:27Z
+    │
+    │ Last 5 Runs:
+    │   ✓ [success] 2025-12-24 22:00:00
+    │   ✓ [success] 2025-12-24 21:15:10
+    │   ✓ [success] 2025-12-24 21:00:00
+    │   ✓ [success] 2025-12-24 20:00:00
+    │   ✓ [success] 2025-12-24 19:00:00
+    └─────────────────────────────────────────────
+
+    ┌─────────────────────────────────────────────
+    │ Task: aggregate_monthly
+    │ ID: 0ff61aab6885b000
+    │ Status: ✓ active
+    │ Every: 1mo
+    │ Offset: 30m
+    │ Created: 2025-12-16T18:30:09Z
+    │ Updated: 2025-12-24T14:39:32Z
+    │ Last Runs: ไม่มีประวัติการรัน
+    └─────────────────────────────────────────────
+
+    ┌─────────────────────────────────────────────
+    │ Task: aggregate_weekly
+    │ ID: 0ff61ad5df45b000
+    │ Status: ✓ active
+    │ Every: 1w
+    │ Offset: 15m
+    │ Created: 2025-12-16T18:30:53Z
+    │ Updated: 2025-12-24T14:39:32Z
+    │ Last Runs: ไม่มีประวัติการรัน
+    └─────────────────────────────────────────────
+
+    ┌─────────────────────────────────────────────
+    │ Task: aggregate_yearly
+    │ ID: 0ff61af7e005b000
+    │ Status: ✓ active
+    │ Every: 1y
+    │ Offset: 1h
+    │ Created: 2025-12-16T18:31:27Z
+    │ Updated: 2025-12-24T14:39:32Z
+    │ Last Runs: ไม่มีประวัติการรัน
+    └─────────────────────────────────────────────
+
+
+[3] ตรวจสอบ Buckets...
+    ✓ AI205_daily
+      Retention: 365 days
+    ✓ AI205_hourly
+      Retention: 90 days
+    ✓ AI205_monthly
+      Retention: Forever
+    ✓ AI205_raw
+      Retention: Forever
+    ✓ AI205_weekly
+      Retention: Forever
+    ✓ AI205_yearly
+      Retention: Forever
+
+[4] ตรวจสอบข้อมูลล่าสุดในแต่ละ Bucket...
+
+    === AI205_raw ===
+    ✓ มีข้อมูล
+       = energy_per_phase
+ @ current
+       = energy_per_phase
+ @ current
+       = energy_per_phase
+ @ current
+       = energy_3phase
+ @ device_ts
+       = energy_3phase
+ @ energy_export
+
+    === AI205_hourly ===
+    ⚠ ไม่พบข้อมูลใน 7 วันที่ผ่านมา
+
+    === AI205_daily ===
+    ⚠ ไม่พบข้อมูลใน 7 วันที่ผ่านมา
+
+[5] ตรวจสอบ Task Script Syntax...
+
+    === aggregate_daily ===
+    Flux Script (first 10 lines):
+      import "timezone"
+      // ?? CRITICAL: Use Asia/Bangkok timezone for accurate daily windows
+      option location = timezone.location(name: "Asia/Bangkok")
+      option task = {name: "aggregate_daily", every: 1d, offset: 10m}
+      // ===== Daily power metrics (average of hourly means) =====
+      from(bucket: "AI205_hourly")
+        |> range(start: -1d)
+      ...
+
+    === aggregate_hourly ===
+    Flux Script (first 10 lines):
+      import "timezone"
+      // ?? CRITICAL: Use Asia/Bangkok timezone for accurate hourly windows
+      // Without this, 01:00 Thai time = 18:00 UTC, causing report misalignment
+      option location = timezone.location(name: "Asia/Bangkok")
+      option task = {name: "aggregate_hourly", every: 1h, offset: 5m}
+      // ===== Aggregate power metrics (mean) =====
+      from(bucket: "AI205_raw")
+      ...
+
+    === aggregate_monthly ===
+    Flux Script (first 10 lines):
+      import "timezone"
+      // ?? CRITICAL: Use Asia/Bangkok timezone for accurate monthly windows
+      // Used for BILLING - timezone is critical!
+      option location = timezone.location(name: "Asia/Bangkok")
+      option task = {name: "aggregate_monthly", every: 1mo, offset: 30m}
+      // ===== Monthly power metrics (average of daily means) =====
+      from(bucket: "AI205_daily")
+      ...
+
+    === aggregate_weekly ===
+    Flux Script (first 10 lines):
+      import "timezone"
+      // ?? CRITICAL: Use Asia/Bangkok timezone for accurate weekly windows
+      option location = timezone.location(name: "Asia/Bangkok")
+      option task = {name: "aggregate_weekly", every: 1w, offset: 15m}
+      // ===== Weekly power metrics (average of daily means) =====
+      from(bucket: "AI205_daily")
+        |> range(start: -1w)
+      ...
+
+    === aggregate_yearly ===
+    Flux Script (first 10 lines):
+      import "timezone"
+      // ?? CRITICAL: Use Asia/Bangkok timezone for accurate yearly windows
+      // ?? BILLING/AUDIT BUCKET - Schema is LOCKED
+      option location = timezone.location(name: "Asia/Bangkok")
+      option task = {name: "aggregate_yearly", every: 1y, offset: 1h}
+      // ===== Yearly power metrics (average of monthly means) =====
+      from(bucket: "AI205_monthly")
+      ...
+
+============================================
+เสร็จสิ้นการ Debug
+============================================
+
+Tips:
+  - ถ้า Task status = inactive ให้เปิดใช้งานใน InfluxDB UI
+  - ถ้า Task runs failed ให้ดู error message และแก้ไข flux script
+  - ถ้าไม่มีข้อมูลใน hourly/daily ให้ตรวจสอบ source bucket มีข้อมูลหรือไม่
+

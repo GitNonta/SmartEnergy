@@ -1,0 +1,138 @@
+/* Edit Mode Toggle Styles */
+
+.edit-mode-toggle {
+    position: fixed;
+    bottom: 100px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+}
+
+.edit-controls {
+    display: flex;
+    gap: 8px;
+    background: rgba(30, 41, 59, 0.95);
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+}
+
+.edit-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.2s ease;
+}
+
+.edit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.edit-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+}
+
+.edit-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+/* Toggle button (pencil icon) */
+.toggle-btn {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.toggle-btn:hover:not(:disabled) {
+    box-shadow: 0 6px 24px rgba(59, 130, 246, 0.5);
+}
+
+/* Save button (checkmark) */
+.save-btn {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.save-btn:hover:not(:disabled) {
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+
+/* Cancel button (X) */
+.cancel-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+
+.cancel-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+/* Reset button (arrow) */
+.reset-btn {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+.reset-btn:hover:not(:disabled) {
+    background: rgba(251, 191, 36, 0.3);
+}
+
+/* Icon styling */
+.btn-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.btn-icon.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Edit mode active indicator */
+.edit-mode-toggle.editing::before {
+    content: 'Edit Mode';
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 8px;
+    padding: 4px 12px;
+    background: rgba(139, 92, 246, 0.9);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+    .edit-mode-toggle {
+        bottom: 80px;
+        right: 16px;
+    }
+
+    .edit-btn {
+        width: 44px;
+        height: 44px;
+    }
+}

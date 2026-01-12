@@ -1,0 +1,111 @@
+/* InfluxDB Error Notification */
+.influx-error-notification {
+  position: fixed;
+  top: calc(65px + 30px + 30px + 20px); /* Below time selector */
+  left: 20px;
+  right: 20px;
+  max-width: 660px;
+  z-index: 50;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.influx-error-content {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+.influx-error-icon {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.influx-error-message {
+  flex: 1;
+  min-width: 0;
+}
+
+.influx-error-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #991b1b;
+  margin-bottom: 4px;
+}
+
+.influx-error-description {
+  font-size: 12px;
+  color: #b91c1c;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.influx-error-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.influx-error-retry,
+.influx-error-close {
+  background: transparent;
+  border: none;
+  color: #dc2626;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.influx-error-retry:hover {
+  background: rgba(220, 38, 38, 0.1);
+  transform: rotate(90deg);
+}
+
+.influx-error-close:hover {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.influx-error-retry:active,
+.influx-error-close:active {
+  transform: scale(0.95);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .influx-error-notification {
+    top: calc(60px + 40px + 20px);
+    left: 10px;
+    right: 10px;
+  }
+  
+  .influx-error-content {
+    padding: 10px 12px;
+  }
+  
+  .influx-error-title {
+    font-size: 13px;
+  }
+  
+  .influx-error-description {
+    font-size: 11px;
+  }
+}

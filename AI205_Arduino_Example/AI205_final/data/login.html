@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI205 Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/script.js" defer></script>
+</head>
+<body data-page="login">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <span>AI205 Monitor</span>
+    </div>
+  </header>
+
+  <main class="page login-wrapper">
+    <section class="card login-card">
+      <h2>Sign in</h2>
+      <p class="subtext">เข้าสู่ระบบเพื่อใช้งาน Dashboard / Config / Advanced</p>
+
+      <form id="login-form">
+        <div class="form-field">
+          <label for="login-user">Username</label>
+          <input type="text" id="login-user" name="username" placeholder="admin" required />
+        </div>
+        <div class="form-field">
+          <label for="login-pass">Password</label>
+          <input type="password" id="login-pass" name="password" placeholder="••••••" required />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn primary" style="width:100%;">Login</button>
+        </div>
+
+        <div id="login-message" class="form-message"></div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

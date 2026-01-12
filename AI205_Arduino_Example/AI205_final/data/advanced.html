@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI205 Advanced</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/script.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body data-page="advanced">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <span>AI205 Monitor</span>
+    </div>
+    <nav class="nav-links">
+      <a href="/dashboard">
+        <i data-lucide="layout-dashboard" class="nav-icon"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/config">
+        <i data-lucide="settings" class="nav-icon"></i>
+        <span>Config</span>
+      </a>
+      <a href="/advanced" class="active">
+        <i data-lucide="sliders-horizontal" class="nav-icon"></i>
+        <span>Advanced</span>
+      </a>
+      <a href="/advanced" id="nav-update-link">
+        <i data-lucide="arrow-up-circle" class="nav-icon"></i>
+        <span>Update</span>
+        <span id="nav-update-badge" class="nav-update-badge hidden">NEW</span>
+      </a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <div style="display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+      
+      <!-- Calibration & Protection -->
+      <section class="card">
+        <h2><i data-lucide="shield-check" class="nav-icon"></i> Calibration & Protection</h2>
+        <p class="subtext">ปรับค่า CT/PT ratio และกำหนด Threshold สำหรับการแจ้งเตือน</p>
+        
+        <form id="advanced-form">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="ct-ratio">CT Ratio</label>
+              <input type="number" step="0.1" id="ct-ratio" name="ctRatio" placeholder="e.g. 2000/5 = 400" />
+              <span class="hint">ค่า Default: ตามมิเตอร์</span>
+            </div>
+            <div class="form-field">
+              <label for="pt-ratio">PT Ratio</label>
+              <input type="number" step="0.1" id="pt-ratio" name="ptRatio" placeholder="e.g. 1.0" />
+              <span class="hint">Default: 1.0</span>
+            </div>
+
+            <div class="form-field">
+              <label for="ov-limit">Over-voltage (V)</label>
+              <input type="number" step="0.1" id="ov-limit" name="ovLimit" placeholder="250.0" />
+            </div>
+            <div class="form-field">
+              <label for="uv-limit">Under-voltage (V)</label>
+              <input type="number" step="0.1" id="uv-limit" name="uvLimit" placeholder="190.0" />
+            </div>
+
+            <div class="form-field">
+              <label for="oc-limit">Over-current (A)</label>
+              <input type="number" step="0.01" id="oc-limit" name="ocLimit" placeholder="Limit Amp" />
+            </div>
+            <div class="form-field">
+              <label for="lowpf-limit">Low PF Limit</label>
+              <input type="number" step="0.01" id="lowpf-limit" name="lowPf" placeholder="0.0 - 1.0" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-adv-refresh" class="btn secondary">
+              <i data-lucide="rotate-cw" class="nav-icon" style="width:16px;"></i> Load
+            </button>
+            <button type="button" id="btn-adv-save" class="btn primary" style="flex:1;">
+              <i data-lucide="save" class="nav-icon" style="width:16px;"></i> Save & Reboot
+            </button>
+          </div>
+          <div id="advanced-message" class="form-message"></div>
+        </form>
+      </section>
+
+      <!-- Service Settings (NEW) -->
+      <section class="card">
+        <h2><i data-lucide="wrench" class="nav-icon"></i> Service Settings</h2>
+        <p class="subtext">ตั้งค่าสำหรับช่างบริการ (Web Login, AP Mode, Modbus, Alerts)</p>
+        
+        <form id="service-form">
+          <!-- Web Login -->
+          <h3 style="font-size:0.85rem; color:var(--primary); margin:0.75rem 0 0.5rem; display:flex; align-items:center; gap:0.5rem;">
+            <i data-lucide="user-circle" class="nav-icon" style="width:14px;"></i> Web Login
+          </h3>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="web-user">Username</label>
+              <input type="text" id="web-user" name="webUser" placeholder="admin" />
+            </div>
+            <div class="form-field">
+              <label for="web-pass">Password</label>
+              <input type="password" id="web-pass" name="webPass" placeholder="••••••" />
+              <span class="hint">เปลี่ยนรหัสผ่านเข้าหน้าเว็บ</span>
+            </div>
+          </div>
+
+          <!-- AP Mode -->
+          <h3 style="font-size:0.85rem; color:var(--primary); margin:1rem 0 0.5rem; display:flex; align-items:center; gap:0.5rem;">
+            <i data-lucide="radio" class="nav-icon" style="width:14px;"></i> AP Mode (Hotspot)
+          </h3>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="ap-ssid">AP SSID</label>
+              <input type="text" id="ap-ssid" name="apSsid" placeholder="AI205_Config" />
+            </div>
+            <div class="form-field">
+              <label for="ap-pass">AP Password</label>
+              <input type="password" id="ap-pass" name="apPass" placeholder="12345678" />
+            </div>
+          </div>
+
+          <!-- Modbus -->
+          <h3 style="font-size:0.85rem; color:var(--primary); margin:1rem 0 0.5rem; display:flex; align-items:center; gap:0.5rem;">
+            <i data-lucide="cpu" class="nav-icon" style="width:14px;"></i> Modbus
+          </h3>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="mb-slave">Slave ID</label>
+              <input type="number" id="mb-slave" name="mbSlave" placeholder="1" min="1" max="247" />
+            </div>
+            <div class="form-field">
+              <label for="mb-baud">Baudrate</label>
+              <select id="mb-baud" name="mbBaud">
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400" selected>38400</option>
+                <option value="57600">57600</option>
+                <option value="115200">115200</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Alert Settings -->
+          <h3 style="font-size:0.85rem; color:var(--primary); margin:1rem 0 0.5rem; display:flex; align-items:center; gap:0.5rem;">
+            <i data-lucide="bell" class="nav-icon" style="width:14px;"></i> Alert Settings
+          </h3>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="alert-cd">Alert Cooldown (ms)</label>
+              <input type="number" id="alert-cd" name="alertCD" placeholder="30000" step="1000" />
+              <span class="hint">ระยะเวลาหน่วงระหว่าง alerts</span>
+            </div>
+            <div class="form-field">
+              <label for="ph-miss-i">Phase Missing I (A)</label>
+              <input type="number" step="0.01" id="ph-miss-i" name="phMissI" placeholder="0.02" />
+            </div>
+            <div class="form-field">
+              <label for="ph-miss-v">Phase Missing V (V)</label>
+              <input type="number" step="1" id="ph-miss-v" name="phMissV" placeholder="100" />
+            </div>
+          </div>
+
+          <div class="form-actions" style="margin-top:1rem;">
+            <button type="button" id="btn-service-save" class="btn primary" style="flex:1;">
+              <i data-lucide="save" class="nav-icon" style="width:16px;"></i> Save Service Settings
+            </button>
+          </div>
+          <div id="service-message" class="form-message"></div>
+        </form>
+
+        <hr style="border:0; border-top:1px dashed var(--border-color); margin:1.5rem 0;">
+
+        <!-- Restart Button -->
+        <div class="form-field">
+          <label>Device Control</label>
+          <button type="button" id="btn-restart" class="btn danger" style="width:100%;">
+            <i data-lucide="power" class="nav-icon" style="width:16px;"></i> Restart Device
+          </button>
+        </div>
+        <div id="restart-message" class="form-message"></div>
+      </section>
+
+       <section class="card">
+        <h2><i data-lucide="server-cog" class="nav-icon"></i> Firmware Update Server</h2>
+        <p class="subtext">กำหนดแหล่งดาวน์โหลดเฟิร์มแวร์สำหรับ HTTP OTA (ใช้กับการอัปเดตผ่าน MQTT)</p>
+
+        <form id="fw-server-form">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="fw-host">Server IP / Host</label>
+              <input type="text" id="fw-host" name="fwHost" placeholder="202.29.50.41" />
+              <span class="hint">เช่น 202.29.50.41 หรือ ota.example.com</span>
+            </div>
+            <div class="form-field">
+              <label for="fw-port">HTTP Port</label>
+              <input type="number" id="fw-port" name="fwPort" placeholder="80" />
+              <span class="hint">ปกติใช้ 80 ถ้าใช้ reverse proxy ให้ใส่ port ที่ใช้จริง</span>
+            </div>
+          </div>
+
+          <div class="form-actions" style="margin-top:0.75rem;">
+            <button type="button" id="btn-fw-server-save" class="btn primary" style="flex:1;">
+              <i data-lucide="save" class="nav-icon" style="width:16px;"></i> Save Firmware Server
+            </button>
+          </div>
+
+          <div id="fw-server-message" class="form-message"></div>
+        </form>
+      </section>
+
+      <!-- System Maintenance -->
+      <div style="display:flex; flex-direction:column; gap:1.5rem;">
+        
+        <!-- MQTT Firmware -->
+        <section class="card">
+          <h2><i data-lucide="cloud-download" class="nav-icon"></i> Cloud Update (MQTT)</h2>
+          <div style="background: rgba(0,0,0,0.2); padding:1rem; border-radius:8px; margin-bottom:1rem;">
+             <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+               <span style="color:var(--text-muted);">Current:</span>
+               <span id="fw-current" style="font-weight:600; font-family:monospace;">—</span>
+             </div>
+             <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+               <span style="color:var(--text-muted);">New:</span>
+               <span id="fw-latest" style="font-weight:600; color:var(--primary); font-family:monospace;">—</span>
+             </div>
+             <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+               <span style="color:var(--text-muted);">Status:</span>
+               <span id="fw-status-text" style="font-style:italic;">checking...</span>
+             </div>
+             <!-- Added Details -->
+             <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+               <span style="color:var(--text-muted);">Release Notes:</span>
+               <span id="fw-notes" style="font-size:0.85rem; max-width:150px; text-align:right;">—</span>
+             </div>
+             <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+               <span style="color:var(--text-muted);">File Size:</span>
+               <span id="fw-size" style="font-family:monospace;">—</span>
+             </div>
+             <div style="display:flex; justify-content:space-between;">
+               <span style="color:var(--text-muted);">Published:</span>
+               <span id="fw-time" style="font-size:0.85rem;">—</span>
+             </div>
+          </div>
+
+          <div class="form-actions" style="margin-top:0; border:none; padding-top:0;">
+            <button type="button" id="btn-fw-check" class="btn secondary" style="flex:1;">
+              <i data-lucide="search" class="nav-icon" style="width:16px;"></i> Check
+            </button>
+            <button type="button" id="btn-fw-apply" class="btn primary" style="flex:1;">
+              <i data-lucide="download" class="nav-icon" style="width:16px;"></i> Update Now
+            </button>
+          </div>
+          <div class="form-message" id="fw-mqtt-message"></div>
+        </section>
+
+        <!-- Manual Backup/Restore -->
+        <section class="card subtle">
+          <h2><i data-lucide="hard-drive" class="nav-icon"></i> Backup & Restore</h2>
+          
+          <div class="form-field" style="margin-bottom:1rem;">
+            <label>Configuration Backup</label>
+            <button type="button" id="btn-backup-config" class="btn secondary" style="width:100%;">
+              <i data-lucide="file-json" class="nav-icon" style="width:16px;"></i> Download .json
+            </button>
+          </div>
+
+          <div class="form-field" style="margin-bottom:1.5rem;">
+            <label>Firmware Dump</label>
+            <button type="button" id="btn-fw-backup" class="btn ghost" style="width:100%;">
+              <i data-lucide="binary" class="nav-icon" style="width:16px;"></i> Download .bin
+            </button>
+          </div>
+          
+          <hr style="border:0; border-top:1px dashed var(--border-color); margin-bottom:1.5rem;">
+
+          <div class="form-field">
+            <label for="fw-file">Manual OTA Update (.bin)</label>
+            <form id="fw-update-form" method="POST" action="/fwupdate" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:0.5rem;">
+              <input type="file" id="fw-file" name="firmware" accept=".bin" required style="font-size:0.8rem;" />
+              <button type="submit" class="btn danger">
+                <i data-lucide="upload" class="nav-icon" style="width:16px;"></i> Upload
+              </button>
+            </form>
+          </div>
+
+          <div class="form-message" id="backup-message"></div>
+          <div class="form-message" id="fw-backup-message"></div>
+        </section>
+
+      </div>
+
+      <!-- Diagnostics Table -->
+      <section class="card full-width subtle">
+        <h2><i data-lucide="activity-square" class="nav-icon"></i> Full Diagnostics</h2>
+        <div class="diag-grid" id="diag-info">
+          <!-- Populated by script.js -->
+        </div>
+      </section>
+
+    </div>
+  </main>
+  
+  <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+/* DashboardPage.css - Layout & Grid System Only */
+
+/* ============================================
+   Grid Layout System
+   ============================================ */
+.dashboard-grid-layout {
+    position: relative;
+    display: grid;
+    gap: 1.25rem;
+    /* Mobile: Single Column */
+    grid-template-columns: 1fr;
+    flex: 1;
+    min-height: 400px;
+}
+
+/* ============================================
+   Block Ordering Logic (CSS Grid)
+   ============================================ */
+.hero-block {
+    order: 1;
+    min-height: 400px;
+}
+
+.primary-block {
+    order: 3;
+}
+
+.secondary-block {
+    order: 2;
+}
+
+.statistics-block-wrapper {
+    order: 4;
+}
+
+/* ============================================
+   Responsive Grid Definitions
+   ============================================ */
+
+/* Tablet Vertical (2 Columns) */
+@media (min-width: 576px) {
+    .dashboard-grid-layout {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .hero-block {
+        grid-column: span 2;
+    }
+
+    .statistics-block-wrapper {
+        grid-column: span 2;
+    }
+}
+
+/* Tablet (3 Columns) */
+@media (min-width: 768px) {
+    .dashboard-grid-layout {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .hero-block {
+        grid-column: span 2;
+    }
+
+    .statistics-block-wrapper {
+        grid-column: span 3;
+    }
+}
+
+/* Laptop (4 Columns) */
+@media (min-width: 992px) {
+    .dashboard-grid-layout {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    .hero-block {
+        grid-column: span 2;
+        grid-row: span 2;
+    }
+
+    .primary-block {
+        grid-column: span 2;
+    }
+
+    .statistics-block-wrapper {
+        grid-column: span 4;
+    }
+}
+
+/* Desktop (6 Columns) */
+@media (min-width: 1200px) {
+    .dashboard-grid-layout {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 1.75rem;
+    }
+
+    .hero-block {
+        grid-column: span 2;
+    }
+
+    .primary-block {
+        grid-column: span 2;
+    }
+
+    .secondary-block {
+        grid-column: span 2;
+    }
+
+    .statistics-block-wrapper {
+        grid-column: span 6;
+    }
+}
+
+/* Ultra-wide (8 Columns) */
+@media (min-width: 1400px) {
+    .dashboard-grid-layout {
+        grid-template-columns: repeat(8, 1fr);
+        gap: 2rem;
+    }
+
+    .hero-block {
+        grid-column: span 2;
+    }
+
+    .primary-block {
+        grid-column: span 2;
+    }
+
+    .secondary-block {
+        grid-column: span 2;
+    }
+
+    .statistics-block-wrapper {
+        grid-column: span 6;
+        grid-column-start: 2;
+    }
+}
+
+
+.react-grid-item {
+    transition: all 200ms ease;
+    transition-property: left, top, width, height;
+    overflow: clip;
+    /* Clip any shadow overflow */
+    box-shadow: none !important;
+    /* Remove all shadows */
+}
+
+.react-grid-item.cssTransforms {
+    transition-property: transform, width, height;
+}
+
+.react-grid-item.resizing {
+    z-index: 1;
+    will-change: width, height;
+}
+
+.react-grid-item.react-draggable-dragging {
+    transition: none;
+    z-index: 100;
+    will-change: transform;
+    opacity: 0.95;
+    /* No shadow while dragging for clean canvas look */
+}
+
+.react-grid-item.dropping {
+    visibility: hidden;
+}
+
+.react-grid-item>.react-resizable-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+}
+
+.react-grid-item>.react-resizable-handle::after {
+    content: "";
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid rgba(255, 255, 255, 0.3);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.react-grid-item:hover>.react-resizable-handle::after {
+    border-color: rgba(59, 130, 246, 0.6);
+}
+
+/* Widget wrapper - no shadow overflow */
+.widget-wrapper {
+    overflow: hidden !important;
+    box-shadow: none !important;
+}
+
+/* Dashboard container - clip all overflow */
+.dashboard-grid-container {
+    overflow-x: clip;
+}
+
+/* End of DashboardPage.css */

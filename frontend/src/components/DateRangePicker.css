@@ -1,0 +1,14 @@
+@media (min-width: 1025px) and (max-width: 1920px) {
+    .custom-calendar-grid {
+        grid-template-columns: repeat(auto-fit, minmax(30px, 1fr)) !important;
+        gap: 1.5rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .custom-calendar-grid {
+        grid-template-columns: repeat(auto-fit, minmax(30px, 1fr)) !important;
+        /* Using a smaller gap for mobile to ensure 7 columns fit */
+        gap: 0.25rem !important;
+    }
+}

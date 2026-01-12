@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI205 Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/script.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Load Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body data-page="dashboard">
+  
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <span>AI205 Monitor</span>
+    </div>
+    <nav class="nav-links">
+      <a href="/dashboard" class="active">
+        <i data-lucide="layout-dashboard" class="nav-icon"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/config">
+        <i data-lucide="settings" class="nav-icon"></i>
+        <span>Config</span>
+      </a>
+      <a href="/advanced">
+        <i data-lucide="sliders-horizontal" class="nav-icon"></i>
+        <span>Advanced</span>
+      </a>
+      <a href="/advanced" id="nav-update-link">
+        <i data-lucide="arrow-up-circle" class="nav-icon"></i>
+        <span>Update</span>
+        <span id="nav-update-badge" class="nav-update-badge hidden">NEW</span>
+      </a>
+    </nav>
+  </header>
+
+  <main class="page">
+    
+    <!-- System Status Bar -->
+    <div class="status-bar">
+      <div id="wifi-status" class="status-pill bad">WiFi Off</div>
+      <div id="mqtt-status" class="status-pill bad">MQTT Off</div>
+      
+      <div class="status-info">
+        <span id="fw-display" style="color:var(--primary); font-weight:600;">FW: —</span>
+        <span style="opacity:0.3; margin:0 0.5rem;">|</span>
+        <span id="uptime">Uptime: —</span>
+      </div>
+    </div>
+
+    <!-- Main Metrics Grid -->
+    <div class="dashboard-grid">
+      
+      <!-- Power Overview (Wide) -->
+      <section class="card full-width">
+        <h2><i data-lucide="zap" class="nav-icon" style="color:var(--warning)"></i> Power Overview</h2>
+        <div class="dashboard-grid" style="margin-bottom:0; gap:1rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <div class="big-metric">
+            <div class="val" id="kw-sum">0.000 kW</div>
+            <div class="lbl">Total Power</div>
+          </div>
+          <div class="big-metric">
+            <div class="val" id="freq">50.00 Hz</div>
+            <div class="lbl">Frequency</div>
+          </div>
+          <div class="big-metric">
+            <div class="val" id="pf-sys">0.000</div>
+            <div class="lbl">System PF</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Voltage -->
+      <section class="card">
+        <h2><i data-lucide="plug-zap" class="nav-icon" style="color:var(--accent)"></i> Voltage (V)</h2>
+        <div class="phase-grid">
+          <div class="phase-item">
+            <div class="phase-label">L1</div>
+            <div class="phase-value"><span id="v1">—</span><span class="phase-unit">V</span></div>
+            <div class="bar-container"><div id="bar-v1" class="bar-fill" style="width:0%"></div></div>
+          </div>
+          <div class="phase-item">
+            <div class="phase-label">L2</div>
+            <div class="phase-value"><span id="v2">—</span><span class="phase-unit">V</span></div>
+            <div class="bar-container"><div id="bar-v2" class="bar-fill" style="width:0%"></div></div>
+          </div>
+          <div class="phase-item">
+            <div class="phase-label">L3</div>
+            <div class="phase-value"><span id="v3">—</span><span class="phase-unit">V</span></div>
+            <div class="bar-container"><div id="bar-v3" class="bar-fill" style="width:0%"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Current -->
+      <section class="card">
+        <h2><i data-lucide="battery-charging" class="nav-icon" style="color:var(--primary)"></i> Current (A)</h2>
+        <div class="phase-grid">
+          <div class="phase-item">
+            <div class="phase-label">L1</div>
+            <div class="phase-value"><span id="i1">—</span><span class="phase-unit">A</span></div>
+          </div>
+          <div class="phase-item">
+            <div class="phase-label">L2</div>
+            <div class="phase-value"><span id="i2">—</span><span class="phase-unit">A</span></div>
+          </div>
+          <div class="phase-item">
+            <div class="phase-label">L3</div>
+            <div class="phase-value"><span id="i3">—</span><span class="phase-unit">A</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Power per Phase -->
+      <section class="card">
+        <h2><i data-lucide="gauge" class="nav-icon" style="color:var(--warning)"></i> Power (kW)</h2>
+        <div class="phase-grid">
+          <div class="phase-item">
+            <div class="phase-label">L1</div>
+            <div class="phase-value"><span id="kw1">—</span><span class="phase-unit">kW</span></div>
+          </div>
+          <div class="phase-item">
+            <div class="phase-label">L2</div>
+            <div class="phase-value"><span id="kw2">—</span><span class="phase-unit">kW</span></div>
+          </div>
+          <div class="phase-item">
+            <div class="phase-label">L3</div>
+            <div class="phase-value"><span id="kw3">—</span><span class="phase-unit">kW</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Power Factor -->
+      <section class="card">
+        <h2><i data-lucide="activity" class="nav-icon" style="color:var(--text-muted)"></i> Power Factor</h2>
+        <div class="phase-grid">
+          <div class="phase-item">
+            <div class="phase-label">L1</div>
+            <div class="phase-value" id="pf1">—</div>
+          </div>
+          <div class="phase-item">
+            <div class="phase-label">L2</div>
+            <div class="phase-value" id="pf2">—</div>
+          </div>
+          <div class="phase-item">
+            <div class="phase-label">L3</div>
+            <div class="phase-value" id="pf3">—</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Energy Stats -->
+      <section class="card full-width">
+        <h2><i data-lucide="lightbulb" class="nav-icon" style="color:#fcd34d"></i> Energy Usage (kWh)</h2>
+        <div class="energy-stats">
+          <div class="stat-box">
+            <small>Import</small>
+            <strong id="ep-imp">—</strong>
+          </div>
+          <div class="stat-box">
+            <small>Export</small>
+            <strong id="ep-exp">—</strong>
+          </div>
+          <div class="stat-box">
+            <small>Total</small>
+            <strong id="ep-total">—</strong>
+          </div>
+          <div class="stat-box">
+            <small>Net</small>
+            <strong id="ep-net">—</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- Technical Details -->
+      <section class="card full-width subtle">
+        <h2><i data-lucide="cpu" class="nav-icon"></i> System Stats</h2>
+        <div class="diag-grid">
+           <div class="diag-item">
+             <span class="label">WiFi SSID</span>
+             <span class="value" id="wifi-ssid">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">WiFi RSSI</span>
+             <span class="value" id="wifi-rssi">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">MQTT Server</span>
+             <span class="value" id="mqtt-server">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">CPU Freq</span>
+             <span class="value" id="cpu-mhz">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">Heap Free</span>
+             <span class="value" id="heap-free">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">PSRAM Free</span>
+             <span class="value" id="psram-free">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">Loop Core0</span>
+             <span class="value" id="loop-core0">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">Loop Core1</span>
+             <span class="value" id="loop-core1">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">Firmware</span>
+             <span class="value" id="fw-version">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">Latest FW</span>
+             <span class="value" id="fw-latest">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">MAC Address</span>
+             <span class="value" id="mac-addr">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">Modbus Status</span>
+             <span class="value" id="modbus-status">—</span>
+           </div>
+           <div class="diag-item">
+             <span class="label">Modbus Errors</span>
+             <span class="value" id="modbus-errors">—</span>
+           </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Firmware Update Popup -->
+    <div id="fw-popup" class="fw-popup hidden">
+      <div class="fw-popup-inner">
+        <div class="fw-popup-title">✅ Firmware Updated</div>
+        <div class="fw-popup-body">
+          <div>Current version: <span id="fw-popup-version">-</span></div>
+          <div id="fw-popup-notes-row" class="fw-popup-notes">
+            Notes: <span id="fw-popup-notes">-</span>
+          </div>
+        </div>
+        <button id="fw-popup-close" class="btn primary">
+          OK
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Initialize Icons -->
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
