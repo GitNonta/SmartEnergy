@@ -49,7 +49,7 @@ function getColorByQuality(quality: string, isDark: boolean): string {
 }
 
 // Fetch data from backend APIs
-async function fetchChartData(mode: ChartViewMode, deviceId: string, isDark: boolean): Promise<DataPoint[]> {
+async function fetchChartData(mode: ChartViewMode, deviceId: string, isDark: boolean, locale: string): Promise<DataPoint[]> {
     try {
         let endpoint = '';
         let range = '';
@@ -94,7 +94,7 @@ async function fetchChartData(mode: ChartViewMode, deviceId: string, isDark: boo
                         : 'measured';
 
             return {
-                x: formatLabel(point._time, mode),
+                x: formatLabel(point._time, mode, locale),
                 y: Number(point._value || 0).toFixed(2),
                 quality,
                 fillColor: getColorByQuality(quality, isDark)
@@ -107,17 +107,16 @@ async function fetchChartData(mode: ChartViewMode, deviceId: string, isDark: boo
     }
 }
 
-function formatLabel(time: string, mode: ChartViewMode): string {
+function formatLabel(time: string, mode: ChartViewMode, locale: string): string {
     const date = new Date(time);
 
     switch (mode) {
         case 'hourly':
             return `${date.getHours().toString().padStart(2, '0')}:00`;
         case 'daily':
-            return `${date.getDate()}/${date.getMonth() + 1}`;
+            return date.toLocaleDateString(locale, { day: 'numeric', month: 'numeric' });
         case 'monthly':
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return months[date.getMonth()];
+            return date.toLocaleDateString(locale, { month: 'short' });
     }
 }
 
@@ -125,7 +124,7 @@ export default function HourlyEnergyChart({
     initialViewMode = 'hourly',
     deviceId = 'AI205'
 }: HourlyEnergyChartProps) {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const { darkMode } = useTheme();
     const [viewMode, setViewMode] = useState<ChartViewMode>(initialViewMode);
     const [chartData, setChartData] = useState<DataPoint[]>([]);
@@ -134,6 +133,8 @@ export default function HourlyEnergyChart({
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
     const chartInstance = useRef<any>(null);
     const chartDivRef = useRef<HTMLDivElement>(null);
+
+    const locale = language === 'th' ? 'th-TH' : language === 'zh' ? 'zh-CN' : 'en-US';
 
     // Load ApexCharts
     useEffect(() => {
@@ -151,11 +152,11 @@ export default function HourlyEnergyChart({
     // Fetch data
     const loadData = useCallback(async () => {
         setLoading(true);
-        const data = await fetchChartData(viewMode, deviceId, darkMode);
+        const data = await fetchChartData(viewMode, deviceId, darkMode, locale);
         setChartData(data);
-        setLastUpdate(new Date().toLocaleTimeString('th-TH'));
+        setLastUpdate(new Date().toLocaleTimeString(locale));
         setLoading(false);
-    }, [viewMode, deviceId, darkMode]);
+    }, [viewMode, deviceId, darkMode, locale]);
 
     useEffect(() => {
         loadData();
@@ -611,4 +612,4 @@ return (
       `}</style>
     </div>
 );
-}
+

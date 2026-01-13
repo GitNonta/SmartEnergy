@@ -97,8 +97,18 @@ const StatisticsBlock: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [showChart, setShowChart] = useState(true);
 
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const { darkMode } = useTheme();
+
+    // Map language code to locale string
+    const getLocale = (lang: string) => {
+        switch (lang) {
+            case 'th': return 'th-TH';
+            case 'zh': return 'zh-CN';
+            default: return 'en-US';
+        }
+    };
+    const locale = getLocale(language);
 
     const chartColors = {
         stroke: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
@@ -141,8 +151,8 @@ const StatisticsBlock: React.FC = () => {
                     return {
                         time: point.time,
                         hour: granularity === 'hour'
-                            ? date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                            : date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }),
+                            ? date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+                            : date.toLocaleDateString(locale, { day: 'numeric', month: 'short' }),
                         power: (point.power || 0) * 1000,  // Convert kW to W
                         powerAvg: data.success ? data.power.avg : 0  // Already in W from API
                     };
@@ -155,7 +165,7 @@ const StatisticsBlock: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [timeRange]);
+    }, [timeRange, locale]);
 
     useEffect(() => {
         fetchStatistics();

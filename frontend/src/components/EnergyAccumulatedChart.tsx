@@ -37,35 +37,55 @@ interface EnergyAccumulatedChartProps {
     isPopup?: boolean;
 }
 
-// ... (Keep existing fetch functions: fetchRealData, fetchDailyData, fetchMonthlyData, fetchYearlyData, generateFallbackData) ...
-// Since I cannot use "Keep existing..." in replace_file_content, I must include them.
-// However, the tool allows me to replace the WHOLE file content if I start from line 1.
-// But wait, the previous tool call viewed the whole file.
-// I will just replace the Component part and imports, and keep the fetch functions if I can strictly target lines.
-// BUT, the fetch functions are outside the component.
-// I will keep the fetch functions as they are, but I need to replace the imports and the component definition.
-// Actually, I'll rewrite the whole file to be safe and clean, reusing the logic.
+// --- Fallback Empty Data (when no data available) ---
+// Returns zeros instead of fake data to clearly show periods with no real data
+const generateFallbackData = (mode: TimeViewMode, locale: string) => {
+    let data: { x: string, y: number }[] = [];
+    const now = new Date();
+
+    console.warn(`⚠️ No real data available for ${mode} - showing zeros`);
+
+    if (mode === 'daily') {
+        // 24 Hours with zeros
+        for (let i = 0; i < 24; i++) {
+            data.push({ x: `${i.toString().padStart(2, '0')}:00`, y: 0 });
+        }
+    } else if (mode === 'monthly') {
+        // Days in month with zeros
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        for (let i = 1; i <= daysInMonth; i++) {
+            data.push({ x: i.toString(), y: 0 });
+        }
+    } else if (mode === 'yearly') {
+        // 12 Months with zeros
+        for (let i = 0; i < 12; i++) {
+            const date = new Date(now.getFullYear(), i, 1);
+            data.push({ x: date.toLocaleDateString(locale, { month: 'short' }), y: 0 });
+        }
+    }
+    return data;
+};
 
 // --- Real Data Fetchers from InfluxDB (Historical Data) ---
-const fetchRealData = async (mode: TimeViewMode) => {
+const fetchRealData = async (mode: TimeViewMode, locale: string) => {
     try {
         console.log(`📊 Fetching ${mode} energy data from InfluxDB...`);
 
         if (mode === 'daily') {
-            return await fetchDailyData();
+            return await fetchDailyData(locale);
         } else if (mode === 'monthly') {
-            return await fetchMonthlyData();
+            return await fetchMonthlyData(locale);
         } else {
-            return await fetchYearlyData();
+            return await fetchYearlyData(locale);
         }
     } catch (error) {
         console.error('❌ Error fetching energy data:', error);
-        return generateFallbackData(mode);
+        return generateFallbackData(mode, locale);
     }
 };
 
 // Fetch Daily data: Today's hourly energy breakdown (00:00 - current hour)
-const fetchDailyData = async () => {
+const fetchDailyData = async (locale: string) => {
     try {
         // Use daily-consumption endpoint which gives real hourly breakdown for today
         const response = await fetch(
@@ -75,14 +95,14 @@ const fetchDailyData = async () => {
 
         if (!response.ok) {
             console.warn(`⚠️ Daily consumption API returned ${response.status}`);
-            return generateFallbackData('daily');
+            return generateFallbackData('daily', locale);
         }
 
         const data = await response.json();
 
         if (!data.success || !Array.isArray(data.hourlyData)) {
             console.warn('⚠️ Invalid daily consumption data');
-            return generateFallbackData('daily');
+            return generateFallbackData('daily', locale);
         }
 
         const currentHour = new Date().getHours();
@@ -104,15 +124,15 @@ const fetchDailyData = async () => {
         const totalEnergy = chartData.reduce((sum, d) => sum + d.y, 0);
         console.log(`✅ Daily chart: ${chartData.length} hours, total ${totalEnergy.toFixed(4)} kWh (up to hour ${currentHour})`);
 
-        return chartData.length > 0 ? chartData : generateFallbackData('daily');
+        return chartData.length > 0 ? chartData : generateFallbackData('daily', locale);
     } catch (error) {
         console.error('❌ Error fetching daily data:', error);
-        return generateFallbackData('daily');
+        return generateFallbackData('daily', locale);
     }
 };
 
 // Fetch Monthly data: Current month's daily energy breakdown
-const fetchMonthlyData = async () => {
+const fetchMonthlyData = async (locale: string) => {
     try {
         const response = await fetch(
             `${getApiBase()}/api/energy/monthly-chart?deviceId=AI205`,
@@ -121,26 +141,26 @@ const fetchMonthlyData = async () => {
 
         if (!response.ok) {
             console.warn(`⚠️ Monthly chart API returned ${response.status}`);
-            return generateFallbackData('monthly');
+            return generateFallbackData('monthly', locale);
         }
 
         const data = await response.json();
 
         if (!data.success || !Array.isArray(data.chartData)) {
             console.warn('⚠️ Invalid monthly chart data');
-            return generateFallbackData('monthly');
+            return generateFallbackData('monthly', locale);
         }
 
         console.log(`✅ Monthly chart: ${data.chartData.length} days, total ${data.total} kWh`);
         return data.chartData;
     } catch (error) {
         console.error('❌ Error fetching monthly data:', error);
-        return generateFallbackData('monthly');
+        return generateFallbackData('monthly', locale);
     }
 };
 
 // Fetch Yearly data: Current year's monthly energy breakdown
-const fetchYearlyData = async () => {
+const fetchYearlyData = async (locale: string) => {
     try {
         const response = await fetch(
             `${getApiBase()}/api/energy/yearly-chart?deviceId=AI205`,
@@ -149,59 +169,37 @@ const fetchYearlyData = async () => {
 
         if (!response.ok) {
             console.warn(`⚠️ Yearly chart API returned ${response.status}`);
-            return generateFallbackData('yearly');
+            return generateFallbackData('yearly', locale);
         }
 
         const data = await response.json();
 
         if (!data.success || !Array.isArray(data.chartData)) {
             console.warn('⚠️ Invalid yearly chart data');
-            return generateFallbackData('yearly');
+            return generateFallbackData('yearly', locale);
         }
 
         console.log(`✅ Yearly chart: ${data.chartData.length} months, total ${data.total} kWh`);
+        // If backend returns English months, we might want to map them here or just assume they are valid for now
+        // Ideally backend should return month numbers or ISO dates
         return data.chartData;
     } catch (error) {
         console.error('❌ Error fetching yearly data:', error);
-        return generateFallbackData('yearly');
+        return generateFallbackData('yearly', locale);
     }
 };
 
-// --- Fallback Empty Data (when no data available) ---
-// Returns zeros instead of fake data to clearly show periods with no real data
-const generateFallbackData = (mode: TimeViewMode) => {
-    let data: { x: string, y: number }[] = [];
-    const now = new Date();
-
-    console.warn(`⚠️ No real data available for ${mode} - showing zeros`);
-
-    if (mode === 'daily') {
-        // 24 Hours with zeros
-        for (let i = 0; i < 24; i++) {
-            data.push({ x: `${i.toString().padStart(2, '0')}:00`, y: 0 });
-        }
-    } else if (mode === 'monthly') {
-        // Days in month with zeros
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        for (let i = 1; i <= daysInMonth; i++) {
-            data.push({ x: `Day ${i}`, y: 0 });
-        }
-    } else if (mode === 'yearly') {
-        // 12 Months with zeros
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        for (let i = 0; i < 12; i++) {
-            data.push({ x: months[i], y: 0 });
-        }
-    }
-    return data;
-};
+import { useLanguage } from '../context/LanguageContext';
 
 export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onClose, isPopup = false }: EnergyAccumulatedChartProps) {
     const { darkMode } = useTheme();
+    const { t, language } = useLanguage();
     const [viewMode, setViewMode] = useState<TimeViewMode>(initialViewMode);
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
     const chartInstance = useRef<any>(null);
     const chartDivRef = useRef<HTMLDivElement>(null);
+
+    const locale = language === 'th' ? 'th-TH' : language === 'zh' ? 'zh-CN' : 'en-US';
 
     // AI State
     const [analyzing, setAnalyzing] = useState(false);
@@ -217,7 +215,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
     useEffect(() => {
         const loadData = async () => {
             console.log(`📊 Loading ${viewMode} chart data...`);
-            const data = await fetchRealData(viewMode);
+            const data = await fetchRealData(viewMode, locale);
             setChartData(data);
         };
 
@@ -225,7 +223,6 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
         loadData();
 
         // Auto-refresh for real-time updates
-        // Daily: every 30 seconds, Monthly/Yearly: every 5 minutes
         const refreshInterval = viewMode === 'daily' ? 30000 : 300000;
         const interval = setInterval(() => {
             console.log(`🔄 Auto-refreshing ${viewMode} chart...`);
@@ -233,7 +230,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
         }, refreshInterval);
 
         return () => clearInterval(interval);
-    }, [viewMode]);
+    }, [viewMode, locale]);
 
     useEffect(() => {
         if ((window as any).ApexCharts) {
@@ -265,7 +262,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
 
         const chart = new ApexCharts(chartDivRef.current, {
             ...options,
-            series: [{ name: 'Consumption', data: chartData }]
+            series: [{ name: t('energy.consumption'), data: chartData }]
         });
 
         chart.render();
@@ -275,7 +272,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
             if (chartInstance.current) chartInstance.current.destroy();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isScriptLoaded, viewMode, chartData, darkMode]);
+    }, [isScriptLoaded, viewMode, chartData, darkMode, t]);
 
     const getThemeColor = (mode: TimeViewMode) => {
         const palette = darkMode ? THEME_COLORS.dark : THEME_COLORS.light;
@@ -334,7 +331,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
             },
             yaxis: {
                 labels: { style: { colors: theme.subtext } },
-                title: { text: 'kWh', style: { color: theme.subtext } }
+                title: { text: t('energy.unit'), style: { color: theme.subtext } }
             },
             grid: {
                 borderColor: theme.grid,
@@ -342,7 +339,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
             },
             tooltip: {
                 theme: darkMode ? 'dark' : 'light',
-                y: { formatter: (val: number) => val.toFixed(2) + " kWh" }
+                y: { formatter: (val: number) => val.toFixed(2) + " " + t('energy.unit') }
             }
         };
     };
@@ -359,12 +356,13 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
     const getTotal = () => chartData.reduce((acc, cur) => acc + cur.y, 0).toFixed(2);
 
     const getTitle = () => {
-        if (viewMode === 'daily') return 'DAILY CONSUMPTION (24H)';
-        if (viewMode === 'monthly') return 'MONTHLY CONSUMPTION';
-        return 'YEARLY CONSUMPTION';
+        if (viewMode === 'daily') return t('history.dailyConsumption');
+        if (viewMode === 'monthly') return t('history.monthlyConsumption');
+        // Add a yearly key or fallback
+        return t('energy.title') + ' (' + t('export.buckets.yearly') + ')';
     };
 
-    if (!isScriptLoaded) return <div className="p-4 text-slate-500 dark:text-slate-400">Loading Chart...</div>;
+    if (!isScriptLoaded) return <div className="p-4 text-slate-500 dark:text-slate-400">{t('common.loading')}</div>;
 
     return (
         <div className={`energy-chart-modern ${isPopup ? 'popup-mode shadow-none border-none h-full' : 'rounded-2xl shadow-lg border border-slate-200 dark:border-white/5'} p-6 transition-colors duration-200 bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900 text-slate-800 dark:text-white`}>
@@ -377,7 +375,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
                     <div>
                         <h2 className="text-sm font-bold tracking-wide uppercase text-slate-800 dark:text-slate-100 m-0">{getTitle()}</h2>
                         <span className="text-xs text-slate-500 dark:text-slate-400">
-                            Total: <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">{getTotal()}</span> kWh
+                            {t('energy.totalEnergy')}: <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">{getTotal()}</span> {t('energy.unit')}
                         </span>
                     </div>
                 </div>
@@ -387,15 +385,21 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
                         <button
                             onClick={() => setViewMode('daily')}
                             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'daily' ? 'bg-cyan-600 text-white dark:bg-cyan-400 dark:text-black' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
-                        >Daily</button>
+                        >
+                            {t('export.buckets.daily')}
+                        </button>
                         <button
                             onClick={() => setViewMode('monthly')}
                             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'monthly' ? 'bg-blue-600 text-white dark:bg-blue-500 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
-                        >Monthly</button>
+                        >
+                            {t('export.buckets.monthly')}
+                        </button>
                         <button
                             onClick={() => setViewMode('yearly')}
                             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'yearly' ? 'bg-purple-600 text-white dark:bg-purple-500 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
-                        >Yearly</button>
+                        >
+                            {t('export.buckets.yearly')}
+                        </button>
                     </div>
                     {onClose && (
                         <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-500 dark:bg-white/10 dark:text-white dark:hover:bg-red-500/80 transition-colors">
@@ -418,11 +422,11 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
                     disabled={analyzing}
                 >
                     {analyzing ? (
-                        <span>ANALYZING...</span>
+                        <span>{t('status.analyzing')}</span>
                     ) : (
                         <>
                             <Brain size={16} />
-                            <span>AI ENERGY AUDIT</span>
+                            <span>{t('status.aiDiagnosis')}</span>
                         </>
                     )}
                 </button>
@@ -432,7 +436,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
             {aiResult && (
                 <div className="mt-4 bg-violet-50 border border-violet-200 dark:bg-violet-500/10 dark:border-violet-500/20 rounded-lg p-4 animate-in slide-in-from-top-2 duration-300">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-violet-600 dark:text-violet-300">Audit for {aiResult.mode}</span>
+                        <span className="text-xs font-bold text-violet-600 dark:text-violet-300">{t('reports.title')} {aiResult.mode}</span>
                         <button onClick={() => setAiResult(null)} className="text-violet-400 hover:text-violet-600 dark:hover:text-violet-200"><X size={16} /></button>
                     </div>
                     <div className="text-sm text-violet-900 dark:text-violet-100 leading-relaxed whitespace-pre-wrap">

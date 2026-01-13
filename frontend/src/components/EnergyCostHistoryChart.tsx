@@ -33,6 +33,7 @@ interface EnergyCostHistoryChartProps {
 
 // Custom tooltip component
 const CustomTooltip = ({ active, payload, label }: any) => {
+    const { t } = useLanguage();
     if (active && payload && payload.length) {
         return (
             <div className="cost-chart-tooltip">
@@ -45,7 +46,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                             <span className="tooltip-value">
                                 {entry.dataKey === 'cost'
                                     ? `฿${entry.value.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`
-                                    : `${entry.value.toFixed(2)} kWh`
+                                    : `${entry.value.toFixed(2)} ${t('energy.unit')}`
                                 }
                             </span>
                         </div>
@@ -117,51 +118,56 @@ export default function EnergyCostHistoryChart({
     return (
         <div className={`cost-history-chart ${isPopup ? 'popup-mode' : ''} bg-white dark:bg-transparent text-slate-900 dark:text-slate-100 w-full h-full flex flex-col p-6`}>
             {/* Header */}
-            <div className="chart-header">
-                <div className="header-left">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mr-3 bg-amber-100 text-amber-500 dark:bg-amber-500/10 dark:text-amber-500">
-                        <TrendingUp size={20} />
+            <div className="chart-header flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                <div className="header-left flex items-center">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4 bg-amber-100 text-amber-500 dark:bg-amber-500/10 dark:text-amber-500 transition-colors">
+                        <TrendingUp size={24} />
                     </div>
-                    <div className="header-text">
-                        <h3 className="chart-title text-slate-800 dark:text-slate-100">{getTitle()}</h3>
-                        <div className="chart-summary">
-                            <span className="summary-item">
-                                <Zap size={14} />
-                                <span>{totalEnergy.toLocaleString('th-TH', { minimumFractionDigits: 2 })} kWh</span>
+                    <div className="header-text flex flex-col">
+                        <h3 className="chart-title text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                            {getTitle()}
+                        </h3>
+                        <div className="chart-summary flex items-center mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+                            <span className="summary-item flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded text-xs">
+                                <Zap size={12} className="text-cyan-500" />
+                                <span>{totalEnergy.toLocaleString('th-TH', { minimumFractionDigits: 2 })} {t('energy.unit')}</span>
                             </span>
                             <span className="mx-2 text-slate-300 dark:text-slate-600">•</span>
-                            <span className="summary-item cost">
-                                <DollarSign size={14} />
+                            <span className="summary-item cost flex items-center gap-1.5 bg-amber-100/50 dark:bg-amber-500/10 px-2 py-0.5 rounded text-xs text-amber-600 dark:text-amber-400">
+                                <DollarSign size={12} />
                                 <span>฿{totalCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <div className="header-right">
+                <div className="header-right flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                     <div className="bg-slate-100 dark:bg-black/20 p-1 rounded-lg flex space-x-1">
                         <button
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'daily' ? 'bg-amber-500 text-white shadow-sm' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'daily' ? 'bg-amber-500 text-white shadow-md scale-105' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
                             onClick={() => setViewMode('daily')}
                         >
                             {t('export.buckets.hourly')}
                         </button>
                         <button
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'monthly' ? 'bg-amber-500 text-white shadow-sm' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'monthly' ? 'bg-amber-500 text-white shadow-md scale-105' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
                             onClick={() => setViewMode('monthly')}
                         >
                             {t('export.buckets.daily')}
                         </button>
                         <button
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'yearly' ? 'bg-amber-500 text-white shadow-sm' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'yearly' ? 'bg-amber-500 text-white shadow-md scale-105' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
                             onClick={() => setViewMode('yearly')}
                         >
                             {t('export.buckets.yearly')}
                         </button>
                     </div>
                     {onClose && (
-                        <button className="close-btn p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400" onClick={onClose}>
-                            <X size={18} />
+                        <button
+                            className="close-btn p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                            onClick={onClose}
+                        >
+                            <X size={20} />
                         </button>
                     )}
                 </div>
@@ -172,7 +178,7 @@ export default function EnergyCostHistoryChart({
                 {loading ? (
                     <div className="chart-loading">
                         <div className="loading-spinner"></div>
-                        <span>กำลังโหลดข้อมูล...</span>
+                        <span>{t('history.loading')}</span>
                     </div>
                 ) : (
                     <ResponsiveContainer width="100%" height={isPopup ? 380 : 320}>
@@ -214,7 +220,7 @@ export default function EnergyCostHistoryChart({
                                 tickLine={false}
                                 axisLine={false}
                                 label={{
-                                    value: 'บาท',
+                                    value: t('cost.baht'),
                                     angle: -90,
                                     position: 'insideLeft',
                                     fill: darkMode ? '#fbbf24' : '#d97706',
@@ -231,7 +237,7 @@ export default function EnergyCostHistoryChart({
                                 tickLine={false}
                                 axisLine={false}
                                 label={{
-                                    value: 'kWh',
+                                    value: t('energy.unit'),
                                     angle: 90,
                                     position: 'insideRight',
                                     fill: darkMode ? '#22d3ee' : '#0891b2',
@@ -244,7 +250,7 @@ export default function EnergyCostHistoryChart({
                             <Legend
                                 wrapperStyle={{ paddingTop: '10px' }}
                                 formatter={(value) => {
-                                    const isCost = value.includes(t('history.cost')) || value === 'ค่าไฟฟ้า (บาท)';
+                                    const isCost = value.includes(t('history.cost'));
                                     const color = isCost
                                         ? (darkMode ? '#fbbf24' : '#d97706')
                                         : (darkMode ? '#22d3ee' : '#0891b2');
@@ -267,7 +273,7 @@ export default function EnergyCostHistoryChart({
                                 yAxisId="right"
                                 type="monotone"
                                 dataKey="energy"
-                                name={`${t('history.energy')} (kWh)`}
+                                name={`${t('history.energy')} (${t('energy.unit')})`}
                                 stroke={darkMode ? "#22d3ee" : "#0891b2"}
                                 strokeWidth={2}
                                 dot={{ fill: darkMode ? '#22d3ee' : '#0891b2', strokeWidth: 0, r: 3 }}
@@ -282,11 +288,11 @@ export default function EnergyCostHistoryChart({
             <div className="chart-footer">
                 <div className="legend-item">
                     <span className="legend-bar cost"></span>
-                    <span>ค่าไฟฟ้า (บาท)</span>
+                    <span>{t('history.cost')} ({t('cost.baht')})</span>
                 </div>
                 <div className="legend-item">
                     <span className="legend-line energy"></span>
-                    <span>{t('history.energy')} (kWh)</span>
+                    <span>{t('history.energy')} ({t('energy.unit')})</span>
                 </div>
             </div>
 

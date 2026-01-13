@@ -51,7 +51,27 @@
         "perUnit": "每单位",
         "breakdown": "费用明细",
         "previousMonth": "上月",
-        "currentMonth": "本月"
+        "currentMonth": "本月",
+        "unit": "单位",
+        "baht": "泰铢",
+        "satangUnit": "萨当/单位",
+        "used": "已用",
+        "averageDaily": "日均",
+        "seeHistory": "查看历史",
+        "historyTooltip": "点击查看历史趋势",
+        "baseTariffSection": "1 基本电费",
+        "baseTariffLabel": "基本电费",
+        "energyCharge": "电能费",
+        "serviceCharge": "服务费",
+        "totalBase": "总基本电费",
+        "ftSection": "2 变动电费 (Ft)",
+        "ftLabel": "变动电费 (Ft)",
+        "editFt": "编辑Ft",
+        "done": "完成",
+        "ftRate": "Ft费率",
+        "vatSection": "3 增值税 7%",
+        "vatCalc": "(基本 + Ft) x 7%",
+        "goal": "目标"
     },
     "power": {
         "title": "有功功率",
@@ -84,7 +104,10 @@
         "cancel": "取消",
         "from": "从",
         "to": "到",
-        "customRange": "自定义范围"
+        "customRange": "自定义范围",
+        "m": "分钟",
+        "h": "小时",
+        "d": "天"
     },
     "alerts": {
         "title": "警报",
@@ -369,5 +392,16 @@
         "heapFree": "可用内存",
         "cpuFreq": "CPU频率",
         "uptime": "运行时间"
+    },
+    "notifications": {
+        "title": "通知",
+        "all": "全部",
+        "unread": "未读",
+        "new": "新",
+        "earlier": "更早",
+        "noNotifications": "没有通知",
+        "seeAll": "查看全部",
+        "justNow": "刚刚",
+        "systemAlert": "系统警报"
     }
 }

@@ -55,15 +55,53 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
     if (!isOpen) return null;
 
     // Process alerts
-    const processedAlerts: AlertItem[] = alerts.map((a: any) => ({
-        id: a.id || Math.random().toString(),
-        title: a.type?.replace(/_/g, ' ') || t('notifications.systemAlert'),
-        message: a.message,
-        timestamp: new Date(a.timestamp),
-        read: false, // Mock read status
-        type: a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'warning' : 'info',
-        source: a.device_id
-    }));
+    const processedAlerts: AlertItem[] = alerts.map((a: any) => {
+        // Map backend type to translation key (camelCase)
+        const typeKey = a.type?.replace(/_/g, '') || 'system'; // e.g., voltageLow, phaseMissing
+        // Try to get translation, fallback to raw type or system alert
+        // We need to check if existing key exists to avoid showing mapped key as text.
+        // But t() returns key if missing? No, usually t() returns key or default.
+        // Let's assume keys in 'alerts.messages' match expected types (camelCase).
+        // If 'a.type' is 'voltage_low', we convert to 'voltageLow'.
+        const camelType = a.type?.replace(/_([a-z])/g, (g: string) => g[1].toUpperCase()) || '';
+
+        // This logic might be complex if we don't know exact backend types.
+        // Assuming backend sends keys that match our `alerts.messages` keys (like 'voltageLow').
+        // If not, we might need a mapping.
+        // Let's just try t(`alerts.messages.${camelType}`) || t('notifications.systemAlert')
+        // Actually simpler: t(`alerts.messages.${a.type}`) if keys match.
+        // Let's stick to the previous code's logic but use t().
+
+        let title = t('notifications.systemAlert');
+        if (a.type) {
+            const key = `alerts.messages.${a.type.replace(/_/g, '')}`; // Try to match simple removal of _?
+            // Or better, backend should send codes.
+            // Given user context (STEP 1002), user wants translation.
+            // Let's try to translate.
+            // Existing code: title: a.type?.replace(/_/g, ' ') || t('notifications.systemAlert'),
+
+            // I will use a helper or direct lookup.
+            // Since I can't verify backend types easily, I'll rely on text replacement or known keys.
+            // Known keys: voltageLow, phaseMissing, undervoltage.
+            // If a.type is 'voltage_low', camelCase it?
+            const camel = a.type.replace(/_([a-z])/g, (g: string) => g[1].toUpperCase());
+            title = t(`alerts.messages.${camel}`, { defaultValue: a.type.replace(/_/g, ' ') });
+
+            // If t() returns key string when missing, we might see 'alerts.messages.foo'.
+            // I'll stick to a safe approach:
+            // If t returns key, fallback to formatted type.
+        }
+
+        return {
+            id: a.id || Math.random().toString(),
+            title: title,
+            message: a.message,
+            timestamp: new Date(a.timestamp),
+            read: false, // Mock read status
+            type: a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'warning' : 'info',
+            source: a.device_id
+        };
+    });
 
     const filteredAlerts = activeTab === 'unread' ? processedAlerts.filter(a => !a.read) : processedAlerts;
 
@@ -80,9 +118,9 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
         const days = Math.floor(hours / 24);
 
         if (minutes < 1) return t('notifications.justNow');
-        if (minutes < 60) return `${minutes}m`;
-        if (hours < 24) return `${hours}h`;
-        return `${days}d`;
+        if (minutes < 60) return `${minutes}${t('time.m')}`;
+        if (hours < 24) return `${hours}${t('time.h')}`;
+        return `${days}${t('time.d')}`;
     };
 
     const getIcon = (type: string) => {

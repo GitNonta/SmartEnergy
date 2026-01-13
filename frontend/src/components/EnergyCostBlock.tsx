@@ -16,6 +16,11 @@ interface MonthInfo {
 
 // Mini Pie Chart Component
 const PieChart: React.FC<{ base: number; ft: number; vat: number }> = ({ base, ft, vat }) => {
+  const { t } = useLanguage(); // Need to use hook here or pass t as prop? 
+  // Hook cannot be used in conditional component effectively if not top level usually, but here it is a FC.
+  // Actually, PieChart is defined outside the main component, so it needs its own hook call or props.
+  // Let's pass t or move PieChart inside? It's defined outside. I'll add useLanguage() inside PieChart.
+
   const total = base + ft + vat;
   if (total === 0) return null;
 
@@ -74,14 +79,14 @@ const PieChart: React.FC<{ base: number; ft: number; vat: number }> = ({ base, f
           {formatCurrency(total)}
         </text>
         <text x="50" y="58" textAnchor="middle" fill="#a8a29e" fontSize="7">
-          บาท
+          {t('cost.baht')}
         </text>
       </svg>
       {/* Legend */}
       <div className="pie-legend">
         <div className="legend-item">
           <span className="dot" style={{ background: '#f59e0b' }}></span>
-          <span>ค่าฐาน {basePercent.toFixed(0)}%</span>
+          <span>{t('cost.baseTariffLabel')} {basePercent.toFixed(0)}%</span>
         </div>
         <div className="legend-item">
           <span className="dot" style={{ background: '#ea580c' }}></span>
@@ -190,24 +195,24 @@ const EnergyCostBlock: React.FC = () => {
       <div
         className="visual-summary clickable group flex items-center gap-6 p-4 bg-slate-50 dark:bg-black/20 rounded-xl mb-4 border border-slate-200 dark:border-white/5 relative transition-all duration-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-black/30 hover:border-amber-400/30 hover:-translate-y-[2px]"
         onClick={() => setShowHistoryChart(true)}
-        title="คลิกเพื่อดูกราฟค่าไฟฟ้าย้อนหลัง"
+        title={t('cost.historyTooltip')}
       >
         <PieChart base={bill.baseTariff} ft={bill.ftCharge} vat={bill.vat} />
         <div className="usage-summary flex-1 flex flex-col gap-3">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[0.65rem] text-slate-500 dark:text-stone-500 uppercase tracking-wider">ใช้ไป</span>
+            <span className="text-[0.65rem] text-slate-500 dark:text-stone-500 uppercase tracking-wider">{t('cost.used')}</span>
             <span className="text-2xl font-bold text-amber-400 font-mono leading-none">{formatCurrency(monthlyEnergy)}</span>
-            <span className="text-[0.7rem] text-slate-400 dark:text-stone-400">หน่วย</span>
+            <span className="text-[0.7rem] text-slate-400 dark:text-stone-400">{t('cost.unit')}</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[0.65rem] text-slate-500 dark:text-stone-500 uppercase tracking-wider">เฉลี่ย/วัน</span>
+            <span className="text-[0.65rem] text-slate-500 dark:text-stone-500 uppercase tracking-wider">{t('cost.averageDaily')}</span>
             <span className="text-2xl font-bold text-amber-400 font-mono leading-none">{formatCurrency(monthlyEnergy / Math.max(new Date().getDate(), 1))}</span>
-            <span className="text-[0.7rem] text-slate-400 dark:text-stone-400">หน่วย</span>
+            <span className="text-[0.7rem] text-slate-400 dark:text-stone-400">{t('cost.unit')}</span>
           </div>
         </div>
         <div className="click-hint absolute bottom-2 right-3 flex items-center gap-1 text-[0.65rem] text-amber-400 opacity-50 transition-opacity duration-200 group-hover:opacity-100">
           <TrendingUp size={14} />
-          <span className="font-medium">ดูย้อนหลัง</span>
+          <span className="font-medium">{t('cost.seeHistory')}</span>
         </div>
       </div>
 
@@ -218,20 +223,20 @@ const EnergyCostBlock: React.FC = () => {
         <div className="border-b border-slate-200 dark:border-white/10 pb-2 mb-1">
           <div className="text-xs text-amber-400 font-bold mb-1 opacity-90 flex items-center">
             <span className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[0.6rem] font-bold text-white mr-1.5 bg-amber-500">1</span>
-            ค่าไฟฟ้าฐาน
+            {t('cost.baseTariffSection')}
           </div>
           <VisualBar value={bill.baseTariff} max={bill.total} color="linear-gradient(90deg, #f59e0b, #fbbf24)" />
           <div className="flex justify-between text-xs text-slate-600 dark:text-stone-300 mb-[3px]">
-            <span>ค่าพลังงานไฟฟ้า ({formatCurrency(monthlyEnergy)} หน่วย)</span>
-            <span className="font-mono font-medium">{formatCurrency(bill.energyCharge)} บาท</span>
+            <span>{t('cost.energyCharge')} ({formatCurrency(monthlyEnergy)} {t('cost.unit')})</span>
+            <span className="font-mono font-medium">{formatCurrency(bill.energyCharge)} {t('cost.baht')}</span>
           </div>
           <div className="flex justify-between text-xs text-slate-600 dark:text-stone-300 mb-[3px]">
-            <span>ค่าบริการ</span>
-            <span className="font-mono font-medium">{formatCurrency(bill.serviceCharge)} บาท</span>
+            <span>{t('cost.serviceCharge')}</span>
+            <span className="font-mono font-medium">{formatCurrency(bill.serviceCharge)} {t('cost.baht')}</span>
           </div>
           <div className="flex justify-between text-xs text-slate-800 dark:text-white mb-[3px] mt-1 font-semibold">
-            <span>รวมค่าไฟฟ้าฐาน</span>
-            <span className="font-mono font-medium text-amber-400">{formatCurrency(bill.baseTariff)} บาท</span>
+            <span>{t('cost.totalBase')}</span>
+            <span className="font-mono font-medium text-amber-400">{formatCurrency(bill.baseTariff)} {t('cost.baht')}</span>
           </div>
         </div>
 
@@ -240,20 +245,20 @@ const EnergyCostBlock: React.FC = () => {
           <div className="text-xs text-amber-400 font-bold mb-1 opacity-90 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[0.6rem] font-bold text-white bg-orange-600">2</span>
-              <span>ค่าไฟฟ้าผันแปร (Ft)</span>
+              <span>{t('cost.ftSection')}</span>
             </div>
             <button
               onClick={() => setIsEditingFt(!isEditingFt)}
               className="bg-transparent border border-amber-400/30 text-amber-400 text-[0.65rem] px-1.5 py-0.5 rounded cursor-pointer hover:bg-amber-400/10 transition-colors"
             >
-              {isEditingFt ? 'Done' : 'Edit Ft'}
+              {isEditingFt ? t('cost.done') : t('cost.editFt')}
             </button>
           </div>
           <VisualBar value={Math.abs(bill.ftCharge)} max={bill.total} color="linear-gradient(90deg, #ea580c, #f97316)" />
 
           <div className="flex justify-between text-xs text-slate-600 dark:text-stone-300 mb-[3px] items-center">
             <div className="flex items-center gap-2">
-              <span>ค่า Ft</span>
+              <span>{t('cost.ftRate')}</span>
               {isEditingFt ? (
                 <div className="flex items-center gap-1">
                   <input
@@ -263,15 +268,15 @@ const EnergyCostBlock: React.FC = () => {
                     step="0.01"
                     className="w-[60px] bg-slate-100 dark:bg-black/30 border border-amber-400 text-slate-900 dark:text-white px-1 py-0.5 rounded text-right text-[0.8rem]"
                   />
-                  <span className="text-[0.75rem] text-slate-500 dark:text-stone-400">สตางค์/หน่วย</span>
+                  <span className="text-[0.75rem] text-slate-500 dark:text-stone-400">{t('cost.satangUnit')}</span>
                 </div>
               ) : (
                 <span className="text-[0.8rem] text-slate-500 dark:text-stone-400">
-                  ({(ftRate * 100).toFixed(2)} สตางค์/หน่วย)
+                  ({(ftRate * 100).toFixed(2)} {t('cost.satangUnit')})
                 </span>
               )}
             </div>
-            <span className="font-mono font-medium">{formatCurrency(bill.ftCharge)} บาท</span>
+            <span className="font-mono font-medium">{formatCurrency(bill.ftCharge)} {t('cost.baht')}</span>
           </div>
         </div>
 
@@ -279,12 +284,12 @@ const EnergyCostBlock: React.FC = () => {
         <div className="border-b border-slate-200 dark:border-white/10 pb-2 mb-1">
           <div className="text-xs text-amber-400 font-bold mb-1 opacity-90 flex items-center">
             <span className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[0.6rem] font-bold text-white mr-1.5 bg-red-600">3</span>
-            ภาษีมูลค่าเพิ่ม 7%
+            {t('cost.vatSection')}
           </div>
           <VisualBar value={bill.vat} max={bill.total} color="linear-gradient(90deg, #dc2626, #ef4444)" />
           <div className="flex justify-between text-xs text-slate-600 dark:text-stone-300 mb-[3px]">
-            <span>(ค่าไฟฟ้าฐาน + ค่า Ft) x 7%</span>
-            <span className="font-mono font-medium">{formatCurrency(bill.vat)} บาท</span>
+            <span>{t('cost.vatCalc')}</span>
+            <span className="font-mono font-medium">{formatCurrency(bill.vat)} {t('cost.baht')}</span>
           </div>
         </div>
 
@@ -293,7 +298,7 @@ const EnergyCostBlock: React.FC = () => {
           <span className="text-[0.85rem] font-bold text-slate-800 dark:text-white">{t('cost.total')}</span>
           <span className="text-[1.4rem] font-extrabold text-amber-400 font-mono">
             {loading ? '...' : formatCurrency(bill.total)}
-            <span className="text-[0.85rem] text-slate-400 dark:text-stone-400 font-sans font-normal ml-1"> บาท</span>
+            <span className="text-[0.85rem] text-slate-400 dark:text-stone-400 font-sans font-normal ml-1"> {t('cost.baht')}</span>
           </span>
         </div>
 
@@ -303,7 +308,7 @@ const EnergyCostBlock: React.FC = () => {
       <div className="mt-4">
         <div className="flex justify-between text-[0.6rem] text-stone-500 mb-1">
           <span>0</span>
-          <span>เป้า 5,000</span>
+          <span>{t('cost.goal')} 5,000</span>
         </div>
         <div className="relative h-1.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-visible">
           <div
@@ -326,8 +331,8 @@ const EnergyCostBlock: React.FC = () => {
 
       {/* History Chart Popup (Portal เพื่อแก้ z-index stacking) */}
       {showHistoryChart && createPortal(
-        <div className="history-chart-overlay fixed inset-0 bg-white/90 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-200" onClick={() => setShowHistoryChart(false)}>
-          <div className="history-chart-popup w-full max-w-[900px] max-h-[90vh] bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900 rounded-2xl border border-slate-200 dark:border-amber-400/20 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
+        <div className="history-chart-overlay fixed inset-0 bg-slate-900/20 dark:bg-black/80 backdrop-blur-[6px] flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-300" onClick={() => setShowHistoryChart(false)}>
+          <div className="history-chart-popup w-full max-w-[950px] max-h-[90vh] bg-white dark:bg-gradient-to-b dark:from-slate-800 dark:to-slate-950 rounded-3xl border border-white/50 dark:border-amber-500/20 shadow-2xl dark:shadow-amber-900/20 overflow-hidden ring-1 ring-black/5 dark:ring-white/5 animate-in slide-in-from-bottom-8 zoom-in-95 duration-500 ease-out" onClick={(e) => e.stopPropagation()}>
             <EnergyCostHistoryChart
               initialMode="monthly"
               onClose={() => setShowHistoryChart(false)}

@@ -51,7 +51,27 @@
         "perUnit": "ต่อหน่วย",
         "breakdown": "รายละเอียดค่าใช้จ่าย",
         "previousMonth": "เดือนก่อน",
-        "currentMonth": "เดือนนี้"
+        "currentMonth": "เดือนนี้",
+        "unit": "หน่วย",
+        "baht": "บาท",
+        "satangUnit": "สตางค์/หน่วย",
+        "used": "ใช้ไป",
+        "averageDaily": "เฉลี่ย/วัน",
+        "seeHistory": "ดูย้อนหลัง",
+        "historyTooltip": "คลิกเพื่อดูกราฟค่าไฟฟ้าย้อนหลัง",
+        "baseTariffSection": "1 ค่าไฟฟ้าฐาน",
+        "baseTariffLabel": "ค่าไฟฟ้าฐาน",
+        "energyCharge": "ค่าพลังงานไฟฟ้า",
+        "serviceCharge": "ค่าบริการ",
+        "totalBase": "รวมค่าไฟฟ้าฐาน",
+        "ftSection": "2 ค่าไฟฟ้าผันแปร (Ft)",
+        "ftLabel": "ค่าไฟฟ้าผันแปร (Ft)",
+        "editFt": "แก้ไข Ft",
+        "done": "เสร็จสิ้น",
+        "ftRate": "ค่า Ft",
+        "vatSection": "3 ภาษีมูลค่าเพิ่ม 7%",
+        "vatCalc": "(ค่าไฟฟ้าฐาน + ค่า Ft) x 7%",
+        "goal": "เป้า"
     },
     "power": {
         "title": "กำลังไฟฟ้า",
@@ -84,7 +104,10 @@
         "cancel": "ยกเลิก",
         "from": "จาก",
         "to": "ถึง",
-        "customRange": "ช่วงเวลาที่กำหนดเอง"
+        "customRange": "ช่วงเวลาที่กำหนดเอง",
+        "m": " นาที",
+        "h": " ชม.",
+        "d": " วัน"
     },
     "alerts": {
         "title": "การแจ้งเตือน",

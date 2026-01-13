@@ -51,7 +51,27 @@
         "perUnit": "per unit",
         "breakdown": "Cost Breakdown",
         "previousMonth": "Previous Month",
-        "currentMonth": "Current Month"
+        "currentMonth": "Current Month",
+        "unit": "Unit",
+        "baht": "Baht",
+        "satangUnit": "Satang/Unit",
+        "used": "USED",
+        "averageDaily": "AVG/DAY",
+        "seeHistory": "See History",
+        "historyTooltip": "Click to see history",
+        "baseTariffSection": "1 Base Tariff",
+        "baseTariffLabel": "Base Tariff",
+        "energyCharge": "Energy Charge",
+        "serviceCharge": "Service Charge",
+        "totalBase": "Total Base Tariff",
+        "ftSection": "2 Variable Tariff (Ft)",
+        "ftLabel": "Variable Tariff (Ft)",
+        "editFt": "Edit Ft",
+        "done": "Done",
+        "ftRate": "Ft Rate",
+        "vatSection": "3 VAT 7%",
+        "vatCalc": "(Base + Ft) x 7%",
+        "goal": "Goal"
     },
     "power": {
         "title": "Active Power",
@@ -83,8 +103,11 @@
         "apply": "Apply",
         "cancel": "Cancel",
         "from": "From",
-        "to": "To",
-        "customRange": "Custom Range"
+        "to": "ถึง",
+        "customRange": "ช่วงเวลาที่กำหนดเอง",
+        "m": " นาที",
+        "h": " ชม.",
+        "d": " วัน"
     },
     "alerts": {
         "title": "Alerts",
