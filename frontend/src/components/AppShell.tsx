@@ -23,82 +23,15 @@ import UserMenuDropdown from './UserMenuDropdown';
 
 // --- Types & Constants ---
 
-type ThemeColor = 'blue' | 'emerald' | 'violet' | 'amber' | 'rose';
-
-interface ThemeConfig {
-  name: string;
-  primary: string;      // Gradient for headers
-  accent: string;       // bg-{color}-600
-  accentHover: string;  // hover:bg-{color}-700
-  accentLight: string;  // bg-{color}-100 / dark:bg-{color}-900/20
-  text: string;         // text-{color}-600 / dark:text-{color}-400
-  border: string;       // border-{color}-200 / dark:border-{color}-700
-  ring: string;
-  bg: string;           // Solid color for the curve effect
-  darkBg: string;       // Solid color for dark mode curve
-}
-
-const THEMES: Record<ThemeColor, ThemeConfig> = {
-  blue: {
-    name: 'Ocean Blue',
-    primary: 'from-blue-600 to-indigo-700',
-    accent: 'bg-blue-600',
-    accentHover: 'hover:bg-blue-700',
-    accentLight: 'bg-blue-100 dark:bg-blue-900/20',
-    text: 'text-blue-600 dark:text-blue-400',
-    border: 'border-blue-200 dark:border-blue-700',
-    ring: 'ring-blue-500',
-    bg: '#eff6ff', // blue-50
-    darkBg: '#1e3a8a' // blue-900
-  },
-  emerald: {
-    name: 'Forest Emerald',
-    primary: 'from-emerald-600 to-teal-700',
-    accent: 'bg-emerald-600',
-    accentHover: 'hover:bg-emerald-700',
-    accentLight: 'bg-emerald-100 dark:bg-emerald-900/20',
-    text: 'text-emerald-600 dark:text-emerald-400',
-    border: 'border-emerald-200 dark:border-emerald-700',
-    ring: 'ring-emerald-500',
-    bg: '#ecfdf5', // emerald-50
-    darkBg: '#064e3b' // emerald-900
-  },
-  violet: {
-    name: 'Royal Violet',
-    primary: 'from-violet-600 to-purple-700',
-    accent: 'bg-violet-600',
-    accentHover: 'hover:bg-violet-700',
-    accentLight: 'bg-violet-100 dark:bg-violet-900/20',
-    text: 'text-violet-600 dark:text-violet-400',
-    border: 'border-violet-200 dark:border-violet-700',
-    ring: 'ring-violet-500',
-    bg: '#f5f3ff', // violet-50
-    darkBg: '#4c1d95' // violet-900
-  },
-  amber: {
-    name: 'Sunset Amber',
-    primary: 'from-amber-500 to-orange-600',
-    accent: 'bg-amber-500',
-    accentHover: 'hover:bg-amber-600',
-    accentLight: 'bg-amber-100 dark:bg-amber-900/20',
-    text: 'text-amber-600 dark:text-amber-400',
-    border: 'border-amber-200 dark:border-amber-700',
-    ring: 'ring-amber-500',
-    bg: '#fffbeb', // amber-50
-    darkBg: '#78350f' // amber-900
-  },
-  rose: {
-    name: 'Crimson Rose',
-    primary: 'from-rose-500 to-pink-600',
-    accent: 'bg-rose-500',
-    accentHover: 'hover:bg-rose-600',
-    accentLight: 'bg-rose-100 dark:bg-rose-900/20',
-    text: 'text-rose-600 dark:text-rose-400',
-    border: 'border-rose-200 dark:border-rose-700',
-    ring: 'ring-rose-500',
-    bg: '#fff1f2', // rose-50
-    darkBg: '#881337' // rose-900
-  }
+// Fixed theme colors (Blue gradient)
+export const THEME = {
+  primary: 'from-blue-600 to-indigo-700',
+  accent: 'bg-blue-600',
+  accentHover: 'hover:bg-blue-700',
+  accentLight: 'bg-blue-100 dark:bg-blue-900/20',
+  text: 'text-blue-600 dark:text-blue-400',
+  border: 'border-blue-200 dark:border-blue-700',
+  ring: 'ring-blue-500',
 };
 
 // --- Contexts ---
@@ -106,9 +39,6 @@ const THEMES: Record<ThemeColor, ThemeConfig> = {
 interface ThemeContextType {
   darkMode: boolean;
   toggleDarkMode: () => void;
-  themeColor: ThemeColor;
-  setThemeColor: (color: ThemeColor) => void;
-  currentTheme: ThemeConfig;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -138,7 +68,8 @@ const TranslatedLabel: React.FC<{ labelKey: string }> = ({ labelKey }) => {
 // Mobile Bottom Navigation Component
 const MobileBottomNav = ({ navItems }: { navItems: { id: string; labelKey: string; path: string; icon: any }[] }) => {
   const location = useLocation();
-  const { currentTheme } = useTheme();
+  // Fixed theme used directly
+  const theme = THEME;
 
   // Find active index based on current path
   const activeIndex = navItems.findIndex(item =>
@@ -193,7 +124,7 @@ const MobileBottomNav = ({ navItems }: { navItems: { id: string; labelKey: strin
           }}
         >
           {/* The Circle */}
-          <div className={`w-16 h-16 rounded-full border-[6px] border-gray-50 dark:border-gray-900 ${currentTheme.accent} flex items-center justify-center shadow-lg`}>
+          <div className={`w-16 h-16 rounded-full border-[6px] border-gray-50 dark:border-gray-900 ${THEME.accent} flex items-center justify-center shadow-lg`}>
             {/* Icon placeholder is handled by the Link above */}
           </div>
 
@@ -210,7 +141,8 @@ const MobileBottomNav = ({ navItems }: { navItems: { id: string; labelKey: strin
 
 // TimeSelectorBlock Component - Now integrated with TimeRangeContext
 const TimeSelectorBlock: React.FC = () => {
-  const { currentTheme } = useTheme();
+  // Theme used directly
+  const theme = THEME;
   const { mode, setMode, openCalendar, getDisplayLabel } = useTimeRange();
   const { t } = useLanguage();
 
@@ -232,7 +164,7 @@ const TimeSelectorBlock: React.FC = () => {
             className={`
               px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 whitespace-nowrap
               ${mode === option.value
-                ? `bg-white dark:bg-gray-600 shadow-sm ring-1 ring-black/5 dark:ring-white/10 ${currentTheme.accent.replace('bg-', 'text-')}`
+                ? `bg-white dark:bg-gray-600 shadow-sm ring-1 ring-black/5 dark:ring-white/10 ${theme.accent.replace('bg-', 'text-')}`
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-600/50'}
             `}
           >
@@ -247,7 +179,7 @@ const TimeSelectorBlock: React.FC = () => {
         className={`
           p-2.5 rounded-full border transition-all duration-200
           ${mode === 'custom'
-            ? `${currentTheme.accent} text-white border-transparent shadow-md`
+            ? `${theme.accent} text-white border-transparent shadow-md`
             : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'}
         `}
         title="Select custom date range"
@@ -279,7 +211,7 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
   const location = useLocation();
   const currentPage = location.pathname.split('/')[1] || 'dashboard';
 
-  const [showThemePicker, setShowThemePicker] = useState(false);
+  // Removed theme picker state
   // Removed: timeRange state now managed by TimeRangeContext
 
   // Get real-time alerts from WebSocket
@@ -294,9 +226,7 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
     return saved !== null ? JSON.parse(saved) : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
-  const [themeColor, setThemeColorState] = useState<ThemeColor>(() => {
-    return (localStorage.getItem('themeColor') as ThemeColor) || 'emerald'; // Default to emerald to match system
-  });
+  // Removed themeColor state
 
   // Effects
   useEffect(() => {
@@ -308,20 +238,18 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
-  useEffect(() => {
-    localStorage.setItem('themeColor', themeColor);
-  }, [themeColor]);
+  // Removed themeColor effect
 
   // Close menus on route change
-  useEffect(() => {
-    setShowThemePicker(false);
-  }, [location]);
+  // useEffect(() => {
+  //   setShowThemePicker(false);
+  // }, [location]);
 
   // Handlers
   const toggleDarkMode = () => setDarkMode((prev: boolean) => !prev);
-  const setThemeColor = (color: ThemeColor) => setThemeColorState(color);
 
-  const currentTheme = THEMES[themeColor];
+  // Fixed theme used directly
+  const currentTheme = THEME; // Keep variable name for minimal diff in return, or could replace below
 
   // Use translation keys - actual translation happens in NavItem components
   const navItems = [
@@ -334,10 +262,9 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
   return (
     <LanguageProvider defaultLanguage="en">
       <TimeRangeProvider defaultMode="realtime">
-        <ThemeContext.Provider value={{ darkMode, toggleDarkMode, themeColor, setThemeColor, currentTheme }}>
+        <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
           <div
-            className="min-h-screen transition-colors duration-200 font-sans pb-24 lg:pb-0"
-            style={{ backgroundColor: darkMode ? currentTheme.darkBg : currentTheme.bg }}
+            className="min-h-screen transition-colors duration-200 font-sans pb-24 lg:pb-0 bg-slate-50 dark:bg-slate-900"
           >
 
             {/* Navigation Bar - Responsive Top for Desktop */}
@@ -383,42 +310,7 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
                     {/* Language Selector */}
                     <LanguageSelector />
 
-                    {/* Theme Picker */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowThemePicker(!showThemePicker)}
-                        className={`p-2 rounded-full hover:bg-white/10 transition-colors ${showThemePicker ? 'bg-white/20' : ''}`}
-                      >
-                        <Palette className="w-5 h-5 text-white/90" />
-                      </button>
-                      {showThemePicker && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setShowThemePicker(false)} />
-                          <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl ring-1 ring-black/5 z-20 overflow-hidden">
-                            <div className="p-2 space-y-1">
-                              {(Object.keys(THEMES) as ThemeColor[]).map((t) => (
-                                <button
-                                  key={t}
-                                  onClick={() => setThemeColor(t)}
-                                  className={`
-                                w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors
-                                ${themeColor === t
-                                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'}
-                              `}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-4 h-4 rounded-full bg-gradient-to-br ${THEMES[t].primary}`} />
-                                    <span className="capitalize">{t}</span>
-                                  </div>
-                                  {themeColor === t && <Check className="w-4 h-4 text-gray-500" />}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    {/* Theme Picker Removed */}
 
                     <button
                       onClick={toggleDarkMode}

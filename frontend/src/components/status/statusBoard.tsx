@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useWebSocket } from '../../context/WebSocketContext';
 import { getApiBase } from '../../config/api';
-import { useTheme } from '../AppShell';
+import { useTheme, THEME } from '../AppShell';
 import { useLanguage } from '../../context/LanguageContext';
 
 /**
@@ -463,7 +463,8 @@ const AIDiagnosisModal = ({ isOpen, onClose, loading, report, error, title }: an
 
 // --- MAIN PAGE ---
 export default function StatusDashboard() {
-  const { darkMode, currentTheme } = useTheme();
+  const { darkMode } = useTheme();
+  const currentTheme = THEME;
   const { t } = useLanguage();
   const status = useSystemHealth();
   const { report, loading, error, generateReport, targetTitle } = useGeminiDiagnosis();

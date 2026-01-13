@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './StatisticsBlock.css';
 import { getApiBase } from '../config/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from './AppShell';
 import { Activity, Zap, Gauge, TrendingUp, AlertTriangle, RefreshCw, BarChart2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, ComposedChart, ReferenceLine } from 'recharts';
 
@@ -95,7 +96,16 @@ const StatisticsBlock: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showChart, setShowChart] = useState(true);
+
     const { t } = useLanguage();
+    const { darkMode } = useTheme();
+
+    const chartColors = {
+        stroke: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+        text: darkMode ? '#94a3b8' : '#64748b',
+        grid: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+        area: darkMode ? '#3b82f6' : '#2563eb'
+    };
 
     const fetchStatistics = useCallback(async () => {
         setLoading(true);
@@ -222,17 +232,17 @@ const StatisticsBlock: React.FC = () => {
                                             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                                     <XAxis
                                         dataKey="hour"
-                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
-                                        axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                                        tick={{ fill: chartColors.text, fontSize: 10 }}
+                                        axisLine={{ stroke: chartColors.stroke }}
                                         tickLine={false}
                                         interval="preserveStartEnd"
                                     />
                                     <YAxis
-                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
-                                        axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                                        tick={{ fill: chartColors.text, fontSize: 10 }}
+                                        axisLine={{ stroke: chartColors.stroke }}
                                         tickLine={false}
                                         tickFormatter={(v) => `${v}`}
                                     />
@@ -240,7 +250,7 @@ const StatisticsBlock: React.FC = () => {
                                     <Area
                                         type="monotone"
                                         dataKey="power"
-                                        stroke="#3b82f6"
+                                        stroke={chartColors.area}
                                         fill="url(#powerGradient)"
                                         strokeWidth={2}
                                         dot={false}

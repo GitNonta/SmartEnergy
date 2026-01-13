@@ -89,3 +89,30 @@
     font-size: 0.85rem;
   }
 }
+
+/* ===================================
+   LIGHT MODE OVERRIDES
+   =================================== */
+
+html:not(.dark) .power-factor-block-component {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .card-header-label {
+  color: #475569;
+}
+
+html:not(.dark) .circle-bg {
+  stroke: rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .pf-label {
+  color: #64748b;
+}
+
+html:not(.dark) .pf-value {
+  /* Colors for value are inline style, but base color if needed */
+  color: #0f172a;
+}

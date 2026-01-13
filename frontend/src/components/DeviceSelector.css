@@ -68,3 +68,38 @@
         opacity: 0.3;
     }
 }
+
+/* ===================================
+   LIGHT MODE OVERRIDES
+   =================================== */
+
+html:not(.dark) .device-selector {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    /* slate-200 */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .device-selector label {
+    color: #475569;
+    /* slate-600 */
+}
+
+html:not(.dark) .device-selector select {
+    background: #f8fafc;
+    /* slate-50 */
+    color: #0891b2;
+    /* cyan-600 */
+    border: 1px solid #cbd5e1;
+    /* slate-300 */
+}
+
+html:not(.dark) .device-selector select:hover {
+    border-color: #0891b2;
+    background: #f1f5f9;
+}
+
+html:not(.dark) .device-selector select option {
+    background: #ffffff;
+    color: #0f172a;
+}

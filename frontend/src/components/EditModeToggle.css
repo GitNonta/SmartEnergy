@@ -137,3 +137,23 @@
         height: 44px;
     }
 }
+
+/* ===================================
+   LIGHT MODE OVERRIDES
+   =================================== */
+
+html:not(.dark) .edit-controls {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+html:not(.dark) .cancel-btn {
+    background: rgba(0, 0, 0, 0.05);
+    color: #64748b;
+}
+
+html:not(.dark) .cancel-btn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.1);
+    color: #0f172a;
+}

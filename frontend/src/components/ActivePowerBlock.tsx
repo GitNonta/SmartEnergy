@@ -44,15 +44,15 @@ const ActivePowerBlock: React.FC<ActivePowerBlockProps> = ({
 
     return (
       <div
-        className="flex flex-col gap-1.5 p-1.5 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-white/5 active:bg-white/10 active:scale-[0.99]"
+        className="flex flex-col gap-1.5 p-1.5 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-emerald-50 dark:hover:bg-white/5 active:bg-emerald-100 dark:active:bg-white/10 active:scale-[0.99]"
         onClick={() => setSelectedView(mode)}
         title={`Click to analyze ${label} Power Graph`}
       >
         <div className="flex justify-between items-center text-[0.8rem]">
-          <span className="bg-white/5 px-1.5 py-0.5 rounded text-slate-400 font-semibold font-sans">{label}</span>
-          <span className="text-slate-200 font-mono font-semibold">{value.toFixed(1)} <span className="text-[0.7em] text-slate-500">W</span></span>
+          <span className="bg-emerald-100 dark:bg-white/5 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-400 font-semibold font-sans">{label}</span>
+          <span className="text-slate-900 dark:text-slate-200 font-mono font-semibold">{value.toFixed(1)} <span className="text-[0.7em] text-slate-500">W</span></span>
         </div>
-        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
           <div
             style={{ width: `${percentage}%` }}
           ></div>
@@ -63,7 +63,7 @@ const ActivePowerBlock: React.FC<ActivePowerBlockProps> = ({
 
   return (
     <>
-      <div className="active-power-modern w-full min-h-[200px] rounded-xl border border-emerald-500/20 bg-gradient-to-b from-slate-800 to-emerald-950 p-5 transition-all duration-200 hover:border-emerald-500/30 relative overflow-hidden flex flex-col font-sans">
+      <div className="active-power-modern w-full min-h-[200px] rounded-xl border border-slate-200 dark:border-emerald-500/20 bg-white dark:bg-gradient-to-b dark:from-slate-800 dark:to-emerald-950 p-5 transition-all duration-200 hover:border-emerald-500/30 relative overflow-hidden flex flex-col font-sans shadow-sm dark:shadow-none">
         {/* Decorative Top Line */}
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 z-10" />
 
@@ -75,7 +75,7 @@ const ActivePowerBlock: React.FC<ActivePowerBlockProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <span className="text-[0.85rem] font-bold text-emerald-200 tracking-wider font-sans">{t('power.title').toUpperCase()}</span>
+            <span className="text-[0.85rem] font-bold text-emerald-800 dark:text-emerald-200 tracking-wider font-sans">{t('power.title').toUpperCase()}</span>
           </div>
           <div className={`px-2.5 py-1 rounded-full text-[0.65rem] font-bold flex items-center gap-1.5 backdrop-blur-sm border ${isConnected && !isStale ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-red-500/15 text-red-400 border-red-500/20'}`}>
             <span className={`w-1.5 h-1.5 rounded-full bg-current`}></span>
@@ -85,16 +85,16 @@ const ActivePowerBlock: React.FC<ActivePowerBlockProps> = ({
 
         {/* Total Power Section (Clickable) */}
         <div
-          className="text-center mb-8 relative p-2.5 cursor-pointer rounded-lg transition-colors hover:bg-white/5 active:bg-white/10 active:scale-[0.99]"
+          className="text-center mb-8 relative p-2.5 cursor-pointer rounded-lg transition-colors hover:bg-emerald-50 dark:hover:bg-white/5 active:bg-emerald-100 dark:active:bg-white/10 active:scale-[0.99]"
           onClick={() => setSelectedView('total')}
           title="Click to analyze Total Power Graph"
         >
-          <div className="text-[0.7rem] text-emerald-300 tracking-[0.1em] mb-2 opacity-80 uppercase font-sans">TOTAL CONSUMPTION</div>
+          <div className="text-[0.7rem] text-emerald-600 dark:text-emerald-300 tracking-[0.1em] mb-2 opacity-80 uppercase font-sans">TOTAL CONSUMPTION</div>
           <div className="flex justify-center items-baseline gap-1.5">
-            <span className={`total-value text-5xl font-extrabold font-mono leading-none ${isStale ? 'text-slate-500' : 'text-white'}`}>
+            <span className={`total-value text-5xl font-extrabold font-mono leading-none ${isStale ? 'text-slate-500' : 'text-slate-900 dark:text-white'}`}>
               {displayData.total.toFixed(1)}
             </span>
-            <span className="text-base font-semibold text-emerald-400">W</span>
+            <span className="text-base font-semibold text-emerald-600 dark:text-emerald-400">W</span>
           </div>
         </div>
 

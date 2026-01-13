@@ -327,3 +327,71 @@
   padding-top: 0.75rem;
   font-style: italic;
 }
+
+/* ===================================
+   LIGHT MODE OVERRIDES
+   =================================== */
+
+html:not(.dark) .current-block-modern {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .current-block-modern:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+html:not(.dark) .icon-wrapper {
+  background: rgba(14, 165, 233, 0.1);
+  /* sky-500/10 */
+  color: #0284c7;
+  /* sky-600 */
+}
+
+html:not(.dark) .title-label {
+  color: #475569;
+  /* slate-600 */
+}
+
+html:not(.dark) .current-row-modern:hover {
+  background-color: #f8fafc;
+  /* slate-50 */
+}
+
+html:not(.dark) .phase-indicator {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .value-display {
+  color: #0f172a;
+  /* slate-900 */
+  text-shadow: none;
+}
+
+html:not(.dark) .value-display.stale {
+  color: #94a3b8;
+}
+
+html:not(.dark) .bar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .modern-footer {
+  border-top-color: #e2e8f0;
+}
+
+html:not(.dark) .footer-label {
+  color: #64748b;
+}
+
+html:not(.dark) .footer-value {
+  color: #334155;
+  background: #f1f5f9;
+}
+
+html:not(.dark) .hint-text-bottom {
+  color: #94a3b8;
+}

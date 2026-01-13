@@ -458,3 +458,122 @@
 .legend-line.min {
     background: #22c55e;
 }
+
+/* ===================================
+   LIGHT MODE OVERRIDES
+   =================================== */
+
+html:not(.dark) .statistics-block {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .statistics-header {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+html:not(.dark) .statistics-title h3 {
+    color: #0f172a;
+}
+
+html:not(.dark) .time-range-select,
+html:not(.dark) .refresh-btn,
+html:not(.dark) .chart-toggle-btn {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+}
+
+html:not(.dark) .time-range-select:hover,
+html:not(.dark) .refresh-btn:hover,
+html:not(.dark) .chart-toggle-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+html:not(.dark) .stat-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+html:not(.dark) .stat-card:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+html:not(.dark) .stat-card-header {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+html:not(.dark) .stat-card-title {
+    color: #475569;
+}
+
+html:not(.dark) .stat-value {
+    color: #0f172a;
+}
+
+html:not(.dark) .stat-unit {
+    color: #64748b;
+}
+
+html:not(.dark) .pf-card,
+html:not(.dark) .energy-total-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+html:not(.dark) .pf-header,
+html:not(.dark) .energy-header {
+    color: #475569;
+}
+
+html:not(.dark) .pf-value,
+html:not(.dark) .energy-value {
+    /* Main colors usually okay, but background needs to be light */
+    color: #334155;
+}
+
+html:not(.dark) .pf-value {
+    color: #10b981;
+    /* emerald-500 */
+}
+
+html:not(.dark) .energy-value {
+    color: #f59e0b;
+    /* amber-500 */
+}
+
+html:not(.dark) .chart-header {
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+html:not(.dark) .statistics-chart-container {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+html:not(.dark) .chart-tooltip {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+}
+
+html:not(.dark) .tooltip-time {
+    color: #64748b;
+}
+
+html:not(.dark) .tooltip-value strong {
+    color: #0f172a;
+}
+
+html:not(.dark) .legend-item {
+    color: #64748b;
+}
+
+html:not(.dark) .stats-footer {
+    border-top: 1px solid #e2e8f0;
+    color: #94a3b8;
+}

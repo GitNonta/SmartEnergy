@@ -23,6 +23,7 @@ import TimeRangeSummaryPanel from '../../components/TimeRangeSummaryPanel';
 import StatisticsBlock from '../../components/StatisticsBlock';
 import { DashboardLayoutProvider, useDashboardLayout } from '../../context/DashboardLayoutContext';
 import EditModeToggle from '../../components/EditModeToggle';
+import DeviceSelector from '../../components/DeviceSelector';
 import { LayoutItem, widgetConfig } from '../../config/defaultDashboardLayout';
 import './DashboardPage.css';
 
@@ -50,6 +51,7 @@ const DashboardContent: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [containerWidth, setContainerWidth] = useState(1200);
+  const [selectedDevice, setSelectedDevice] = useState('AI205');
 
   // Real-time clock effect
   useEffect(() => {
@@ -190,6 +192,11 @@ const DashboardContent: React.FC = () => {
         </div>
 
         <div className="w-full md:w-auto flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          {/* Device Selector */}
+          <DeviceSelector
+            selectedDevice={selectedDevice}
+            onDeviceChange={setSelectedDevice}
+          />
           <div className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 px-4 py-2 rounded-xl border border-slate-200 dark:border-white/5">
             <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
             <div className="flex flex-col leading-tight">

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import './EnergyCostBlock.css';
 import { getApiBase } from '../config/api';
 import { calculateBill, formatCurrency, TARIFF_CONFIG, type BillBreakdown } from '../utils/tariffCalc';
-import { useTheme } from './AppShell';
+import { useTheme, THEME } from './AppShell';
 import { useLanguage } from '../context/LanguageContext';
 import { TrendingUp } from 'lucide-react';
 import EnergyCostHistoryChart from './EnergyCostHistoryChart';
@@ -122,10 +122,10 @@ const EnergyCostBlock: React.FC = () => {
   const [showHistoryChart, setShowHistoryChart] = useState(false);
 
   // Get theme and language - hooks must be called unconditionally at top level
-  const { currentTheme } = useTheme();
+  // Fixed theme used directly
+  const theme = THEME;
+  const themeAccent = THEME.accent;
   const { t } = useLanguage();
-  const themeAccent = currentTheme?.accent ?? 'bg-amber-500';
-
   // ✅ Use utility function instead of hardcoded logic
   const bill: BillBreakdown = calculateBill(monthlyEnergy, ftRate);
 
@@ -172,7 +172,7 @@ const EnergyCostBlock: React.FC = () => {
   }, []);
 
   return (
-    <div className="energy-cost-block-modern w-full min-h-[180px] rounded-xl border border-amber-400/15 bg-gradient-to-br from-slate-800 to-stone-800 p-5 transition-all duration-200 hover:border-amber-400/25 text-stone-200 font-sans relative overflow-hidden flex flex-col">
+    <div className="energy-cost-block-modern w-full min-h-[180px] rounded-xl border border-slate-200 dark:border-amber-400/15 bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-stone-800 p-5 transition-all duration-200 hover:border-amber-400/50 dark:hover:border-amber-400/25 text-slate-800 dark:text-stone-200 font-sans relative overflow-hidden flex flex-col shadow-sm dark:shadow-none">
       {/* Header */}
       <div className="flex items-center gap-4 mb-4">
         <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-700 rounded-lg flex items-center justify-center">
@@ -180,7 +180,7 @@ const EnergyCostBlock: React.FC = () => {
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-extrabold text-amber-400 tracking-wider font-sans">{t('cost.title').toUpperCase()}</span>
-          <span className="text-[0.7rem] text-stone-400 font-medium">
+          <span className="text-[0.7rem] text-slate-500 dark:text-stone-400 font-medium">
             {monthInfo ? `${monthInfo.name} ${monthInfo.year}` : t('common.loading')} • Type {TARIFF_CONFIG.type}
           </span>
         </div>
@@ -188,21 +188,21 @@ const EnergyCostBlock: React.FC = () => {
 
       {/* Visual Summary - Pie Chart (คลิกเพื่อดูย้อนหลัง) */}
       <div
-        className="visual-summary clickable group flex items-center gap-6 p-4 bg-black/20 rounded-xl mb-4 border border-white/5 relative transition-all duration-200 cursor-pointer hover:bg-black/30 hover:border-amber-400/30 hover:-translate-y-[2px]"
+        className="visual-summary clickable group flex items-center gap-6 p-4 bg-slate-50 dark:bg-black/20 rounded-xl mb-4 border border-slate-200 dark:border-white/5 relative transition-all duration-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-black/30 hover:border-amber-400/30 hover:-translate-y-[2px]"
         onClick={() => setShowHistoryChart(true)}
         title="คลิกเพื่อดูกราฟค่าไฟฟ้าย้อนหลัง"
       >
         <PieChart base={bill.baseTariff} ft={bill.ftCharge} vat={bill.vat} />
         <div className="usage-summary flex-1 flex flex-col gap-3">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[0.65rem] text-stone-500 uppercase tracking-wider">ใช้ไป</span>
+            <span className="text-[0.65rem] text-slate-500 dark:text-stone-500 uppercase tracking-wider">ใช้ไป</span>
             <span className="text-2xl font-bold text-amber-400 font-mono leading-none">{formatCurrency(monthlyEnergy)}</span>
-            <span className="text-[0.7rem] text-stone-400">หน่วย</span>
+            <span className="text-[0.7rem] text-slate-400 dark:text-stone-400">หน่วย</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[0.65rem] text-stone-500 uppercase tracking-wider">เฉลี่ย/วัน</span>
+            <span className="text-[0.65rem] text-slate-500 dark:text-stone-500 uppercase tracking-wider">เฉลี่ย/วัน</span>
             <span className="text-2xl font-bold text-amber-400 font-mono leading-none">{formatCurrency(monthlyEnergy / Math.max(new Date().getDate(), 1))}</span>
-            <span className="text-[0.7rem] text-stone-400">หน่วย</span>
+            <span className="text-[0.7rem] text-slate-400 dark:text-stone-400">หน่วย</span>
           </div>
         </div>
         <div className="click-hint absolute bottom-2 right-3 flex items-center gap-1 text-[0.65rem] text-amber-400 opacity-50 transition-opacity duration-200 group-hover:opacity-100">
@@ -215,28 +215,28 @@ const EnergyCostBlock: React.FC = () => {
       <div className="flex-grow flex flex-col gap-3">
 
         {/* Section 1: Base Tariff */}
-        <div className="border-b border-white/10 pb-2 mb-1">
+        <div className="border-b border-slate-200 dark:border-white/10 pb-2 mb-1">
           <div className="text-xs text-amber-400 font-bold mb-1 opacity-90 flex items-center">
             <span className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[0.6rem] font-bold text-white mr-1.5 bg-amber-500">1</span>
             ค่าไฟฟ้าฐาน
           </div>
           <VisualBar value={bill.baseTariff} max={bill.total} color="linear-gradient(90deg, #f59e0b, #fbbf24)" />
-          <div className="flex justify-between text-xs text-stone-300 mb-[3px]">
+          <div className="flex justify-between text-xs text-slate-600 dark:text-stone-300 mb-[3px]">
             <span>ค่าพลังงานไฟฟ้า ({formatCurrency(monthlyEnergy)} หน่วย)</span>
             <span className="font-mono font-medium">{formatCurrency(bill.energyCharge)} บาท</span>
           </div>
-          <div className="flex justify-between text-xs text-stone-300 mb-[3px]">
+          <div className="flex justify-between text-xs text-slate-600 dark:text-stone-300 mb-[3px]">
             <span>ค่าบริการ</span>
             <span className="font-mono font-medium">{formatCurrency(bill.serviceCharge)} บาท</span>
           </div>
-          <div className="flex justify-between text-xs text-white mb-[3px] mt-1 font-semibold">
+          <div className="flex justify-between text-xs text-slate-800 dark:text-white mb-[3px] mt-1 font-semibold">
             <span>รวมค่าไฟฟ้าฐาน</span>
             <span className="font-mono font-medium text-amber-400">{formatCurrency(bill.baseTariff)} บาท</span>
           </div>
         </div>
 
         {/* Section 2: Ft (Editable) */}
-        <div className="border-b border-white/10 pb-2 mb-1">
+        <div className="border-b border-slate-200 dark:border-white/10 pb-2 mb-1">
           <div className="text-xs text-amber-400 font-bold mb-1 opacity-90 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[0.6rem] font-bold text-white bg-orange-600">2</span>
@@ -251,7 +251,7 @@ const EnergyCostBlock: React.FC = () => {
           </div>
           <VisualBar value={Math.abs(bill.ftCharge)} max={bill.total} color="linear-gradient(90deg, #ea580c, #f97316)" />
 
-          <div className="flex justify-between text-xs text-stone-300 mb-[3px] items-center">
+          <div className="flex justify-between text-xs text-slate-600 dark:text-stone-300 mb-[3px] items-center">
             <div className="flex items-center gap-2">
               <span>ค่า Ft</span>
               {isEditingFt ? (
@@ -261,12 +261,12 @@ const EnergyCostBlock: React.FC = () => {
                     value={(ftRate * 100).toFixed(2)}
                     onChange={(e) => setFtRate(Number(e.target.value) / 100)}
                     step="0.01"
-                    className="w-[60px] bg-black/30 border border-amber-400 text-white px-1 py-0.5 rounded text-right text-[0.8rem]"
+                    className="w-[60px] bg-slate-100 dark:bg-black/30 border border-amber-400 text-slate-900 dark:text-white px-1 py-0.5 rounded text-right text-[0.8rem]"
                   />
-                  <span className="text-[0.75rem] text-stone-400">สตางค์/หน่วย</span>
+                  <span className="text-[0.75rem] text-slate-500 dark:text-stone-400">สตางค์/หน่วย</span>
                 </div>
               ) : (
-                <span className="text-[0.8rem] text-stone-400">
+                <span className="text-[0.8rem] text-slate-500 dark:text-stone-400">
                   ({(ftRate * 100).toFixed(2)} สตางค์/หน่วย)
                 </span>
               )}
@@ -276,24 +276,24 @@ const EnergyCostBlock: React.FC = () => {
         </div>
 
         {/* Section 3: VAT */}
-        <div className="border-b border-white/10 pb-2 mb-1">
+        <div className="border-b border-slate-200 dark:border-white/10 pb-2 mb-1">
           <div className="text-xs text-amber-400 font-bold mb-1 opacity-90 flex items-center">
             <span className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[0.6rem] font-bold text-white mr-1.5 bg-red-600">3</span>
             ภาษีมูลค่าเพิ่ม 7%
           </div>
           <VisualBar value={bill.vat} max={bill.total} color="linear-gradient(90deg, #dc2626, #ef4444)" />
-          <div className="flex justify-between text-xs text-stone-300 mb-[3px]">
+          <div className="flex justify-between text-xs text-slate-600 dark:text-stone-300 mb-[3px]">
             <span>(ค่าไฟฟ้าฐาน + ค่า Ft) x 7%</span>
             <span className="font-mono font-medium">{formatCurrency(bill.vat)} บาท</span>
           </div>
         </div>
 
         {/* Total Grand */}
-        <div className="bg-black/30 px-4 py-3 rounded-xl flex justify-between items-center mt-2 border border-amber-400/20">
-          <span className="text-[0.85rem] font-bold text-white">{t('cost.total')}</span>
+        <div className="bg-slate-100 dark:bg-black/30 px-4 py-3 rounded-xl flex justify-between items-center mt-2 border border-slate-200 dark:border-amber-400/20">
+          <span className="text-[0.85rem] font-bold text-slate-800 dark:text-white">{t('cost.total')}</span>
           <span className="text-[1.4rem] font-extrabold text-amber-400 font-mono">
             {loading ? '...' : formatCurrency(bill.total)}
-            <span className="text-[0.85rem] text-stone-400 font-sans font-normal ml-1"> บาท</span>
+            <span className="text-[0.85rem] text-slate-400 dark:text-stone-400 font-sans font-normal ml-1"> บาท</span>
           </span>
         </div>
 
@@ -305,7 +305,7 @@ const EnergyCostBlock: React.FC = () => {
           <span>0</span>
           <span>เป้า 5,000</span>
         </div>
-        <div className="relative h-1.5 bg-white/10 rounded-full overflow-visible">
+        <div className="relative h-1.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-visible">
           <div
             className={`h-full rounded-full transition-all duration-1000 ease-out ${bill.total > 5000 ? 'bg-gradient-to-r from-red-500 to-red-400' : 'bg-gradient-to-r from-amber-500 to-amber-300'}`}
             style={{ width: `${Math.min((bill.total / 5000) * 100, 100)}%` }}

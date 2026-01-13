@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTimeRange } from '../context/TimeRangeContext';
-import { useTheme } from './AppShell';
+import { useTheme, THEME } from './AppShell';
 import { useLanguage } from '../context/LanguageContext';
 import './DateRangePicker.css';
 
@@ -17,7 +17,8 @@ interface DateRangePickerProps {
 
 const DateRangePicker: React.FC<DateRangePickerProps> = ({ className = '' }) => {
     const { isCalendarOpen, closeCalendar, setCustomRange, setMode } = useTimeRange();
-    const { currentTheme } = useTheme();
+    // Fixed theme used directly
+    const currentTheme = THEME;
     const { language, t } = useLanguage();
     const containerRef = useRef<HTMLDivElement>(null);
 

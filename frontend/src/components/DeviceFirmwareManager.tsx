@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useWebSocket } from '../context/WebSocketContext';
 import { getApiBase } from '../config/api';
-import { useTheme } from './AppShell';
+import { useTheme, THEME } from './AppShell';
 import { useLanguage } from '../context/LanguageContext';
 
 interface Device {
@@ -532,7 +532,9 @@ const DeviceFirmwareManager: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
 
   const { espStatus, isConnected } = useWebSocket();
-  const { currentTheme } = useTheme();
+  const { darkMode } = useTheme();
+  // Fixed theme used directly
+  const theme = THEME;
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -568,10 +570,10 @@ const DeviceFirmwareManager: React.FC = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('firmware.subtitle')}</p>
           </div>
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${isConnected
-            ? `${currentTheme.accentLight} ${currentTheme.text}`
+            ? `${theme.accentLight} ${theme.text}`
             : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
             }`}>
-            <div className={`w-2 h-2 rounded-full ${isConnected ? `${currentTheme.accent} animate-pulse` : 'bg-slate-400'}`} />
+            <div className={`w-2 h-2 rounded-full ${isConnected ? `${theme.accent} animate-pulse` : 'bg-slate-400'}`} />
             {isConnected ? t('firmware.connected') : t('firmware.offline')}
           </div>
         </div>

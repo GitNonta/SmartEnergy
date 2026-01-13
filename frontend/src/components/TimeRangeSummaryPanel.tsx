@@ -8,7 +8,7 @@ import {
     Calendar, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { useTimeRange } from '../context/TimeRangeContext';
-import { useTheme } from './AppShell';
+import { useTheme, THEME } from './AppShell';
 import { useLanguage } from '../context/LanguageContext';
 
 interface SummaryData {
@@ -43,7 +43,8 @@ const API_BASE = getApiBase();
 
 const TimeRangeSummaryPanel: React.FC = () => {
     const { mode, getQueryRange, getDisplayLabel, openCalendar } = useTimeRange();
-    const { currentTheme, darkMode } = useTheme();
+    const { darkMode } = useTheme();
+    const currentTheme = THEME;
     const { t } = useLanguage();
 
     const [loading, setLoading] = useState(false);

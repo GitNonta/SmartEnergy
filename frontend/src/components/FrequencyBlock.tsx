@@ -40,29 +40,29 @@ const FrequencyBlock: React.FC = () => {
 
     return (
       <div
-        className="voltage-phase-row group flex flex-col gap-1.5 p-2 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-white/5 active:bg-white/10"
+        className="voltage-phase-row group flex flex-col gap-1.5 p-2 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-blue-50 dark:hover:bg-white/5 active:bg-blue-100 dark:active:bg-white/10"
         onClick={() => handlePhaseClick(viewMode)} // เพิ่ม Click Event
         title={`Click to analyze ${phaseName} waveform`}
       >
         <div className="flex justify-between items-center text-[0.8rem]">
-          <div className={`px-1.5 py-0.5 rounded text-[0.7rem] font-semibold tracking-wide ${labelClass}`}>
+          <div className={`px-1.5 py-0.5 rounded text-[0.7rem] font-semibold tracking-wide border ${labelClass}`}>
             {phaseName}
           </div>
           <div className="flex items-baseline gap-1">
-            <span className={`text-lg font-bold font-mono leading-none ${isStale ? 'text-slate-500' : 'text-slate-200'}`}>
+            <span className={`text-lg font-bold font-mono leading-none ${isStale ? 'text-slate-500' : 'text-slate-800 dark:text-slate-200'}`}>
               {value.toFixed(1)}
             </span>
             <span className="text-[0.7rem] text-slate-500 font-medium">V</span>
           </div>
         </div>
 
-        <div className="relative h-1.5 bg-white/5 rounded-full overflow-visible w-full mt-0.5">
+        <div className="relative h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-visible w-full mt-0.5">
           <div
             className={`h-full rounded-full transition-[width] duration-300 ease-out ${colorClass}`}
             style={{ width: `${percentage}%` }}
           ></div>
           <div
-            className="absolute top-[-2px] w-0.5 h-2.5 bg-white/30 rounded-[1px] transform -translate-x-1/2 z-10"
+            className="absolute top-[-2px] w-0.5 h-2.5 bg-slate-400 dark:bg-white/30 rounded-[1px] transform -translate-x-1/2 z-10"
             style={{ left: `${nominalPercent}%` }}
             title="Nominal 230V"
           ></div>
@@ -73,14 +73,14 @@ const FrequencyBlock: React.FC = () => {
 
   return (
     <>
-      <div className="frequency-block-component modern-voltage-card w-full min-h-[220px] rounded-xl border border-blue-500/20 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950 p-5 transition-all duration-200 hover:border-blue-500/30 relative overflow-hidden flex flex-col font-sans">
+      <div className="frequency-block-component modern-voltage-card w-full min-h-[220px] rounded-xl border border-slate-200 dark:border-blue-500/20 bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 p-5 transition-all duration-200 hover:border-blue-500/30 relative overflow-hidden flex flex-col font-sans shadow-sm dark:shadow-none">
         {/* Decorative Top Line */}
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-500 z-10" />
 
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500"><Zap size={20} /></div>
-            <span className="text-[0.85rem] font-bold text-blue-200 tracking-wider font-sans">{t('power.voltage').toUpperCase()}</span>
+            <span className="text-[0.85rem] font-bold text-slate-700 dark:text-blue-200 tracking-wider font-sans">{t('power.voltage').toUpperCase()}</span>
           </div>
           <div className={`px-2.5 py-1 rounded-full text-[0.65rem] font-bold flex items-center gap-1.5 backdrop-blur-sm border transition-colors duration-300 ${isConnected && !isStale ? 'bg-blue-500/15 text-blue-400 border-blue-500/20' : 'bg-red-500/15 text-red-400 border-red-500/20'}`}>
             <div className={`w-1.5 h-1.5 rounded-full bg-current ${isConnected && !isStale ? 'animate-[pulse_2s_infinite]' : ''}`}></div>
@@ -99,12 +99,12 @@ const FrequencyBlock: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-3 flex-1">
-          {renderPhaseRow('L1', displayData.f1, 'bg-gradient-to-r from-red-500 to-red-400', 'bg-red-500/10 text-red-400 border border-red-500/20', 'phase1')}
-          {renderPhaseRow('L2', displayData.f2, 'bg-gradient-to-r from-yellow-500 to-yellow-400', 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20', 'phase2')}
-          {renderPhaseRow('L3', displayData.f3, 'bg-gradient-to-r from-blue-500 to-blue-400', 'bg-blue-500/10 text-blue-400 border border-blue-500/20', 'phase3')}
+          {renderPhaseRow('L1', displayData.f1, 'bg-gradient-to-r from-red-500 to-red-400', 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20', 'phase1')}
+          {renderPhaseRow('L2', displayData.f2, 'bg-gradient-to-r from-yellow-500 to-yellow-400', 'bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-500/10 dark:text-yellow-400 dark:border-yellow-500/20', 'phase2')}
+          {renderPhaseRow('L3', displayData.f3, 'bg-gradient-to-r from-blue-500 to-blue-400', 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20', 'phase3')}
         </div>
 
-        <div className="flex justify-between items-center text-[0.65rem] text-slate-500 border-t border-white/5 pt-3 mt-4 font-sans">
+        <div className="flex justify-between items-center text-[0.65rem] text-slate-500 border-t border-slate-200 dark:border-white/5 pt-3 mt-4 font-sans">
           <span>Nominal: {nominalVoltage}V</span>
           <span className="italic opacity-70">(Click rows for graph)</span>
           <span>Max: {maxScale}V</span>
