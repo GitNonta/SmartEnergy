@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useTheme } from './AppShell';
+import { Zap, BarChart3, Brain, X, Cpu, TrendingUp, CheckCircle2, AlertTriangle, AlertOctagon, XCircle, Info } from 'lucide-react';
 import { analyzeCurrent, isAIConfigured } from '../services/aiService';
 
 // --- Constants & Config ---
@@ -51,6 +52,48 @@ const calculateStats = (data: ChartDataPoint[]): CurrentStats => {
         current: current.toFixed(2)
     };
 };
+
+// --- Emoji to Icon Mapping ---
+const emojiMap: Record<string, React.ReactNode> = {
+    '🤖': <Cpu size={16} className="text-violet-500 inline-block mr-1.5 mb-0.5" />,
+    '📊': <TrendingUp size={16} className="text-blue-500 inline-block mr-1.5 mb-0.5" />,
+    '✅': <CheckCircle2 size={16} className="text-emerald-500 inline-block mr-1.5 mb-0.5" />,
+    '⚠️': <AlertTriangle size={16} className="text-amber-500 inline-block mr-1.5 mb-0.5" />,
+    '🚨': <AlertOctagon size={16} className="text-red-500 inline-block mr-1.5 mb-0.5" />,
+    '❌': <XCircle size={16} className="text-red-600 inline-block mr-1.5 mb-0.5" />,
+    'ℹ️': <Info size={16} className="text-blue-400 inline-block mr-1.5 mb-0.5" />,
+};
+
+const TextWithIcons = ({ text }: { text: string }) => {
+    if (!text) return null;
+    const emojiRegex = new RegExp(`(${Object.keys(emojiMap).join('|')})`, 'gu');
+    const parts = text.split(emojiRegex);
+
+    return (
+        <div className="whitespace-pre-wrap text-center">
+            {parts.map((part, index) => {
+                if (emojiMap[part]) {
+                    return <React.Fragment key={index}>{emojiMap[part]}</React.Fragment>;
+                }
+                return <span key={index}>{part}</span>;
+            })}
+        </div>
+    );
+};
+
+// --- Custom Styles for Liquid Glass Scrollbar ---
+const scrollbarStyles = `
+    .liquid-glass-scroll::-webkit-scrollbar { width: 4px; }
+    .liquid-glass-scroll::-webkit-scrollbar-track { background: transparent; }
+    .liquid-glass-scroll::-webkit-scrollbar-thumb {
+        background: rgba(139, 92, 246, 0.2);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .liquid-glass-scroll::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.4); }
+    .dark .liquid-glass-scroll::-webkit-scrollbar-thumb { background: rgba(167, 139, 250, 0.2); }
+    .dark .liquid-glass-scroll::-webkit-scrollbar-thumb:hover { background: rgba(167, 139, 250, 0.4); }
+`;
 
 export default function CurrentRealtimeChart({ initialViewMode = 'all', onClose, isPopup = false }: CurrentRealtimeChartProps) {
     // --- State ---
@@ -349,10 +392,88 @@ export default function CurrentRealtimeChart({ initialViewMode = 'all', onClose,
             </div>
 
             {/* Chart */}
-            <div className="c-chart-container">
+            <style>{scrollbarStyles}</style>
+            <div className="c-chart-container relative group">
                 <div ref={chartDivRef} id="current-chart" />
                 {!isConnected && <div className="c-overlay">OFFLINE</div>}
+
+                {/* AI Activator Icon */}
+                {viewMode !== 'all' && (
+                    <div className="absolute bottom-4 right-4 z-20">
+                        <button
+                            onClick={handleAnalyze}
+                            disabled={analyzing}
+                            className={`
+                                group/btn relative p-3 rounded-2xl transition-all duration-500
+                                bg-white/10 dark:bg-white/5 backdrop-blur-xl
+                                border border-white/20 dark:border-white/10
+                                hover:border-violet-500/50 hover:bg-violet-500/10
+                                shadow-[0_8px_32px_0_rgba(31,38,135,0.1)]
+                                active:scale-90 disabled:opacity-50
+                            `}
+                            title="AI Diagnosis"
+                        >
+                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-violet-500/0 to-violet-500/0 group-hover/btn:from-violet-500/10 group-hover/btn:to-transparent transition-all duration-500" />
+                            <Brain
+                                size={24}
+                                className={`
+                                    relative z-10 transition-all duration-500
+                                    ${analyzing ? 'text-violet-500 animate-pulse' : 'text-slate-400 group-hover/btn:text-violet-500'}
+                                `}
+                            />
+                            {!aiResult && !analyzing && (
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-violet-500 rounded-full border-2 border-white dark:border-slate-900 animate-bounce" />
+                            )}
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {/* AI Result Popup - Liquid Glass */}
+            {aiResult && (
+                <div className="absolute inset-x-6 bottom-24 z-50 animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+                    <div className="relative overflow-hidden rounded-3xl liquid-glass-container p-6 backdrop-blur-2xl border border-white/30 dark:border-white/10 shadow-2xl">
+                        <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-xl bg-violet-500/20 text-violet-500">
+                                        {aiResult.isLocal ? <BarChart3 size={18} /> : <Brain size={18} />}
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-violet-500 uppercase tracking-widest leading-none block mb-0.5">
+                                            {aiResult.isLocal ? 'Local Insight' : 'AI Intelligence'}
+                                        </span>
+                                        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white uppercase">
+                                            {aiResult.phase}
+                                        </h3>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setAiResult(null)}
+                                    className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-slate-400 hover:text-red-500 transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="relative max-h-[200px] overflow-y-auto pr-2 liquid-glass-scroll
+                                text-sm text-slate-800 dark:text-slate-100 leading-relaxed font-semibold 
+                                bg-white/20 dark:bg-black/20 rounded-xl p-4 border border-white/10
+                                transition-all duration-300">
+                                <TextWithIcons text={aiResult.text} />
+
+                                {aiResult.isLocal && (
+                                    <div className="mt-4 pt-4 border-t border-white/10 text-[10px] text-center text-slate-500 dark:text-slate-400 italic">
+                                        💡 Local Analysis Fallback
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Stats Footer */}
             <div className="c-footer">
@@ -375,27 +496,8 @@ export default function CurrentRealtimeChart({ initialViewMode = 'all', onClose,
                             <span className="s-val">{Number(stats.current).toLocaleString()} <span className="u">A</span></span>
                         </div>
                     </div>
-
-                    <button
-                        className={`c-ai-btn ${analyzing ? 'loading' : ''}`}
-                        onClick={handleAnalyze}
-                        disabled={analyzing}
-                    >
-                        {analyzing ? 'ANALYZING...' : '✨ AI CHECK'}
-                    </button>
                 </div>
             </div>
-
-            {/* AI Result */}
-            {aiResult && (
-                <div className="c-ai-result">
-                    <div className="ai-header">
-                        <span>Analysis for {aiResult.phase}</span>
-                        <button onClick={() => setAiResult(null)}>✕</button>
-                    </div>
-                    <div className="ai-body">{aiResult.text}</div>
-                </div>
-            )}
 
             <style>{`
                 .current-chart-modern {
