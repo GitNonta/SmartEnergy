@@ -284,22 +284,43 @@ async function initDatabase() {
     `);
     console.log('✅ Activity logs table ready');
 
-    // Create audit_logs table for data changes tracking
+    // Create audit_logs table for data changes tracking and security audit
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS audit_logs (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         user_id INT,
         action VARCHAR(100) NOT NULL,
-        target_table VARCHAR(100) NOT NULL,
-        target_id INT NOT NULL,
+        target_table VARCHAR(100),
+        target_id INT,
         changes JSON,
+        ip_address VARCHAR(45),
+        user_agent VARCHAR(500),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
         INDEX idx_audit_user (user_id),
         INDEX idx_audit_target (target_table, target_id),
-        INDEX idx_audit_created (created_at)
+        INDEX idx_audit_created (created_at),
+        INDEX idx_audit_ip (ip_address)
       )
     `);
+    
+    // Add new columns to existing audit_logs table
+    try {
+      await connection.execute(`ALTER TABLE audit_logs ADD COLUMN ip_address VARCHAR(45) AFTER changes`);
+      console.log('  ➕ Added ip_address column to audit_logs');
+    } catch (e) { /* Column exists */ }
+
+    try {
+      await connection.execute(`ALTER TABLE audit_logs ADD COLUMN user_agent VARCHAR(500) AFTER ip_address`);
+      console.log('  ➕ Added user_agent column to audit_logs');
+    } catch (e) { /* Column exists */ }
+
+    // Make target_table and target_id nullable for system events
+    try {
+      await connection.execute(`ALTER TABLE audit_logs MODIFY COLUMN target_table VARCHAR(100) NULL`);
+      await connection.execute(`ALTER TABLE audit_logs MODIFY COLUMN target_id INT NULL`);
+    } catch (e) { /* Ignore */ }
+
     console.log('✅ Audit logs table ready');
 
     // Create dashboard_layouts table for widget positioning

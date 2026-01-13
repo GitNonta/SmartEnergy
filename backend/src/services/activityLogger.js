@@ -93,20 +93,31 @@ async function getActivityLogs(options = {}) {
    * @param {string} targetTable - Table being modified
    * @param {number} targetId - ID of the record
    * @param {Object} oldData - Previous data state
-   * @param {Object} newData - New data state
+   * @param {string} ipAddress - Request IP
+   * @param {string} userAgent - Request User Agent
    */
-  async function logAudit(userId, action, targetTable, targetId, oldData, newData) {
+  async function logAudit(userId, action, targetTable, targetId, oldData, newData, ipAddress = null, userAgent = null) {
     try {
       const changes = compareObjects(oldData, newData);
       
-      if (!changes && action !== 'DELETE' && action !== 'CREATE') {
-        return; // No changes to log
+      // If no old/new data provided, allowing logging pure events if changes is null but action provided
+      if (!changes && action !== 'DELETE' && action !== 'CREATE' && !ipAddress) {
+         // Modification: allow logging if ipAddress provided (security event) or if forced
+         // But logic below checks changes.
+         // Let's rely on caller providing meaningful old/new data for standard audits.
+         // For security audits like 'LOGIN_FAIL', we might pass old=null, new={...details} which results in _new change.
+         return; 
       }
-  
+      
+      // If changes is null but we want to force log (like security event without data mutation but with context)
+      // use "changes" as the details object if changes is null ? 
+      // Current implementation: compareObjects returns { _new: ... } if old is null.
+      // So passing old=null, new={details} works.
+
       await query(
-        `INSERT INTO audit_logs (user_id, action, target_table, target_id, changes)
-         VALUES (?, ?, ?, ?, ?)`,
-        [userId, action, targetTable, targetId, JSON.stringify(changes)]
+        `INSERT INTO audit_logs (user_id, action, target_table, target_id, changes, ip_address, user_agent)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [userId, action, targetTable, targetId, JSON.stringify(changes), ipAddress, userAgent]
       );
     } catch (error) {
       console.error('Audit logging error:', error.message);

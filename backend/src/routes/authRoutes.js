@@ -19,7 +19,8 @@ const {
 const { 
   ACTIONS, 
   logActivity, 
-  getActivityLogs 
+  getActivityLogs,
+  logAudit
 } = require('../services/activityLogger');
 
 /**
@@ -107,7 +108,7 @@ router.post('/login', async (req, res) => {
         locked = true;
         retryAfter = limitData.lockUntil;
         
-        // Log Lockout Event
+        // Log Lockout Event to Activity Log
         await logActivity(user ? user.id : null, 'SECURITY_LOCKOUT', 'auth', {
           ip: ipAddress,
           identifier,
@@ -115,7 +116,41 @@ router.post('/login', async (req, res) => {
           reason: 'Excessive failed login attempts'
         }, ipAddress);
         
+        // Log to Audit Log (High Priority Security Event)
+        await logAudit(
+          user ? user.id : null,
+          'SECURITY_LOCKOUT',
+          'users',
+          user ? user.id : null,
+          null,
+          { 
+            reason: 'Excessive failed login attempts', 
+            failCount: limitData.count, 
+            identifier,
+            ip: ipAddress,
+            userAgent
+          },
+          ipAddress,
+          userAgent
+        );
+        
         console.warn(`⚠️ IP ${ipAddress} locked out due to excessive login failures`);
+      } else if (limitData.count >= 3) {
+        // Log Repeated Failure to Audit Log (Warning Level)
+        await logAudit(
+          user ? user.id : null,
+          'LOGIN_FAILED_REPEATED',
+          'users',
+          user ? user.id : null, 
+          null,
+          { 
+            reason, 
+            attempt: limitData.count, 
+            identifier 
+          },
+          ipAddress,
+          userAgent
+        );
       }
       
       failedAttempts.set(limitKey, limitData);
