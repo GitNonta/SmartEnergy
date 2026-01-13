@@ -15,9 +15,20 @@ const LoginPage: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
 
     // Redirect to original destination or dashboard if already authenticated
     const from = (location.state as any)?.from?.pathname || '/dashboard';
+
+    // Timer effect for cooldown
+    React.useEffect(() => {
+        if (cooldown > 0) {
+            const timer = setInterval(() => {
+                setCooldown((prev) => prev - 1);
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [cooldown]);
 
     if (isLoading) {
         return (
@@ -40,6 +51,16 @@ const LoginPage: React.FC = () => {
 
         if (!result.success) {
             setError(result.error || t('auth.loginError'));
+
+            // Check for lockout response
+            // Type cast to any because LoginResult interface might not have remainingSeconds yet
+            const loginRes = result as any;
+
+            if (loginRes.remainingSeconds || (result.error && result.error.includes('administrator'))) {
+                // Use remainingSeconds from backend if available, otherwise default to 120s
+                const remaining = typeof loginRes.remainingSeconds === 'number' ? loginRes.remainingSeconds : 120;
+                setCooldown(remaining);
+            }
         }
 
         setIsSubmitting(false);
@@ -47,6 +68,32 @@ const LoginPage: React.FC = () => {
 
     return (
         <div className="login-container">
+            {/* Lockout Popup Overlay */}
+            {error && error.includes('contact administrator') && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-slate-800 border border-red-500/30 rounded-lg p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
+                                <AlertCircle className="w-8 h-8 text-red-500" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white">Access Temporarily Locked</h3>
+                            <p className="text-slate-300 text-sm">
+                                {t('auth.lockedMessage') || 'Too many failed attempts. Please contact administrator.'}
+                            </p>
+
+                            {/* Cooldown Timer */}
+                            <div className="text-2xl font-mono font-bold text-yellow-400 my-2">
+                                {String(Math.floor(cooldown / 60)).padStart(2, '0')}:{String(cooldown % 60).padStart(2, '0')}
+                            </div>
+
+                            <p className="text-xs text-slate-500">
+                                Please wait before trying again
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="login-card">
                 {/* Logo */}
                 <div className="login-logo">
@@ -63,7 +110,7 @@ const LoginPage: React.FC = () => {
                 <p className="login-subtitle">{t('auth.loginSubtitle')}</p>
 
                 {/* Error Message */}
-                {error && (
+                {error && !error.includes('contact administrator') && (
                     <div className="login-error">
                         <AlertCircle className="w-4 h-4" />
                         <span>{error}</span>
@@ -83,6 +130,8 @@ const LoginPage: React.FC = () => {
                             autoComplete="username"
                             autoFocus
                             required
+                            disabled={cooldown > 0}
+                            className={cooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}
                         />
                     </div>
 
@@ -97,11 +146,14 @@ const LoginPage: React.FC = () => {
                                 placeholder={t('auth.passwordPlaceholder')}
                                 autoComplete="current-password"
                                 required
+                                disabled={cooldown > 0}
+                                className={cooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}
                             />
                             <button
                                 type="button"
                                 className="password-toggle"
                                 onClick={() => setShowPassword(!showPassword)}
+                                disabled={cooldown > 0}
                             >
                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
@@ -110,8 +162,8 @@ const LoginPage: React.FC = () => {
 
                     <button
                         type="submit"
-                        className="login-button"
-                        disabled={isSubmitting || !username || !password}
+                        className={`login-button ${cooldown > 0 ? 'bg-slate-700 cursor-not-allowed hover:bg-slate-700' : ''}`}
+                        disabled={isSubmitting || !username || !password || cooldown > 0}
                     >
                         {isSubmitting ? (
                             <>
@@ -119,7 +171,7 @@ const LoginPage: React.FC = () => {
                                 <span>{t('common.loading')}</span>
                             </>
                         ) : (
-                            <span>{t('auth.loginButton')}</span>
+                            <span>{cooldown > 0 ? `Try again in ${cooldown}s` : t('auth.loginButton')}</span>
                         )}
                     </button>
                 </form>

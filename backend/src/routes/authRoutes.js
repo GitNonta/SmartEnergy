@@ -26,14 +26,54 @@ const {
  * POST /api/auth/login
  * Authenticate user and create session
  */
+// Rate Limiting Store (In-Memory)
+const failedAttempts = new Map();
+const MAX_ATTEMPTS = 5;
+const COOLDOWN_SECONDS = 120;
+
+/**
+ * Cleanup old rate limit entries periodically (every 1 hour)
+ */
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, data] of failedAttempts.entries()) {
+    if (data.lockUntil && data.lockUntil < now) {
+      failedAttempts.delete(key);
+    } else if (now - data.lastAttempt > 3600000) { // 1 hour inactivity
+      failedAttempts.delete(key);
+    }
+  }
+}, 3600000);
+
+/**
+ * POST /api/auth/login
+ * Authenticate user and create session
+ */
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'];
+    const identifier = username; // User input identifier
 
-    // 'username' field can be username, email, or phone number
-    const identifier = username;
+    // 1. Check Rate Limit
+    const limitKey = `login_fail:${ipAddress}`; // Limit by IP
+    const limitData = failedAttempts.get(limitKey) || { count: 0, lockUntil: null, lastAttempt: null };
+
+    if (limitData.lockUntil && limitData.lockUntil > Date.now()) {
+      const remainingSeconds = Math.ceil((limitData.lockUntil - Date.now()) / 1000);
+      
+      // Log blocked attempt (optional, maybe too noisy if spammed)
+      // await logActivity(null, 'LOGIN_BLOCKED', 'auth', { ip: ipAddress, reason: 'Rate limited' }, ipAddress);
+
+      return res.status(429).json({
+        success: false,
+        error: 'Too many failed attempts. Please contact administrator.',
+        locked: true,
+        retryAfter: limitData.lockUntil,
+        remainingSeconds
+      });
+    }
 
     if (!identifier || !password) {
       return res.status(400).json({
@@ -42,7 +82,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find user by username, email, or phone number
+    // 2. Find user
     const user = await queryOne(
       `SELECT * FROM users 
        WHERE is_active = TRUE 
@@ -54,34 +94,78 @@ router.post('/login', async (req, res) => {
       [identifier, identifier, identifier]
     );
 
-    if (!user) {
-      await logActivity(null, ACTIONS.LOGIN_FAILED, 'auth', 
-        { identifier, reason: 'User not found' }, ipAddress);
+    // Helper to handle login failure
+    const handleLoginFailure = async (reason) => {
+      limitData.count += 1;
+      limitData.lastAttempt = Date.now();
       
+      let locked = false;
+      let retryAfter = null;
+
+      if (limitData.count >= MAX_ATTEMPTS) {
+        limitData.lockUntil = Date.now() + (COOLDOWN_SECONDS * 1000);
+        locked = true;
+        retryAfter = limitData.lockUntil;
+        
+        // Log Lockout Event
+        await logActivity(user ? user.id : null, 'SECURITY_LOCKOUT', 'auth', {
+          ip: ipAddress,
+          identifier,
+          failCount: limitData.count,
+          reason: 'Excessive failed login attempts'
+        }, ipAddress);
+        
+        console.warn(`⚠️ IP ${ipAddress} locked out due to excessive login failures`);
+      }
+      
+      failedAttempts.set(limitKey, limitData);
+
+      // Log Failed Login
+      await logActivity(user ? user.id : null, ACTIONS.LOGIN_FAILED, 'auth', {
+        identifier,
+        ip: ipAddress,
+        reason,
+        attempt: limitData.count,
+        maxAttempts: MAX_ATTEMPTS
+      }, ipAddress);
+
+      if (locked) {
+        return res.status(429).json({
+          success: false,
+          error: 'Too many failed attempts. Please contact administrator.',
+          locked: true,
+          retryAfter,
+          remainingSeconds: COOLDOWN_SECONDS
+        });
+      }
+
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials'
+        error: 'Username or password incorrect'
       });
+    };
+
+    if (!user) {
+      return await handleLoginFailure('User not found');
     }
 
-    // Verify password
+    // 3. Verify password
     const validPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!validPassword) {
-      await logActivity(user.id, ACTIONS.LOGIN_FAILED, 'auth',
-        { reason: 'Invalid password' }, ipAddress);
-      
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
+      return await handleLoginFailure('Invalid password');
+    }
+
+    // 4. Success - Reset Rate Limit
+    if (failedAttempts.has(limitKey)) {
+      failedAttempts.delete(limitKey);
     }
 
     // Create session
     const session = await createSession(user, ipAddress, userAgent);
     
     await logActivity(user.id, ACTIONS.LOGIN_SUCCESS, 'auth',
-      { ip: ipAddress }, ipAddress);
+      { ip: ipAddress, method: 'credentials' }, ipAddress);
     
     // Set HttpOnly cookie for web clients
     res.cookie('jwt', session.token, getCookieOptions());
