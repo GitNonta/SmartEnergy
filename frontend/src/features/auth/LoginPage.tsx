@@ -76,7 +76,7 @@ const LoginPage: React.FC = () => {
                             <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
                                 <AlertCircle className="w-8 h-8 text-red-500" />
                             </div>
-                            <h3 className="text-xl font-bold text-white">Access Temporarily Locked</h3>
+                            <h3 className="text-xl font-bold text-white">{t('auth.lockedTitle') || 'Access Temporarily Locked'}</h3>
                             <p className="text-slate-300 text-sm">
                                 {t('auth.lockedMessage') || 'Too many failed attempts. Please contact administrator.'}
                             </p>
@@ -87,7 +87,7 @@ const LoginPage: React.FC = () => {
                             </div>
 
                             <p className="text-xs text-slate-500">
-                                Please wait before trying again
+                                {t('auth.waitMessage') || 'Please wait before trying again'}
                             </p>
                         </div>
                     </div>

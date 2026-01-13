@@ -256,7 +256,10 @@
         "user": "User",
         "sessionExpiring": "Session Expiring",
         "sessionExpiringMessage": "Your session will expire due to inactivity. Do you want to stay logged in?",
-        "stayLoggedIn": "Stay Logged In"
+        "stayLoggedIn": "Stay Logged In",
+        "lockedTitle": "Access Temporarily Locked",
+        "lockedMessage": "Too many failed attempts. Please contact administrator.",
+        "waitMessage": "Please wait before trying again"
     },
     "chat": {
         "title": "AI Assistant",
