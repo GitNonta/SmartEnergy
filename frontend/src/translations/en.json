@@ -388,5 +388,16 @@
         "loading": "Loading data...",
         "energy": "Energy",
         "cost": "Cost"
+    },
+    "notifications": {
+        "title": "Notifications",
+        "all": "All",
+        "unread": "Unread",
+        "new": "New",
+        "earlier": "Earlier",
+        "noNotifications": "No notifications",
+        "seeAll": "See all",
+        "justNow": "Just now",
+        "systemAlert": "System Alert"
     }
 }

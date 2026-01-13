@@ -1,4 +1,4 @@
-import React, { useState, memo, useEffect } from 'react';
+import React, { useState, memo, useEffect, useRef } from 'react';
 import {
   Home,
   BarChart,
@@ -12,11 +12,19 @@ import {
   Settings2,
   AlertCircle,
   Zap,
-  Server
+  Server,
+  MoreHorizontal,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { Badge } from './ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { useWebSocket } from '../context/WebSocketContext';
+import { useTheme } from './AppShell';
+import { NotificationPopup } from './NotificationPopup';
+
+// --- TYPES & INTERFACES ---
 
 interface MenuItemProps {
   id: string;
@@ -31,6 +39,18 @@ interface MenuItemProps {
     onClick?: () => void;
   }>;
 }
+
+interface AlertItem {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string | Date;
+  read: boolean;
+  type: 'info' | 'warning' | 'critical' | 'success';
+  source?: string;
+}
+
+// --- HELPER COMPONENTS ---
 
 const MenuItem: React.FC<MenuItemProps> = memo(({
   icon,
@@ -92,62 +112,40 @@ const MenuItem: React.FC<MenuItemProps> = memo(({
 
 MenuItem.displayName = 'MenuItem';
 
-const NotificationsDialog: React.FC = () => (
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Notifications</DialogTitle>
-    </DialogHeader>
-    <div className="space-y-4 mt-4">
-      <div className="flex items-start gap-4 p-4 bg-yellow-50 rounded-lg">
-        <AlertCircle className="w-5 h-5 text-yellow-500 mt-1" />
-        <div>
-          <h4 className="font-medium text-sm">High Power Usage Alert</h4>
-          <p className="text-sm text-gray-500">Meter M01 exceeded threshold (5000W)</p>
-          <span className="text-xs text-gray-400 mt-1">2 minutes ago</span>
-        </div>
-      </div>
-      <div className="flex items-start gap-4 p-4 bg-blue-50 rounded-lg">
-        <Settings className="w-5 h-5 text-blue-500 mt-1" />
-        <div>
-          <h4 className="font-medium text-sm">System Update</h4>
-          <p className="text-sm text-gray-500">New features available</p>
-          <span className="text-xs text-gray-400 mt-1">1 hour ago</span>
-        </div>
-      </div>
-    </div>
-  </DialogContent>
-);
-
-interface IconButtonProps {
+const IconButton: React.FC<{
   icon: React.ReactNode;
   badge?: number;
   onClick?: () => void;
-}
-
-const IconButton: React.FC<IconButtonProps> = ({ icon, badge, onClick }) => (
+  isActive?: boolean;
+}> = ({ icon, badge, onClick, isActive }) => (
   <button
     onClick={onClick}
-    className="relative inline-flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+    className={`relative inline-flex items-center justify-center w-10 h-10 rounded-full transition-colors ${isActive
+      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'
+      : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
+      }`}
   >
     {icon}
     {badge !== undefined && badge > 0 && (
-      <span className={`absolute -top-1 -right-1 flex items-center justify-center min-w-5 h-5 px-1 text-xs font-medium text-white rounded-full ${badge > 0 ? 'bg-red-600' : 'bg-blue-600'}`}>
+      <span className={`absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full border-2 border-white dark:border-gray-900 ${badge > 0 ? 'bg-red-500' : 'bg-blue-500'}`}>
         {badge > 9 ? '9+' : badge}
       </span>
     )}
   </button>
 );
 
+// --- MAIN MENUBAR COMPONENT ---
+
 export const MenuBar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeItem, setActiveItem] = useState('dashboard');
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const { alerts } = useWebSocket();
 
-  // Count alerts for badge (critical and warning alerts)
+  // Count alerts for badge
   const alertCount = alerts?.filter((a: any) =>
-    a.severity === 'critical' || a.severity === 'warning' || a.level === 'critical' || a.level === 'warning'
+    a.severity === 'critical' || a.severity === 'warning'
   ).length || 0;
-  const hasCritical = alerts?.some((a: any) => a.severity === 'critical' || a.level === 'critical') || false;
 
   const menuItems: MenuItemProps[] = [
     {
@@ -222,16 +220,22 @@ export const MenuBar: React.FC = () => {
           </div>
 
           {/* Right side icons */}
-          <div className="hidden md:flex md:items-center md:space-x-4">
-            <Dialog>
-              <DialogTrigger>
-                <IconButton
-                  icon={<Bell className="h-5 w-5" />}
-                  badge={alertCount}
-                />
-              </DialogTrigger>
-              <NotificationsDialog />
-            </Dialog>
+          <div className="hidden md:flex md:items-center md:space-x-4 relative">
+
+            {/* Notification Bell with Popup */}
+            <div className="relative">
+              <IconButton
+                icon={<Bell className="h-5 w-5" />}
+                badge={alertCount}
+                isActive={isNotifOpen}
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+              />
+              <NotificationPopup
+                isOpen={isNotifOpen}
+                onClose={() => setIsNotifOpen(false)}
+                alerts={alerts || []}
+              />
+            </div>
 
             <IconButton
               icon={<HelpCircle className="h-5 w-5" />}
@@ -266,15 +270,11 @@ export const MenuBar: React.FC = () => {
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-around px-4">
-              <Dialog>
-                <DialogTrigger>
-                  <IconButton
-                    icon={<Bell className="h-5 w-5" />}
-                    badge={alertCount}
-                  />
-                </DialogTrigger>
-                <NotificationsDialog />
-              </Dialog>
+              <IconButton
+                icon={<Bell className="h-5 w-5" />}
+                badge={alertCount}
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+              />
 
               <IconButton
                 icon={<HelpCircle className="h-5 w-5" />}

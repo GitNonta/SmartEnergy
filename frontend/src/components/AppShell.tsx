@@ -20,6 +20,7 @@ import DateRangePicker from './DateRangePicker';
 import LanguageSelector from './LanguageSelector';
 import ChatWidget from './ChatWidget';
 import UserMenuDropdown from './UserMenuDropdown';
+import { NotificationPopup } from './NotificationPopup';
 
 // --- Types & Constants ---
 
@@ -226,6 +227,8 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
     return saved !== null ? JSON.parse(saved) : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+
   // Removed themeColor state
 
   // Effects
@@ -321,16 +324,28 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
 
                     <div className="hidden sm:block h-6 w-px bg-white/20 mx-1"></div>
 
-                    <Link to="/alerts" className="p-2 rounded-full hover:bg-white/10 transition-colors relative">
-                      <Bell className="w-5 h-5 text-white/90" />
-                      {alertCount > 0 ? (
-                        <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full border-2 border-white/20">
-                          {alertCount > 9 ? '9+' : alertCount}
-                        </span>
-                      ) : (
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full border-2 border-white/10"></span>
-                      )}
-                    </Link>
+                    {/* Notification Bell */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setIsNotifOpen(!isNotifOpen)}
+                        className={`p-2 rounded-full hover:bg-white/10 transition-colors relative ${isNotifOpen ? 'bg-white/20' : ''}`}
+                      >
+                        <Bell className="w-5 h-5 text-white/90" />
+                        {alertCount > 0 ? (
+                          <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full border-2 border-white/20">
+                            {alertCount > 9 ? '9+' : alertCount}
+                          </span>
+                        ) : (
+                          <span className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full border-2 border-white/10"></span>
+                        )}
+                      </button>
+
+                      <NotificationPopup
+                        isOpen={isNotifOpen}
+                        onClose={() => setIsNotifOpen(false)}
+                        alerts={alerts || []}
+                      />
+                    </div>
 
                     <UserMenuDropdown />
                   </div>

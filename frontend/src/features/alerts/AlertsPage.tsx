@@ -289,54 +289,6 @@ export default function AlertsPage() {
         )}
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('alerts.total')}</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{alerts.length}</p>
-            </div>
-            <AlertTriangle className="w-8 h-8 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-red-600 dark:text-red-400">{t('alerts.critical')}</p>
-              <p className="text-2xl font-bold text-red-800 dark:text-red-200">
-                {alerts.filter(a => a.type === 'error').length}
-              </p>
-            </div>
-            <XCircle className="w-8 h-8 text-red-400" />
-          </div>
-        </div>
-
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-yellow-600 dark:text-yellow-400">{t('alerts.warning')}</p>
-              <p className="text-2xl font-bold text-yellow-800 dark:text-yellow-200">
-                {alerts.filter(a => a.type === 'warning').length}
-              </p>
-            </div>
-            <AlertTriangle className="w-8 h-8 text-yellow-400" />
-          </div>
-        </div>
-
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-blue-600 dark:text-blue-400">{t('alerts.info')}</p>
-              <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-                {alerts.filter(a => a.type === 'info').length}
-              </p>
-            </div>
-            <Database className="w-8 h-8 text-blue-400" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
