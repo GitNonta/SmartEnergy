@@ -135,18 +135,23 @@ router.post('/login', async (req, res) => {
         );
         
         console.warn(`⚠️ IP ${ipAddress} locked out due to excessive login failures`);
-      } else if (limitData.count >= 3) {
-        // Log Repeated Failure to Audit Log (Warning Level)
+      } else {
+        // Log Every Failure to Audit Log (as requested for detailed tracking)
+        // action: LOGIN_FAILED or LOGIN_FAILED_REPEATED (>1)
+        const auditAction = limitData.count > 1 ? 'LOGIN_FAILED_REPEATED' : 'LOGIN_FAILED';
+        
         await logAudit(
           user ? user.id : null,
-          'LOGIN_FAILED_REPEATED',
+          auditAction,
           'users',
           user ? user.id : null, 
           null,
           { 
             reason, 
             attempt: limitData.count, 
-            identifier 
+            identifier,
+            ip: ipAddress,
+            userAgent
           },
           ipAddress,
           userAgent
