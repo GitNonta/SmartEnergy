@@ -76,7 +76,7 @@ export const analyzeVoltage = async (phase: string, value: number): Promise<AIAn
     // Local analysis fallback
     const getLocalAnalysis = (): string => {
         let analysis = `📊 LOCAL ANALYSIS - ${phase}\n`;
-        analysis += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        analysis += `━\n`;
         analysis += `Current Voltage: ${value.toFixed(2)}V\n`;
         analysis += `Nominal Voltage: 220V\n`;
         analysis += `Deviation: ${deviation > 0 ? '+' : ''}${deviation.toFixed(2)}V (${deviationPercent}%)\n\n`;
@@ -128,7 +128,7 @@ export const analyzeCurrent = async (phase: string, value: number, ratedCurrent:
 
     const getLocalAnalysis = (): string => {
         let analysis = `📊 LOCAL ANALYSIS - ${phase}\n`;
-        analysis += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        analysis += `━\n`;
         analysis += `Current: ${value.toFixed(2)}A\n`;
         analysis += `Rated: ${ratedCurrent}A\n`;
         analysis += `Load: ${loadPercent}%\n\n`;
@@ -180,7 +180,7 @@ export const analyzePower = async (type: string, value: number, maxPower: number
 
     const getLocalAnalysis = (): string => {
         let analysis = `📊 LOCAL ANALYSIS - ${type}\n`;
-        analysis += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        analysis += `━\n`;
         analysis += `Power: ${value.toFixed(1)}W (${powerKW.toFixed(2)}kW)\n`;
         analysis += `Usage: ${usagePercent}%\n\n`;
 
@@ -229,7 +229,7 @@ export const analyzeEnergy = async (daily: number, monthly: number, yearly: numb
 
     const getLocalAnalysis = (): string => {
         let analysis = `📊 LOCAL ENERGY ANALYSIS\n`;
-        analysis += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        analysis += `━\n`;
         analysis += `Daily: ${daily.toFixed(2)} kWh\n`;
         analysis += `Monthly: ${monthly.toFixed(2)} kWh\n`;
         analysis += `Yearly: ${yearly.toFixed(2)} kWh\n`;

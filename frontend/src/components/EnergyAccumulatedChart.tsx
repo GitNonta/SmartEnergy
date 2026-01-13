@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getApiBase } from '../config/api';
-import { BarChart3, X, Brain } from 'lucide-react';
+import { BarChart3, X, Brain, CheckCircle2, AlertTriangle, AlertOctagon, XCircle, TrendingUp, Info, Cpu } from 'lucide-react';
 import { analyzeEnergy } from '../services/aiService';
 import { useTheme } from './AppShell';
 
@@ -191,6 +191,61 @@ const fetchYearlyData = async (locale: string) => {
 
 import { useLanguage } from '../context/LanguageContext';
 
+// --- Emoji to Icon Mapping ---
+const emojiMap: Record<string, React.ReactNode> = {
+    '🤖': <Cpu size={16} className="text-violet-500 inline-block mr-1.5 mb-0.5" />,
+    '📊': <TrendingUp size={16} className="text-blue-500 inline-block mr-1.5 mb-0.5" />,
+    '✅': <CheckCircle2 size={16} className="text-emerald-500 inline-block mr-1.5 mb-0.5" />,
+    '⚠️': <AlertTriangle size={16} className="text-amber-500 inline-block mr-1.5 mb-0.5" />,
+    '🚨': <AlertOctagon size={16} className="text-red-500 inline-block mr-1.5 mb-0.5" />,
+    '❌': <XCircle size={16} className="text-red-600 inline-block mr-1.5 mb-0.5" />,
+    'ℹ️': <Info size={16} className="text-blue-400 inline-block mr-1.5 mb-0.5" />,
+};
+
+const TextWithIcons = ({ text }: { text: string }) => {
+    if (!text) return null;
+
+    // Split text into parts, preserving emojis as separate tokens
+    // This regex matches any of the emojis in our map
+    const emojiRegex = new RegExp(`(${Object.keys(emojiMap).join('|')})`, 'gu');
+    const parts = text.split(emojiRegex);
+
+    return (
+        <div className="whitespace-pre-wrap text-center">
+            {parts.map((part, index) => {
+                if (emojiMap[part]) {
+                    return <React.Fragment key={index}>{emojiMap[part]}</React.Fragment>;
+                }
+                return <span key={index}>{part}</span>;
+            })}
+        </div>
+    );
+};
+
+// --- Custom Styles for Liquid Glass Scrollbar ---
+const scrollbarStyles = `
+    .liquid-glass-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+    .liquid-glass-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .liquid-glass-scroll::-webkit-scrollbar-thumb {
+        background: rgba(139, 92, 246, 0.2);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .liquid-glass-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(139, 92, 246, 0.4);
+    }
+    .dark .liquid-glass-scroll::-webkit-scrollbar-thumb {
+        background: rgba(167, 139, 250, 0.2);
+    }
+    .dark .liquid-glass-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(167, 139, 250, 0.4);
+    }
+`;
+
 export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onClose, isPopup = false }: EnergyAccumulatedChartProps) {
     const { darkMode } = useTheme();
     const { t, language } = useLanguage();
@@ -365,8 +420,9 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
     if (!isScriptLoaded) return <div className="p-4 text-slate-500 dark:text-slate-400">{t('common.loading')}</div>;
 
     return (
-        <div className={`energy-chart-modern ${isPopup ? 'popup-mode shadow-none border-none h-full' : 'rounded-2xl shadow-lg border border-slate-200 dark:border-white/5'} p-6 transition-colors duration-200 bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900 text-slate-800 dark:text-white`}>
+        <div className={`energy-chart-modern relative ${isPopup ? 'popup-mode shadow-none border-none h-full' : 'rounded-2xl shadow-lg border border-slate-200 dark:border-white/5'} p-6 transition-colors duration-200 bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900 text-slate-800 dark:text-white`}>
             {/* Header */}
+            <style>{scrollbarStyles}</style>
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 flex items-center justify-center rounded-lg bg-cyan-100 text-cyan-600 dark:bg-white/5 dark:text-white text-lg">
@@ -414,33 +470,65 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
                 <div ref={chartDivRef} />
             </div>
 
-            {/* Footer / AI */}
-            <div className="mt-4 flex justify-end">
+            {/* AI Activator - Floating Icon */}
+            <div className="absolute bottom-6 right-6">
                 <button
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-white transition-all transform hover:-translate-y-px hover:shadow-lg ${analyzing ? 'opacity-70 cursor-wait bg-slate-400' : 'bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:shadow-violet-500/40'}`}
+                    className={`group relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-500 overflow-hidden ${analyzing
+                        ? 'bg-slate-400 cursor-wait'
+                        : 'bg-white/10 hover:bg-violet-500/20 backdrop-blur-xl border border-white/20 hover:border-violet-500/50 shadow-lg hover:shadow-violet-500/40'
+                        }`}
                     onClick={handleAnalyze}
                     disabled={analyzing}
+                    title={t('status.aiDiagnosis')}
                 >
+                    {/* Liquid Background Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-violet-500/20 to-fuchsia-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
                     {analyzing ? (
-                        <span>{t('status.analyzing')}</span>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
-                        <>
-                            <Brain size={16} />
-                            <span>{t('status.aiDiagnosis')}</span>
-                        </>
+                        <div className="relative transform group-hover:scale-110 transition-transform duration-500">
+                            <Brain size={24} className="text-violet-600 dark:text-violet-400 group-hover:text-violet-500" />
+                        </div>
+                    )}
+
+                    {/* Notification Dot if result is hidden */}
+                    {!aiResult && !analyzing && (
+                        <div className="absolute top-2 right-2 w-2 h-2 bg-fuchsia-500 rounded-full animate-pulse shadow-sm" />
                     )}
                 </button>
             </div>
 
-            {/* AI Result */}
+            {/* AI Result - Liquid Glass Popup */}
             {aiResult && (
-                <div className="mt-4 bg-violet-50 border border-violet-200 dark:bg-violet-500/10 dark:border-violet-500/20 rounded-lg p-4 animate-in slide-in-from-top-2 duration-300">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-violet-600 dark:text-violet-300">{t('reports.title')} {aiResult.mode}</span>
-                        <button onClick={() => setAiResult(null)} className="text-violet-400 hover:text-violet-600 dark:hover:text-violet-200"><X size={16} /></button>
+                <div className="absolute bottom-24 right-6 left-6 sm:left-auto sm:w-80 
+                    bg-gradient-to-br from-white/40 to-white/10 dark:from-slate-800/40 dark:to-slate-900/10 
+                    backdrop-blur-2xl border border-white/30 dark:border-white/10 
+                    rounded-2xl p-5 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] 
+                    animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 z-50
+                    before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-violet-500/5 before:to-transparent before:pointer-events-none"
+                >
+                    {/* Glossy Reflection Effect */}
+                    <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-2xl pointer-events-none" />
+
+                    <div className="relative flex justify-between items-center mb-3">
+                        <span className="text-xs font-extrabold tracking-widest uppercase text-violet-700 dark:text-violet-300 flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
+                            {t('reports.title')}
+                        </span>
+                        <button
+                            onClick={() => setAiResult(null)}
+                            className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 transition-all duration-300 border border-white/20"
+                        >
+                            <X size={14} />
+                        </button>
                     </div>
-                    <div className="text-sm text-violet-900 dark:text-violet-100 leading-relaxed whitespace-pre-wrap">
-                        {aiResult.text}
+
+                    <div className="relative max-h-[250px] overflow-y-auto pr-2 liquid-glass-scroll
+                        text-sm text-slate-800 dark:text-slate-100 leading-relaxed font-semibold 
+                        bg-white/20 dark:bg-black/20 rounded-xl p-4 border border-white/10
+                        transition-all duration-300">
+                        <TextWithIcons text={aiResult.text} />
                     </div>
                 </div>
             )}
