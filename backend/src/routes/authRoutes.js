@@ -32,22 +32,27 @@ router.post('/login', async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'];
 
-    if (!username || !password) {
+    // 'username' field can be username, email, or phone number
+    const identifier = username;
+
+    if (!identifier || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Username and password are required'
+        error: 'Username/Email/Phone and password are required'
       });
     }
 
-    // Find user
+    // Find user by username, email, or phone number
     const user = await queryOne(
-      'SELECT * FROM users WHERE username = ? AND is_active = TRUE',
-      [username]
+      `SELECT * FROM users 
+       WHERE (username = ? OR email = ? OR phone_number = ?) 
+       AND is_active = TRUE`,
+      [identifier, identifier, identifier]
     );
 
     if (!user) {
       await logActivity(null, ACTIONS.LOGIN_FAILED, 'auth', 
-        { username, reason: 'User not found' }, ipAddress);
+        { identifier, reason: 'User not found' }, ipAddress);
       
       return res.status(401).json({
         success: false,
