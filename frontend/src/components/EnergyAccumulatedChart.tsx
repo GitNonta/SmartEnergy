@@ -524,9 +524,9 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
                         </button>
                     </div>
 
-                    <div className="relative max-h-[250px] overflow-y-auto pr-2 liquid-glass-scroll
-                        text-sm text-slate-800 dark:text-slate-100 leading-relaxed font-semibold 
-                        bg-white/20 dark:bg-black/20 rounded-xl p-4 border border-white/10
+                    <div className="relative max-h-[220px] overflow-y-auto pr-2 liquid-glass-scroll
+                        text-[11px] text-slate-800 dark:text-slate-100 leading-relaxed font-bold 
+                        bg-white/10 dark:bg-black/10 rounded-xl p-3 border border-white/10
                         transition-all duration-300">
                         <TextWithIcons text={aiResult.text} />
                     </div>
