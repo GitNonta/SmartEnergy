@@ -3,6 +3,8 @@ import { useWebSocket } from '../context/WebSocketContext';
 import { Zap, BarChart3, Brain, X } from 'lucide-react';
 import { analyzeVoltage, isAIConfigured } from '../services/aiService';
 
+import { useTheme } from './AppShell';
+
 // --- Constants & Config ---
 const MAX_DATA_POINTS = 60;
 // Y-axis will be calculated dynamically based on real-time data
@@ -60,6 +62,7 @@ const calculateStats = (data: ChartDataPoint[]): PhaseStats => {
 export default function VoltageRealtimeChart({ initialViewMode = 'all', onClose, isPopup = false }: VoltageRealtimeChartProps) {
     // --- State ---
     const { energyData, isConnected } = useWebSocket();
+    const { darkMode } = useTheme();
     const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
@@ -273,7 +276,7 @@ export default function VoltageRealtimeChart({ initialViewMode = 'all', onClose,
                     size: 5 // ขยายขนาดเมื่อเอาเมาส์ชี้
                 }
             },
-            theme: { mode: 'dark' },
+            theme: { mode: darkMode ? 'dark' : 'light' },
             xaxis: {
                 type: 'datetime',
                 labels: {
@@ -303,18 +306,18 @@ export default function VoltageRealtimeChart({ initialViewMode = 'all', onClose,
                 tickAmount: 5,
                 title: {
                     text: `Voltage (V) [${yAxisMin}-${yAxisMax}]`,
-                    style: { color: '#94a3b8', fontSize: '11px' }
+                    style: { color: darkMode ? '#94a3b8' : '#64748b', fontSize: '11px' }
                 }
             },
             grid: {
-                borderColor: 'rgba(255,255,255,0.05)',
+                borderColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
                 strokeDashArray: 3,
             },
             legend: { show: true, position: 'top' },
             // เพิ่ม Tooltip เพื่อดูค่าละเอียด
             tooltip: {
                 enabled: true,
-                theme: 'dark',
+                theme: darkMode ? 'dark' : 'light',
                 x: {
                     formatter: (val: number) => {
                         const date = new Date(val);
@@ -502,14 +505,20 @@ export default function VoltageRealtimeChart({ initialViewMode = 'all', onClose,
 
             <style>{`
                 .voltage-chart-modern {
-                    background: linear-gradient(145deg, #1e293b, #0f172a);
+                    background: #ffffff;
                     border-radius: 16px;
-                    border: 1px solid rgba(255,255,255,0.05);
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
                     padding: 1.5rem;
-                    color: #fff;
+                    color: #1e293b;
                     font-family: 'Inter', sans-serif;
                     position: relative;
+                }
+                html.dark .voltage-chart-modern {
+                    background: linear-gradient(145deg, #1e293b, #0f172a);
+                    border: 1px solid rgba(255,255,255,0.05);
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    color: #fff;
                 }
                 .voltage-chart-modern.popup-mode {
                     box-shadow: none;
@@ -518,50 +527,98 @@ export default function VoltageRealtimeChart({ initialViewMode = 'all', onClose,
                 }
                 .v-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
                 .v-title-group { display: flex; align-items: center; gap: 10px; }
-                .v-icon { width: 36px; height: 36px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
-                .v-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; margin: 0; color: #f8fafc; }
-                .v-subtitle { font-size: 0.7rem; color: #94a3b8; }
                 
-                .v-tabs { display: flex; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px; gap: 4px; }
+                .v-icon { 
+                    width: 36px; height: 36px; 
+                    background: #f1f5f9; 
+                    border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+                    color: #3b82f6; 
+                }
+                html.dark .v-icon {
+                    background: rgba(255,255,255,0.05);
+                    color: #fff;
+                }
+
+                .v-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; margin: 0; color: #0f172a; }
+                html.dark .v-title { color: #f8fafc; }
+
+                .v-subtitle { font-size: 0.7rem; color: #64748b; }
+                html.dark .v-subtitle { color: #94a3b8; }
+                
+                .v-tabs { display: flex; background: #f1f5f9; padding: 4px; border-radius: 8px; gap: 4px; }
+                html.dark .v-tabs { background: rgba(0,0,0,0.2); }
+
                 .v-tab { border: none; background: transparent; color: #64748b; padding: 6px 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
-                .v-tab:hover { color: #cbd5e1; }
-                .v-tab.active { background: #334155; color: #fff; shadow: 0 2px 4px rgba(0,0,0,0.2); }
-                .v-tab.t-p1.active { background: ${COLORS.p1}; }
-                .v-tab.t-p2.active { background: ${COLORS.p2}; color: #000; }
-                .v-tab.t-p3.active { background: ${COLORS.p3}; }
+                .v-tab:hover { color: #334155; }
+                html.dark .v-tab:hover { color: #cbd5e1; }
+
+                .v-tab.active { background: #ffffff; color: #0f172a; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+                html.dark .v-tab.active { background: #334155; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+                .v-tab.t-p1.active { background: ${COLORS.p1}; color: #fff; }
+                .v-tab.t-p2.active { background: ${COLORS.p2}; color: #fff; }
+                .v-tab.t-p3.active { background: ${COLORS.p3}; color: #fff; }
+                html.dark .v-tab.t-p2.active { color: #000; }
 
                 .v-close-btn {
-                    background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+                    background: rgba(0,0,0,0.05); border: none; color: #64748b; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
                 }
-                .v-close-btn:hover { background: rgba(239, 68, 68, 0.8); }
+                html.dark .v-close-btn {
+                    background: rgba(255,255,255,0.1); color: #fff;
+                }
+                .v-close-btn:hover { background: rgba(239, 68, 68, 0.8); color: white; }
 
                 .v-chart-container { min-height: 300px; position: relative; }
-                .v-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); font-weight: bold; letter-spacing: 0.1em; color: #ef4444; }
+                .v-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); font-weight: bold; letter-spacing: 0.1em; color: #ef4444; }
+                html.dark .v-overlay { background: rgba(0,0,0,0.5); }
 
-                .v-footer { margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; }
+                .v-footer { margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+                html.dark .v-footer { border-top: 1px solid rgba(255,255,255,0.05); }
+
                 .v-legend-hint { text-align: center; color: #64748b; font-size: 0.8rem; font-style: italic; }
                 
                 .v-stats-panel { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
                 .v-stat-row { display: flex; gap: 1rem; }
                 .stat-box { display: flex; flex-direction: column; }
-                .s-label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; }
-                .s-val { font-family: 'Roboto Mono', monospace; font-size: 1rem; font-weight: 600; }
-                .stat-box.highlight .s-val { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+                .s-label { font-size: 0.65rem; color: #64748b; font-weight: 700; }
+                html.dark .s-label { color: #94a3b8; }
+
+                .s-val { font-family: 'Roboto Mono', monospace; font-size: 1rem; font-weight: 600; color: #0f172a; }
+                html.dark .s-val { color: #fff; }
+
+                .stat-box.highlight .s-val { color: #2563eb; }
+                html.dark .stat-box.highlight .s-val { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
 
                 .v-ai-btn { background: linear-gradient(90deg, #6366f1, #8b5cf6); border: none; padding: 8px 16px; border-radius: 6px; color: white; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; gap: 8px; }
                 .v-ai-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); }
                 .v-ai-btn.loading { opacity: 0.7; cursor: wait; }
 
-                .v-ai-result { margin-top: 1rem; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; padding: 1rem; animation: slideDown 0.3s ease; }
-                .v-ai-result.local-mode { background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2); }
-                .ai-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; color: #a5b4fc; margin-bottom: 0.5rem; }
+                .v-ai-result { margin-top: 1rem; background: #eef2ff; border: 1px solid #e0e7ff; border-radius: 8px; padding: 1rem; animation: slideDown 0.3s ease; }
+                html.dark .v-ai-result { background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); }
+
+                .v-ai-result.local-mode { background: #eff6ff; border-color: #dbeafe; }
+                html.dark .v-ai-result.local-mode { background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2); }
+                
+                .ai-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; color: #6366f1; margin-bottom: 0.5rem; }
+                html.dark .ai-header { color: #a5b4fc; }
+
                 .ai-header span { display: flex; align-items: center; gap: 6px; }
                 .ai-header button { background: none; border: none; color: inherit; cursor: pointer; display: flex; align-items: center; padding: 0; }
-                .v-ai-result.local-mode .ai-header { color: #93c5fd; }
-                .ai-body { font-size: 0.85rem; color: #e0e7ff; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; }
-                .v-ai-result.local-mode .ai-body { color: #dbeafe; }
-                .ai-footer { font-size: 0.75rem; color: #a5b4fc; margin-top: 0.5rem; font-style: italic; border-top: 1px solid rgba(99, 102, 241, 0.2); padding-top: 0.5rem; }
-                .v-ai-result.local-mode .ai-footer { color: #93c5fd; border-top-color: rgba(59, 130, 246, 0.2); }
+                
+                .v-ai-result.local-mode .ai-header { color: #3b82f6; }
+                html.dark .v-ai-result.local-mode .ai-header { color: #93c5fd; }
+
+                .ai-body { font-size: 0.85rem; color: #1e293b; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; }
+                html.dark .ai-body { color: #e0e7ff; }
+
+                .v-ai-result.local-mode .ai-body { color: #1e293b; }
+                html.dark .v-ai-result.local-mode .ai-body { color: #dbeafe; }
+
+                .ai-footer { font-size: 0.75rem; color: #6366f1; margin-top: 0.5rem; font-style: italic; border-top: 1px solid #e0e7ff; padding-top: 0.5rem; }
+                html.dark .ai-footer { color: #a5b4fc; border-top: 1px solid rgba(99, 102, 241, 0.2); }
+
+                .v-ai-result.local-mode .ai-footer { color: #3b82f6; border-top-color: #dbeafe; }
+                html.dark .v-ai-result.local-mode .ai-footer { color: #93c5fd; border-top-color: rgba(59, 130, 246, 0.2); }
                 
                 @media (max-width: 600px) {
                     .v-stats-panel { flex-direction: column; align-items: flex-start; }

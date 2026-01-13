@@ -13,6 +13,7 @@ import {
 import { TrendingUp, X, Zap, DollarSign } from 'lucide-react';
 import { getApiBase } from '../config/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from './AppShell';
 import './EnergyCostHistoryChart.css';
 
 export type ViewMode = 'daily' | 'monthly' | 'yearly';
@@ -68,6 +69,7 @@ export default function EnergyCostHistoryChart({
     const [totalCost, setTotalCost] = useState<number>(0);
     const [loading, setLoading] = useState(false);
     const { t } = useLanguage();
+    const { darkMode } = useTheme();
 
     useEffect(() => {
         setViewMode(initialMode);
@@ -106,28 +108,28 @@ export default function EnergyCostHistoryChart({
 
     const getTitle = () => {
         switch (viewMode) {
-            case 'daily': return 'ค่าไฟฟ้ารายชั่วโมง (วันนี้)';
-            case 'monthly': return 'ค่าไฟฟ้ารายวัน (เดือนนี้)';
-            case 'yearly': return 'ค่าไฟฟ้ารายเดือน (ปีนี้)';
+            case 'daily': return t('history.hourlyCost');
+            case 'monthly': return t('history.dailyCost');
+            case 'yearly': return t('history.monthlyCost');
         }
     };
 
     return (
-        <div className={`cost-history-chart ${isPopup ? 'popup-mode' : ''}`}>
+        <div className={`cost-history-chart ${isPopup ? 'popup-mode' : ''} bg-white dark:bg-transparent text-slate-900 dark:text-slate-100 w-full h-full flex flex-col p-6`}>
             {/* Header */}
             <div className="chart-header">
                 <div className="header-left">
-                    <div className="header-icon">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mr-3 bg-amber-100 text-amber-500 dark:bg-amber-500/10 dark:text-amber-500">
                         <TrendingUp size={20} />
                     </div>
                     <div className="header-text">
-                        <h3 className="chart-title">{getTitle()}</h3>
+                        <h3 className="chart-title text-slate-800 dark:text-slate-100">{getTitle()}</h3>
                         <div className="chart-summary">
                             <span className="summary-item">
                                 <Zap size={14} />
                                 <span>{totalEnergy.toLocaleString('th-TH', { minimumFractionDigits: 2 })} kWh</span>
                             </span>
-                            <span className="summary-divider">•</span>
+                            <span className="mx-2 text-slate-300 dark:text-slate-600">•</span>
                             <span className="summary-item cost">
                                 <DollarSign size={14} />
                                 <span>฿{totalCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
@@ -137,28 +139,28 @@ export default function EnergyCostHistoryChart({
                 </div>
 
                 <div className="header-right">
-                    <div className="mode-tabs">
+                    <div className="bg-slate-100 dark:bg-black/20 p-1 rounded-lg flex space-x-1">
                         <button
-                            className={`tab ${viewMode === 'daily' ? 'active' : ''}`}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'daily' ? 'bg-amber-500 text-white shadow-sm' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                             onClick={() => setViewMode('daily')}
                         >
-                            รายชม.
+                            {t('export.buckets.hourly')}
                         </button>
                         <button
-                            className={`tab ${viewMode === 'monthly' ? 'active' : ''}`}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'monthly' ? 'bg-amber-500 text-white shadow-sm' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                             onClick={() => setViewMode('monthly')}
                         >
-                            รายวัน
+                            {t('export.buckets.daily')}
                         </button>
                         <button
-                            className={`tab ${viewMode === 'yearly' ? 'active' : ''}`}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'yearly' ? 'bg-amber-500 text-white shadow-sm' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                             onClick={() => setViewMode('yearly')}
                         >
-                            รายเดือน
+                            {t('export.buckets.yearly')}
                         </button>
                     </div>
                     {onClose && (
-                        <button className="close-btn" onClick={onClose}>
+                        <button className="close-btn p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400" onClick={onClose}>
                             <X size={18} />
                         </button>
                     )}
@@ -181,41 +183,41 @@ export default function EnergyCostHistoryChart({
                             <defs>
                                 {/* Gradient for Cost bars */}
                                 <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.9} />
-                                    <stop offset="95%" stopColor="#d97706" stopOpacity={0.7} />
+                                    <stop offset="5%" stopColor={darkMode ? "#f59e0b" : "#d97706"} stopOpacity={0.9} />
+                                    <stop offset="95%" stopColor={darkMode ? "#d97706" : "#b45309"} stopOpacity={0.7} />
                                 </linearGradient>
                                 {/* Gradient for Energy bars */}
                                 <linearGradient id="energyGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.9} />
-                                    <stop offset="95%" stopColor="#0891b2" stopOpacity={0.7} />
+                                    <stop offset="5%" stopColor={darkMode ? "#22d3ee" : "#0891b2"} stopOpacity={0.9} />
+                                    <stop offset="95%" stopColor={darkMode ? "#0891b2" : "#0e7490"} stopOpacity={0.7} />
                                 </linearGradient>
                             </defs>
 
                             <CartesianGrid
                                 strokeDasharray="3 3"
-                                stroke="rgba(255,255,255,0.1)"
+                                stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
                                 vertical={false}
                             />
 
                             <XAxis
                                 dataKey="x"
-                                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                                tick={{ fill: darkMode ? '#94a3b8' : '#64748b', fontSize: 11 }}
                                 tickLine={false}
-                                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                                axisLine={{ stroke: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
                                 interval={viewMode === 'daily' ? 2 : viewMode === 'monthly' ? 4 : 0}
                             />
 
                             {/* Left Y-axis for Cost (THB) */}
                             <YAxis
                                 yAxisId="left"
-                                tick={{ fill: '#fbbf24', fontSize: 11 }}
+                                tick={{ fill: darkMode ? '#fbbf24' : '#d97706', fontSize: 11 }}
                                 tickLine={false}
                                 axisLine={false}
                                 label={{
                                     value: 'บาท',
                                     angle: -90,
                                     position: 'insideLeft',
-                                    fill: '#fbbf24',
+                                    fill: darkMode ? '#fbbf24' : '#d97706',
                                     fontSize: 12
                                 }}
                                 tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
@@ -225,14 +227,14 @@ export default function EnergyCostHistoryChart({
                             <YAxis
                                 yAxisId="right"
                                 orientation="right"
-                                tick={{ fill: '#22d3ee', fontSize: 11 }}
+                                tick={{ fill: darkMode ? '#22d3ee' : '#0891b2', fontSize: 11 }}
                                 tickLine={false}
                                 axisLine={false}
                                 label={{
                                     value: 'kWh',
                                     angle: 90,
                                     position: 'insideRight',
-                                    fill: '#22d3ee',
+                                    fill: darkMode ? '#22d3ee' : '#0891b2',
                                     fontSize: 12
                                 }}
                             />
@@ -241,18 +243,20 @@ export default function EnergyCostHistoryChart({
 
                             <Legend
                                 wrapperStyle={{ paddingTop: '10px' }}
-                                formatter={(value) => (
-                                    <span style={{ color: value === 'ค่าไฟฟ้า (บาท)' ? '#fbbf24' : '#22d3ee' }}>
-                                        {value}
-                                    </span>
-                                )}
+                                formatter={(value) => {
+                                    const isCost = value.includes(t('history.cost')) || value === 'ค่าไฟฟ้า (บาท)';
+                                    const color = isCost
+                                        ? (darkMode ? '#fbbf24' : '#d97706')
+                                        : (darkMode ? '#22d3ee' : '#0891b2');
+                                    return <span style={{ color }}>{value}</span>;
+                                }}
                             />
 
                             {/* Cost bars */}
                             <Bar
                                 yAxisId="left"
                                 dataKey="cost"
-                                name="ค่าไฟฟ้า (บาท)"
+                                name={t('history.cost')}
                                 fill="url(#costGradient)"
                                 radius={[4, 4, 0, 0]}
                                 barSize={viewMode === 'yearly' ? 24 : viewMode === 'monthly' ? 12 : 14}
@@ -263,11 +267,11 @@ export default function EnergyCostHistoryChart({
                                 yAxisId="right"
                                 type="monotone"
                                 dataKey="energy"
-                                name="พลังงาน (kWh)"
-                                stroke="#22d3ee"
+                                name={`${t('history.energy')} (kWh)`}
+                                stroke={darkMode ? "#22d3ee" : "#0891b2"}
                                 strokeWidth={2}
-                                dot={{ fill: '#22d3ee', strokeWidth: 0, r: 3 }}
-                                activeDot={{ r: 5, fill: '#22d3ee' }}
+                                dot={{ fill: darkMode ? '#22d3ee' : '#0891b2', strokeWidth: 0, r: 3 }}
+                                activeDot={{ r: 5, fill: darkMode ? '#22d3ee' : '#0891b2' }}
                             />
                         </ComposedChart>
                     </ResponsiveContainer>
@@ -282,9 +286,67 @@ export default function EnergyCostHistoryChart({
                 </div>
                 <div className="legend-item">
                     <span className="legend-line energy"></span>
-                    <span>พลังงาน (kWh)</span>
+                    <span>{t('history.energy')} (kWh)</span>
                 </div>
             </div>
+
+            {/* CSS styles that couldn't be replaced with utilities easily */}
+            <style>{`
+                .chart-loading {
+                     display: flex;
+                     flex-direction: column;
+                     align-items: center;
+                     justify-content: center;
+                     height: 100%;
+                     color: #64748b;
+                     font-size: 0.8rem;
+                }
+                .loading-spinner {
+                    border: 3px solid #f3f3f3;
+                    border-top: 3px solid #f59e0b;
+                    border-radius: 50%;
+                    width: 24px;
+                    height: 24px;
+                    animation: spin 1s linear infinite;
+                    margin-bottom: 10px;
+                }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                .chart-footer {
+                    display: flex;
+                    justify-content: center;
+                    gap: 20px;
+                    margin-top: 10px;
+                    font-size: 0.75rem;
+                    color: #64748b;
+                }
+                .legend-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .legend-bar {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 2px;
+                }
+                .legend-bar.cost {
+                    background: linear-gradient(to bottom, #f59e0b, #d97706);
+                }
+                .legend-line {
+                    width: 12px;
+                    height: 3px;
+                    border-radius: 1px;
+                }
+                .legend-line.energy {
+                    background: #0891b2;
+                }
+                html.dark .legend-line.energy {
+                    background: #22d3ee;
+                }
+            `}</style>
         </div>
     );
 }

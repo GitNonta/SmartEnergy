@@ -107,14 +107,14 @@ const ActivePowerBlock: React.FC<ActivePowerBlockProps> = ({
 
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.1),transparent_70%)] pointer-events-none"></div>
 
-        <div className="text-[0.65rem] text-slate-500 text-center mt-auto pt-4 italic font-sans">(Click rows for graph)</div>
+
       </div>
 
       {/* Modal Popup */}
       {/* Modal Popup */}
       {selectedView && createPortal(
-        <div className="history-chart-overlay fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-200" onClick={() => setSelectedView(null)}>
-          <div className="history-chart-popup w-full max-w-[900px] max-h-[90vh] bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-emerald-500/20 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
+        <div className="history-chart-overlay fixed inset-0 bg-white/90 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-200" onClick={() => setSelectedView(null)}>
+          <div className="history-chart-popup w-full max-w-[900px] max-h-[90vh] bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900 rounded-2xl border border-slate-200 dark:border-emerald-500/20 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
             <ActivePowerRealtimeChart
               initialViewMode={selectedView}
               onClose={() => setSelectedView(null)}

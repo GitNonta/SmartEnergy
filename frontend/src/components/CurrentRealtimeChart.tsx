@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
+import { useTheme } from './AppShell';
 import { analyzeCurrent, isAIConfigured } from '../services/aiService';
 
 // --- Constants & Config ---
@@ -54,6 +55,7 @@ const calculateStats = (data: ChartDataPoint[]): CurrentStats => {
 export default function CurrentRealtimeChart({ initialViewMode = 'all', onClose, isPopup = false }: CurrentRealtimeChartProps) {
     // --- State ---
     const { energyData, isConnected } = useWebSocket();
+    const { darkMode } = useTheme();
     const [viewMode, setViewMode] = useState<CurrentViewMode>(initialViewMode);
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
@@ -227,7 +229,7 @@ export default function CurrentRealtimeChart({ initialViewMode = 'all', onClose,
             strokeWidth: 0,
             hover: { size: 5 }
         },
-        theme: { mode: 'dark' },
+        theme: { mode: darkMode ? 'dark' : 'light' },
         xaxis: {
             type: 'datetime',
             labels: {
@@ -257,17 +259,17 @@ export default function CurrentRealtimeChart({ initialViewMode = 'all', onClose,
             max: yAxisMax,
             title: {
                 text: `Current (A) [${yAxisMin.toFixed(1)}-${yAxisMax.toFixed(1)}]`,
-                style: { color: '#94a3b8', fontSize: '11px' }
+                style: { color: darkMode ? '#94a3b8' : '#64748b', fontSize: '11px' }
             }
         },
         grid: {
-            borderColor: 'rgba(255,255,255,0.05)',
+            borderColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
             strokeDashArray: 3,
         },
         legend: { show: true, position: 'top' },
         tooltip: {
             enabled: true,
-            theme: 'dark',
+            theme: darkMode ? 'dark' : 'light',
             x: {
                 formatter: (val: number) => {
                     // Convert UTC timestamp to Bangkok time
@@ -397,55 +399,91 @@ export default function CurrentRealtimeChart({ initialViewMode = 'all', onClose,
 
             <style>{`
                 .current-chart-modern {
-                    background: linear-gradient(145deg, #1e293b, #0f172a);
+                    background: #ffffff;
                     border-radius: 16px;
-                    border: 1px solid rgba(148, 163, 184, 0.1);
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
                     padding: 1.5rem;
-                    color: #fff;
+                    color: #1e293b;
                     font-family: 'Inter', sans-serif;
                     position: relative;
+                }
+                html.dark .current-chart-modern {
+                    background: linear-gradient(145deg, #1e293b, #0f172a);
+                    border: 1px solid rgba(148, 163, 184, 0.1);
+                    color: #fff;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
                 }
                 .current-chart-modern.popup-mode {
                     box-shadow: none; border: none; height: 100%;
                 }
                 .c-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
                 .c-title-group { display: flex; align-items: center; gap: 10px; }
-                .c-icon { width: 36px; height: 36px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #38bdf8; }
-                .c-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; margin: 0; color: #f8fafc; }
-                .c-subtitle { font-size: 0.7rem; color: #94a3b8; }
                 
-                .c-tabs { display: flex; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px; gap: 4px; }
-                .c-tab { border: none; background: transparent; color: #94a3b8; padding: 6px 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
-                .c-tab:hover { color: #fff; }
-                .c-tab.active { background: #334155; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-                .c-tab.t-p1.active { background: ${COLORS.p1}; }
-                .c-tab.t-p2.active { background: ${COLORS.p2}; color: #000; }
-                .c-tab.t-p3.active { background: ${COLORS.p3}; }
+                .c-icon { width: 36px; height: 36px; background: #e0f2fe; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #0284c7; }
+                html.dark .c-icon { background: rgba(255,255,255,0.05); color: #38bdf8; }
 
-                .c-close-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-                .c-close-btn:hover { background: rgba(239, 68, 68, 0.8); }
+                .c-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; margin: 0; color: #0f172a; }
+                html.dark .c-title { color: #f8fafc; }
+
+                .c-subtitle { font-size: 0.7rem; color: #64748b; }
+                html.dark .c-subtitle { color: #94a3b8; }
+                
+                .c-tabs { display: flex; background: #f1f5f9; padding: 4px; border-radius: 8px; gap: 4px; }
+                html.dark .c-tabs { background: rgba(0,0,0,0.2); }
+
+                .c-tab { border: none; background: transparent; color: #64748b; padding: 6px 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+                .c-tab:hover { color: #1e293b; }
+                html.dark .c-tab { color: #94a3b8; }
+                html.dark .c-tab:hover { color: #fff; }
+
+                .c-tab.active { background: #ffffff; color: #0f172a; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+                html.dark .c-tab.active { background: #334155; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+                .c-tab.t-p1.active { background: ${COLORS.p1}; color: #fff; }
+                .c-tab.t-p2.active { background: ${COLORS.p2}; color: #000; }
+                .c-tab.t-p3.active { background: ${COLORS.p3}; color: #fff; }
+
+                .c-close-btn { background: #f1f5f9; border: none; color: #64748b; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+                html.dark .c-close-btn { background: rgba(255,255,255,0.1); color: #fff; }
+                .c-close-btn:hover { background: #ef4444; color: white; }
+                html.dark .c-close-btn:hover { background: rgba(239, 68, 68, 0.8); }
 
                 .c-chart-container { min-height: 300px; position: relative; }
-                .c-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); font-weight: bold; letter-spacing: 0.1em; color: #ef4444; }
+                .c-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); font-weight: bold; letter-spacing: 0.1em; color: #ef4444; }
+                html.dark .c-overlay { background: rgba(0,0,0,0.5); }
 
-                .c-footer { margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; }
+                .c-footer { margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+                html.dark .c-footer { border-top: 1px solid rgba(255,255,255,0.05); }
                 
                 .c-stats-panel { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
                 .c-stat-row { display: flex; gap: 1rem; }
                 .stat-box { display: flex; flex-direction: column; }
-                .s-label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; }
-                .s-val { font-family: 'Roboto Mono', monospace; font-size: 1rem; font-weight: 600; color: #e2e8f0; }
+                
+                .s-label { font-size: 0.65rem; color: #64748b; font-weight: 700; }
+                html.dark .s-label { color: #94a3b8; }
+
+                .s-val { font-family: 'Roboto Mono', monospace; font-size: 1rem; font-weight: 600; color: #0f172a; }
+                html.dark .s-val { color: #e2e8f0; }
+
                 .s-val .u { font-size: 0.7rem; color: #64748b; }
-                .stat-box.highlight .s-val { color: #fff; text-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+                html.dark .s-val .u { color: #64748b; }
+
+                .stat-box.highlight .s-val { color: #0ea5e9; }
+                html.dark .stat-box.highlight .s-val { color: #fff; text-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
 
                 .c-ai-btn { background: linear-gradient(90deg, #0ea5e9, #3b82f6); border: none; padding: 8px 16px; border-radius: 6px; color: white; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: transform 0.2s; }
                 .c-ai-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
                 .c-ai-btn.loading { opacity: 0.7; cursor: wait; }
 
-                .c-ai-result { margin-top: 1rem; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 1rem; animation: slideDown 0.3s ease; }
-                .ai-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #7dd3fc; margin-bottom: 0.5rem; }
-                .ai-body { font-size: 0.85rem; color: #e0f2fe; line-height: 1.5; }
+                .c-ai-result { margin-top: 1rem; background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 8px; padding: 1rem; animation: slideDown 0.3s ease; }
+                html.dark .c-ai-result { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); }
+
+                .ai-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #0369a1; margin-bottom: 0.5rem; }
+                html.dark .ai-header { color: #7dd3fc; }
+
+                .ai-body { font-size: 0.85rem; color: #0c4a6e; line-height: 1.5; }
+                html.dark .ai-body { color: #e0f2fe; }
 
                 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
                 

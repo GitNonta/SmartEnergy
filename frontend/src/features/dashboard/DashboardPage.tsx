@@ -323,10 +323,7 @@ const DashboardContent: React.FC = () => {
       <EditModeToggle />
 
       {/* Footer */}
-      <footer className="mt-8 pt-4 border-t border-slate-200 dark:border-white/5 flex justify-between text-slate-400 dark:text-white/30 text-xs">
-        <div className="font-mono">
-          Last Update: {lastUpdate ? lastUpdate.toLocaleTimeString() : '-'}
-        </div>
+      <footer className="mt-8 pt-4 border-t border-slate-200 dark:border-white/5 flex justify-end text-slate-400 dark:text-white/30 text-xs">
         <div>v3.0.0 (Free Position)</div>
       </footer>
     </div>

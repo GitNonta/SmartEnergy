@@ -369,5 +369,21 @@
         "heapFree": "หน่วยความจำว่าง",
         "cpuFreq": "ความเร็ว CPU",
         "uptime": "เวลาทำงาน"
+    },
+    "history": {
+        "hourlyConsumption": "การใช้พลังงานรายชั่วโมง",
+        "dailyConsumption": "การใช้พลังงานรายวัน",
+        "monthlyConsumption": "การใช้พลังงานรายเดือน",
+        "hourlyCost": "ค่าไฟฟ้ารายชั่วโมง",
+        "dailyCost": "ค่าไฟฟ้ารายวัน",
+        "monthlyCost": "ค่าไฟฟ้ารายเดือน",
+        "total": "รวม",
+        "measured": "วัดค่าจริง",
+        "estimated": "ประมาณการ",
+        "invalid": "ข้อมูลไม่สมบูรณ์",
+        "source": "แหล่งข้อมูล",
+        "loading": "กำลังโหลดข้อมูล...",
+        "energy": "พลังงาน",
+        "cost": "ค่าไฟฟ้า"
     }
 }

@@ -106,7 +106,7 @@ const FrequencyBlock: React.FC = () => {
 
         <div className="flex justify-between items-center text-[0.65rem] text-slate-500 border-t border-slate-200 dark:border-white/5 pt-3 mt-4 font-sans">
           <span>Nominal: {nominalVoltage}V</span>
-          <span className="italic opacity-70">(Click rows for graph)</span>
+
           <span>Max: {maxScale}V</span>
         </div>
       </div>
@@ -114,8 +114,8 @@ const FrequencyBlock: React.FC = () => {
       {/* Modal Popup for Chart */}
       {/* Modal Popup for Chart */}
       {selectedPhase && createPortal(
-        <div className="history-chart-overlay fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-200" onClick={() => setSelectedPhase(null)}>
-          <div className="history-chart-popup w-full max-w-[900px] max-h-[90vh] bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-blue-500/20 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
+        <div className="history-chart-overlay fixed inset-0 bg-white/90 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-200" onClick={() => setSelectedPhase(null)}>
+          <div className="history-chart-popup w-full max-w-[900px] max-h-[90vh] bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900 rounded-2xl border border-slate-200 dark:border-blue-500/20 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
             <VoltageRealtimeChart
               initialViewMode={selectedPhase}
               onClose={() => setSelectedPhase(null)}

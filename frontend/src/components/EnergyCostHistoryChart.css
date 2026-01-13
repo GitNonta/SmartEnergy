@@ -1,145 +1,6 @@
-/* EnergyCostHistoryChart.css - Premium Gold/Cyan Theme */
+/* EnergyCostHistoryChart.css - Styles for specific elements like tooltips and loading spinners */
 
-.cost-history-chart {
-    background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-    border-radius: 16px;
-    border: 1px solid rgba(251, 191, 36, 0.15);
-    box-shadow:
-        0 10px 25px -5px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    padding: 1.25rem;
-    font-family: 'Inter', sans-serif;
-    color: #e7e5e4;
-    position: relative;
-    overflow: hidden;
-}
-
-.cost-history-chart.popup-mode {
-    height: 100%;
-    box-shadow: none;
-    border: none;
-}
-
-/* Header */
-.chart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.header-icon {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
-}
-
-.header-text {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.chart-title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #fbbf24;
-    letter-spacing: 0.02em;
-}
-
-.chart-summary {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: #94a3b8;
-}
-
-.summary-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.summary-item.cost {
-    color: #fbbf24;
-    font-weight: 600;
-}
-
-.summary-divider {
-    color: #475569;
-}
-
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-/* Mode Tabs */
-.mode-tabs {
-    display: flex;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 8px;
-    padding: 4px;
-    gap: 2px;
-}
-
-.mode-tabs .tab {
-    background: transparent;
-    border: none;
-    color: #64748b;
-    padding: 6px 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-}
-
-.mode-tabs .tab:hover {
-    color: #cbd5e1;
-}
-
-.mode-tabs .tab.active {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    color: #000;
-}
-
-/* Close Button */
-.close-btn {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 8px;
-    color: #94a3b8;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-}
+/* The main container styling and theme colors are now handled via Tailwind CSS in the component */
 
 /* Chart Container */
 .chart-container {
@@ -147,49 +8,36 @@
     position: relative;
 }
 
-.chart-loading {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    color: #94a3b8;
-}
-
-.loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid rgba(251, 191, 36, 0.2);
-    border-top-color: #fbbf24;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
 /* Custom Tooltip */
 .cost-chart-tooltip {
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid rgba(251, 191, 36, 0.3);
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 10px 14px;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
+    color: #0f172a;
+}
+
+html.dark .cost-chart-tooltip {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: #e2e8f0;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
 }
 
 .tooltip-label {
     margin: 0 0 8px 0;
     font-size: 0.75rem;
     font-weight: 600;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 6px;
+}
+
+html.dark .tooltip-label {
     color: #94a3b8;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 6px;
 }
 
 .tooltip-items {
@@ -216,44 +64,6 @@
     font-family: 'Roboto Mono', monospace;
 }
 
-/* Footer Legend */
-.chart-footer {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    color: #94a3b8;
-}
-
-.legend-bar {
-    width: 16px;
-    height: 10px;
-    border-radius: 2px;
-}
-
-.legend-bar.cost {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.legend-line {
-    width: 16px;
-    height: 3px;
-    border-radius: 2px;
-}
-
-.legend-line.energy {
-    background: #22d3ee;
-}
-
 /* Responsive */
 @media (max-width: 640px) {
     .chart-header {
@@ -263,16 +73,6 @@
     .header-right {
         width: 100%;
         justify-content: space-between;
-    }
-
-    .mode-tabs {
-        flex: 1;
-    }
-
-    .mode-tabs .tab {
-        flex: 1;
-        text-align: center;
-        padding: 8px 6px;
     }
 
     .chart-container {

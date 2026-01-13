@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
+import { useTheme } from './AppShell';
 import { analyzePower, isAIConfigured } from '../services/aiService';
 
 // --- Constants & Config ---
@@ -53,6 +54,7 @@ const calculateStats = (data: ChartDataPoint[]): PowerStats => {
 export default function ActivePowerRealtimeChart({ initialViewMode = 'total', onClose, isPopup = false }: ActivePowerRealtimeChartProps) {
     // --- State ---
     const { energyData, isConnected } = useWebSocket();
+    const { darkMode } = useTheme();
     const [viewMode, setViewMode] = useState<PowerViewMode>(initialViewMode);
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
@@ -248,7 +250,7 @@ export default function ActivePowerRealtimeChart({ initialViewMode = 'total', on
             strokeWidth: 0,
             hover: { size: 5 }
         },
-        theme: { mode: 'dark' },
+        theme: { mode: darkMode ? 'dark' : 'light' },
         xaxis: {
             type: 'datetime',
             labels: {
@@ -278,17 +280,17 @@ export default function ActivePowerRealtimeChart({ initialViewMode = 'total', on
             max: yAxisMax,
             title: {
                 text: `Power (W) [${yAxisMin}-${yAxisMax}]`,
-                style: { color: '#94a3b8', fontSize: '11px' }
+                style: { color: darkMode ? '#94a3b8' : '#64748b', fontSize: '11px' }
             }
         },
         grid: {
-            borderColor: 'rgba(255,255,255,0.05)',
+            borderColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
             strokeDashArray: 3,
         },
         legend: { show: true, position: 'top' },
         tooltip: {
             enabled: true,
-            theme: 'dark',
+            theme: darkMode ? 'dark' : 'light',
             x: {
                 formatter: (val: number) => {
                     // Convert UTC timestamp to Bangkok time
@@ -416,57 +418,93 @@ export default function ActivePowerRealtimeChart({ initialViewMode = 'total', on
 
             <style>{`
                 .power-chart-modern {
-                    background: linear-gradient(145deg, #1e293b, #064e3b); /* Dark to Emerald */
+                    background: #ffffff;
                     border-radius: 16px;
-                    border: 1px solid rgba(16, 185, 129, 0.2);
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
                     padding: 1.5rem;
-                    color: #fff;
+                    color: #1e293b;
                     font-family: 'Inter', sans-serif;
                     position: relative;
+                }
+                html.dark .power-chart-modern {
+                    background: linear-gradient(145deg, #1e293b, #064e3b);
+                    border: 1px solid rgba(16, 185, 129, 0.2);
+                    color: #fff;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
                 }
                 .power-chart-modern.popup-mode {
                     box-shadow: none; border: none; height: 100%;
                 }
                 .p-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
                 .p-title-group { display: flex; align-items: center; gap: 10px; }
-                .p-icon { width: 36px; height: 36px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #10b981; }
-                .p-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; margin: 0; color: #d1fae5; }
-                .p-subtitle { font-size: 0.7rem; color: #6ee7b7; }
                 
-                .p-tabs { display: flex; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px; gap: 4px; }
-                .p-tab { border: none; background: transparent; color: #94a3b8; padding: 6px 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
-                .p-tab:hover { color: #fff; }
-                .p-tab.active { background: #334155; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-                .p-tab.t-total.active { background: ${COLORS.total}; }
-                .p-tab.t-p1.active { background: ${COLORS.p1}; }
-                .p-tab.t-p2.active { background: ${COLORS.p2}; color: #000; }
-                .p-tab.t-p3.active { background: ${COLORS.p3}; }
+                .p-icon { width: 36px; height: 36px; background: #d1fae5; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #059669; }
+                html.dark .p-icon { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 
-                .p-close-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-                .p-close-btn:hover { background: rgba(239, 68, 68, 0.8); }
+                .p-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; margin: 0; color: #065f46; }
+                html.dark .p-title { color: #d1fae5; }
+                
+                .p-subtitle { font-size: 0.7rem; color: #64748b; }
+                html.dark .p-subtitle { color: #6ee7b7; }
+                
+                .p-tabs { display: flex; background: #f1f5f9; padding: 4px; border-radius: 8px; gap: 4px; }
+                html.dark .p-tabs { background: rgba(0,0,0,0.2); }
+
+                .p-tab { border: none; background: transparent; color: #64748b; padding: 6px 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+                .p-tab:hover { color: #334155; }
+                html.dark .p-tab { color: #94a3b8; }
+                html.dark .p-tab:hover { color: #fff; }
+
+                .p-tab.active { background: #ffffff; color: #0f172a; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+                html.dark .p-tab.active { background: #334155; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+                .p-tab.t-total.active { background: ${COLORS.total}; color: #fff; }
+                .p-tab.t-p1.active { background: ${COLORS.p1}; color: #fff; }
+                .p-tab.t-p2.active { background: ${COLORS.p2}; color: #000; }
+                .p-tab.t-p3.active { background: ${COLORS.p3}; color: #fff; }
+
+                .p-close-btn { background: #f1f5f9; border: none; color: #64748b; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+                html.dark .p-close-btn { background: rgba(255,255,255,0.1); color: #fff; }
+                .p-close-btn:hover { background: #ef4444; color: white; }
+                html.dark .p-close-btn:hover { background: rgba(239, 68, 68, 0.8); }
 
                 .p-chart-container { min-height: 300px; position: relative; }
-                .p-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); font-weight: bold; letter-spacing: 0.1em; color: #ef4444; }
+                .p-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); font-weight: bold; letter-spacing: 0.1em; color: #ef4444; }
+                html.dark .p-overlay { background: rgba(0,0,0,0.5); }
 
-                .p-footer { margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; }
+                .p-footer { margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+                html.dark .p-footer { border-top: 1px solid rgba(255,255,255,0.05); }
                 
                 .p-stats-panel { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
                 .p-stat-row { display: flex; gap: 1rem; }
                 .stat-box { display: flex; flex-direction: column; }
-                .s-label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; }
-                .s-val { font-family: 'Roboto Mono', monospace; font-size: 1rem; font-weight: 600; color: #e2e8f0; }
+                
+                .s-label { font-size: 0.65rem; color: #64748b; font-weight: 700; }
+                html.dark .s-label { color: #94a3b8; }
+
+                .s-val { font-family: 'Roboto Mono', monospace; font-size: 1rem; font-weight: 600; color: #0f172a; }
+                html.dark .s-val { color: #e2e8f0; }
+
                 .s-val .u { font-size: 0.7rem; color: #64748b; }
-                .stat-box.highlight .s-val { color: #fff; text-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
+                html.dark .s-val .u { color: #64748b; }
+
+                .stat-box.highlight .s-val { color: #10b981; }
+                html.dark .stat-box.highlight .s-val { color: #fff; text-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
 
                 .p-ai-btn { background: linear-gradient(90deg, #10b981, #059669); border: none; padding: 8px 16px; border-radius: 6px; color: white; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: transform 0.2s; }
                 .p-ai-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); }
                 .p-ai-btn.loading { opacity: 0.7; cursor: wait; }
 
-                .p-ai-result { margin-top: 1rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 1rem; animation: slideDown 0.3s ease; }
-                .ai-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #6ee7b7; margin-bottom: 0.5rem; }
-                .ai-body { font-size: 0.85rem; color: #d1fae5; line-height: 1.5; }
+                .p-ai-result { margin-top: 1rem; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 1rem; animation: slideDown 0.3s ease; }
+                html.dark .p-ai-result { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); }
 
+                .ai-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem; }
+                html.dark .ai-header { color: #6ee7b7; }
+
+                .ai-body { font-size: 0.85rem; color: #065f46; line-height: 1.5; }
+                html.dark .ai-body { color: #d1fae5; }
+                
                 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
                 
                 @media (max-width: 600px) {

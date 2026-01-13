@@ -1,18 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getApiBase } from '../config/api';
 import { BarChart3, X, Brain } from 'lucide-react';
-import { analyzeEnergy, isAIConfigured } from '../services/aiService';
+import { analyzeEnergy } from '../services/aiService';
+import { useTheme } from './AppShell';
 
 // --- Constants & Config ---
 const APEXCHARTS_CDN_URL = "https://cdn.jsdelivr.net/npm/apexcharts";
 
-// Theme Colors (Cyan/Blue/Purple Gradient)
-const COLORS = {
-    daily: '#22d3ee',   // Cyan
-    monthly: '#3b82f6', // Blue
-    yearly: '#a855f7',  // Purple
-    bg: '#1e293b',
-    barBg: '#334155'
+// Theme Colors
+const THEME_COLORS = {
+    dark: {
+        daily: '#22d3ee',   // Cyan
+        monthly: '#3b82f6', // Blue
+        yearly: '#a855f7',  // Purple
+        text: '#f8fafc',
+        subtext: '#94a3b8',
+        grid: 'rgba(255,255,255,0.05)',
+        bg: '#1e293b'
+    },
+    light: {
+        daily: '#0891b2',   // Cyan-600
+        monthly: '#2563eb', // Blue-600
+        yearly: '#9333ea',  // Purple-600
+        text: '#0f172a',    // Slate-900
+        subtext: '#64748b', // Slate-500
+        grid: 'rgba(0,0,0,0.05)',
+        bg: '#ffffff'
+    }
 };
 
 export type TimeViewMode = 'daily' | 'monthly' | 'yearly';
@@ -22,6 +36,15 @@ interface EnergyAccumulatedChartProps {
     onClose?: () => void;
     isPopup?: boolean;
 }
+
+// ... (Keep existing fetch functions: fetchRealData, fetchDailyData, fetchMonthlyData, fetchYearlyData, generateFallbackData) ...
+// Since I cannot use "Keep existing..." in replace_file_content, I must include them.
+// However, the tool allows me to replace the WHOLE file content if I start from line 1.
+// But wait, the previous tool call viewed the whole file.
+// I will just replace the Component part and imports, and keep the fetch functions if I can strictly target lines.
+// BUT, the fetch functions are outside the component.
+// I will keep the fetch functions as they are, but I need to replace the imports and the component definition.
+// Actually, I'll rewrite the whole file to be safe and clean, reusing the logic.
 
 // --- Real Data Fetchers from InfluxDB (Historical Data) ---
 const fetchRealData = async (mode: TimeViewMode) => {
@@ -87,8 +110,6 @@ const fetchDailyData = async () => {
         return generateFallbackData('daily');
     }
 };
-
-// Removed duplicate fetchFromDailyConsumption - consolidated into fetchDailyData above
 
 // Fetch Monthly data: Current month's daily energy breakdown
 const fetchMonthlyData = async () => {
@@ -176,6 +197,7 @@ const generateFallbackData = (mode: TimeViewMode) => {
 };
 
 export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onClose, isPopup = false }: EnergyAccumulatedChartProps) {
+    const { darkMode } = useTheme();
     const [viewMode, setViewMode] = useState<TimeViewMode>(initialViewMode);
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
     const chartInstance = useRef<any>(null);
@@ -253,72 +275,77 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
             if (chartInstance.current) chartInstance.current.destroy();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isScriptLoaded, viewMode, chartData]);
+    }, [isScriptLoaded, viewMode, chartData, darkMode]);
 
     const getThemeColor = (mode: TimeViewMode) => {
-        if (mode === 'daily') return COLORS.daily;
-        if (mode === 'monthly') return COLORS.monthly;
-        return COLORS.yearly;
+        const palette = darkMode ? THEME_COLORS.dark : THEME_COLORS.light;
+        if (mode === 'daily') return palette.daily;
+        if (mode === 'monthly') return palette.monthly;
+        return palette.yearly;
     };
 
-    const getChartOptions = (mode: TimeViewMode, data: any[]) => ({
-        chart: {
-            type: 'bar',
-            height: isPopup ? 400 : 350,
-            background: 'transparent',
-            toolbar: { show: false },
-            animations: { enabled: true }
-        },
-        plotOptions: {
-            bar: {
-                borderRadius: 4,
-                columnWidth: '60%',
-                distributed: false, // Use single color for series
-                dataLabels: { position: 'top' }
-            }
-        },
-        dataLabels: {
-            enabled: false,
-            formatter: (val: number) => val.toFixed(0),
-            offsetY: -20,
-            style: { fontSize: '10px', colors: ["#fff"] }
-        },
-        fill: {
-            type: 'gradient',
-            gradient: {
-                shade: 'dark',
-                type: 'vertical',
-                shadeIntensity: 0.5,
-                gradientToColors: [getThemeColor(mode)], // End color
-                inverseColors: true,
-                opacityFrom: 1,
-                opacityTo: 0.6,
-                stops: [0, 100]
-            }
-        },
-        colors: [getThemeColor(mode)], // Base color
-        xaxis: {
-            categories: data.map(d => d.x),
-            labels: {
-                style: { colors: '#94a3b8', fontSize: '10px' },
-                rotate: -45
+    const getChartOptions = (mode: TimeViewMode, data: any[]) => {
+        const theme = darkMode ? THEME_COLORS.dark : THEME_COLORS.light;
+        return {
+            chart: {
+                type: 'bar',
+                height: isPopup ? 400 : 350,
+                background: 'transparent',
+                toolbar: { show: false },
+                animations: { enabled: true }
             },
-            axisBorder: { show: false },
-            axisTicks: { show: false }
-        },
-        yaxis: {
-            labels: { style: { colors: '#94a3b8' } },
-            title: { text: 'kWh', style: { color: '#94a3b8' } }
-        },
-        grid: {
-            borderColor: 'rgba(255,255,255,0.05)',
-            strokeDashArray: 3,
-        },
-        tooltip: {
-            theme: 'dark',
-            y: { formatter: (val: number) => val.toFixed(2) + " kWh" }
-        }
-    });
+            theme: { mode: darkMode ? 'dark' : 'light' },
+            plotOptions: {
+                bar: {
+                    borderRadius: 4,
+                    columnWidth: '60%',
+                    distributed: false, // Use single color for series
+                    dataLabels: { position: 'top' }
+                }
+            },
+            dataLabels: {
+                enabled: false,
+                formatter: (val: number) => val.toFixed(0),
+                offsetY: -20,
+                style: { fontSize: '10px', colors: [theme.text] }
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: darkMode ? 'dark' : 'light',
+                    type: 'vertical',
+                    shadeIntensity: 0.5,
+                    gradientToColors: [getThemeColor(mode)], // End color
+                    inverseColors: true,
+                    opacityFrom: 1,
+                    opacityTo: 0.6,
+                    stops: [0, 100]
+                }
+            },
+            colors: [getThemeColor(mode)], // Base color
+            xaxis: {
+                categories: data.map(d => d.x),
+                labels: {
+                    style: { colors: theme.subtext, fontSize: '10px' },
+                    rotate: -45
+                },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                labels: { style: { colors: theme.subtext } },
+                title: { text: 'kWh', style: { color: theme.subtext } }
+            },
+            grid: {
+                borderColor: theme.grid,
+                strokeDashArray: 3,
+            },
+            tooltip: {
+                theme: darkMode ? 'dark' : 'light',
+                y: { formatter: (val: number) => val.toFixed(2) + " kWh" }
+            }
+        };
+    };
 
     const handleAnalyze = async () => {
         setAnalyzing(true);
@@ -337,39 +364,56 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
         return 'YEARLY CONSUMPTION';
     };
 
-    if (!isScriptLoaded) return <div className="p-4 text-white">Loading Chart...</div>;
+    if (!isScriptLoaded) return <div className="p-4 text-slate-500 dark:text-slate-400">Loading Chart...</div>;
 
     return (
-        <div className={`energy-chart-modern ${isPopup ? 'popup-mode' : ''}`}>
+        <div className={`energy-chart-modern ${isPopup ? 'popup-mode shadow-none border-none h-full' : 'rounded-2xl shadow-lg border border-slate-200 dark:border-white/5'} p-6 transition-colors duration-200 bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900 text-slate-800 dark:text-white`}>
             {/* Header */}
-            <div className="e-header">
-                <div className="e-title-group">
-                    <div className="e-icon"><BarChart3 size={24} /></div>
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 flex items-center justify-center rounded-lg bg-cyan-100 text-cyan-600 dark:bg-white/5 dark:text-white text-lg">
+                        <BarChart3 size={20} />
+                    </div>
                     <div>
-                        <h2 className="e-title">{getTitle()}</h2>
-                        <span className="e-subtitle">Total: <span className="highlight">{getTotal()}</span> kWh</span>
+                        <h2 className="text-sm font-bold tracking-wide uppercase text-slate-800 dark:text-slate-100 m-0">{getTitle()}</h2>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            Total: <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">{getTotal()}</span> kWh
+                        </span>
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div className="e-tabs">
-                        <button onClick={() => setViewMode('daily')} className={`e-tab t-daily ${viewMode === 'daily' ? 'active' : ''}`}>Daily</button>
-                        <button onClick={() => setViewMode('monthly')} className={`e-tab t-monthly ${viewMode === 'monthly' ? 'active' : ''}`}>Monthly</button>
-                        <button onClick={() => setViewMode('yearly')} className={`e-tab t-yearly ${viewMode === 'yearly' ? 'active' : ''}`}>Yearly</button>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-between">
+                    <div className="flex bg-slate-100 dark:bg-black/20 p-1 rounded-lg gap-1">
+                        <button
+                            onClick={() => setViewMode('daily')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'daily' ? 'bg-cyan-600 text-white dark:bg-cyan-400 dark:text-black' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                        >Daily</button>
+                        <button
+                            onClick={() => setViewMode('monthly')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'monthly' ? 'bg-blue-600 text-white dark:bg-blue-500 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                        >Monthly</button>
+                        <button
+                            onClick={() => setViewMode('yearly')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${viewMode === 'yearly' ? 'bg-purple-600 text-white dark:bg-purple-500 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                        >Yearly</button>
                     </div>
-                    {onClose && <button onClick={onClose} className="e-close-btn"><X size={20} /></button>}
+                    {onClose && (
+                        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-500 dark:bg-white/10 dark:text-white dark:hover:bg-red-500/80 transition-colors">
+                            <X size={18} />
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Chart */}
-            <div className="e-chart-container">
+            <div className="min-h-[350px]">
                 <div ref={chartDivRef} />
             </div>
 
             {/* Footer / AI */}
-            <div className="e-footer">
+            <div className="mt-4 flex justify-end">
                 <button
-                    className={`e-ai-btn ${analyzing ? 'loading' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-white transition-all transform hover:-translate-y-px hover:shadow-lg ${analyzing ? 'opacity-70 cursor-wait bg-slate-400' : 'bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:shadow-violet-500/40'}`}
                     onClick={handleAnalyze}
                     disabled={analyzing}
                 >
@@ -386,66 +430,16 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
 
             {/* AI Result */}
             {aiResult && (
-                <div className="e-ai-result">
-                    <div className="ai-header">
-                        <span>Audit for {aiResult.mode}</span>
-                        <button onClick={() => setAiResult(null)}><X size={16} /></button>
+                <div className="mt-4 bg-violet-50 border border-violet-200 dark:bg-violet-500/10 dark:border-violet-500/20 rounded-lg p-4 animate-in slide-in-from-top-2 duration-300">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-violet-600 dark:text-violet-300">Audit for {aiResult.mode}</span>
+                        <button onClick={() => setAiResult(null)} className="text-violet-400 hover:text-violet-600 dark:hover:text-violet-200"><X size={16} /></button>
                     </div>
-                    <div className="ai-body">{aiResult.text}</div>
+                    <div className="text-sm text-violet-900 dark:text-violet-100 leading-relaxed whitespace-pre-wrap">
+                        {aiResult.text}
+                    </div>
                 </div>
             )}
-
-            <style>{`
-                .energy-chart-modern {
-                    background: linear-gradient(145deg, #1e293b, #111827);
-                    border-radius: 16px;
-                    border: 1px solid rgba(255,255,255,0.05);
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-                    padding: 1.5rem;
-                    color: #fff;
-                    font-family: 'Inter', sans-serif;
-                    position: relative;
-                }
-                .energy-chart-modern.popup-mode { box-shadow: none; border: none; height: 100%; }
-                
-                .e-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
-                .e-title-group { display: flex; align-items: center; gap: 10px; }
-                .e-icon { width: 36px; height: 36px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
-                .e-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.05em; margin: 0; color: #f8fafc; }
-                .e-subtitle { font-size: 0.75rem; color: #94a3b8; }
-                .e-subtitle .highlight { color: #22d3ee; font-family: 'Roboto Mono', monospace; font-weight: 700; }
-
-                .e-tabs { display: flex; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px; gap: 4px; }
-                .e-tab { border: none; background: transparent; color: #64748b; padding: 6px 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
-                .e-tab:hover { color: #cbd5e1; }
-                .e-tab.active { background: #334155; color: #fff; }
-                .e-tab.t-daily.active { background: ${COLORS.daily}; color: #000; }
-                .e-tab.t-monthly.active { background: ${COLORS.monthly}; }
-                .e-tab.t-yearly.active { background: ${COLORS.yearly}; }
-
-                .e-close-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-                .e-close-btn:hover { background: rgba(239, 68, 68, 0.8); }
-
-                .e-chart-container { min-height: 350px; }
-
-                .e-footer { margin-top: 1rem; display: flex; justify-content: flex-end; }
-                .e-ai-btn { background: linear-gradient(90deg, #8b5cf6, #d946ef); border: none; padding: 8px 16px; border-radius: 6px; color: white; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; gap: 8px; }
-                .e-ai-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); }
-                .e-ai-btn.loading { opacity: 0.7; cursor: wait; }
-
-                .e-ai-result { margin-top: 1rem; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 8px; padding: 1rem; animation: slideDown 0.3s ease; }
-                .ai-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; color: #c084fc; margin-bottom: 0.5rem; }
-                .ai-header button { background: none; border: none; color: inherit; cursor: pointer; display: flex; align-items: center; padding: 0; }
-                .ai-body { font-size: 0.85rem; color: #e9d5ff; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
-
-                @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-                
-                @media (max-width: 600px) {
-                    .e-header { flex-direction: column; align-items: flex-start; }
-                    .e-tabs { width: 100%; justify-content: space-between; }
-                    .e-ai-btn { width: 100%; }
-                }
-            `}</style>
         </div>
     );
 }

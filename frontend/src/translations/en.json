@@ -369,5 +369,21 @@
         "heapFree": "Heap Free",
         "cpuFreq": "CPU Freq",
         "uptime": "Uptime"
+    },
+    "history": {
+        "hourlyConsumption": "HOURLY CONSUMPTION",
+        "dailyConsumption": "DAILY CONSUMPTION",
+        "monthlyConsumption": "MONTHLY CONSUMPTION",
+        "hourlyCost": "Hourly Cost",
+        "dailyCost": "Daily Cost",
+        "monthlyCost": "Monthly Cost",
+        "total": "Total",
+        "measured": "Measured",
+        "estimated": "Estimated",
+        "invalid": "Invalid",
+        "source": "Source",
+        "loading": "Loading data...",
+        "energy": "Energy",
+        "cost": "Cost"
     }
 }

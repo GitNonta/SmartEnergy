@@ -373,9 +373,6 @@ const StatisticsBlock: React.FC = () => {
 
                     <div className="stats-footer">
                         <span className="data-source">{t('statistics.source')}: {stats.dataSource}</span>
-                        <span className="last-updated">
-                            {t('statistics.updated')}: {new Date(stats.timestamp).toLocaleTimeString()}
-                        </span>
                     </div>
                 </>
             )}
