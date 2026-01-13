@@ -16,7 +16,7 @@ interface EnergyAccumulatedBlockProps {
 // CSV Export Modal Component
 const CsvExportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { t } = useLanguage();
-  const [bucket, setBucket] = useState('hourly');
+  const [bucket, setBucket] = useState('raw');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -32,14 +32,20 @@ const CsvExportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [loadingFields, setLoadingFields] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate time options (00:00 to 23:00)
+  // NEW: Additional options
+  const [measurement, setMeasurement] = useState('energy_3phase');
+  const [aggregation, setAggregation] = useState('none');
+  const [includeEnergy, setIncludeEnergy] = useState(true);
+  const [previewData, setPreviewData] = useState<any[] | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewFields, setPreviewFields] = useState<string[]>([]);
+
   const timeOptions = Array.from({ length: 24 }, (_, i) => {
     const hour = i.toString().padStart(2, '0');
     return `${hour}:00`;
   });
-  timeOptions.push('23:59'); // Add end of day option
+  timeOptions.push('23:59');
 
-  // Fetch available fields when bucket changes
   useEffect(() => {
     const fetchFields = async () => {
       setLoadingFields(true);
@@ -48,7 +54,6 @@ const CsvExportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         if (res.ok) {
           const data = await res.json();
           setAvailableFields(data.fields || []);
-          // Pre-select common fields
           const commonFields = ['power_active_kw', 'energy_total', 'voltage', 'current', 'power_factor'];
           setFields(data.fields?.filter((f: string) => commonFields.includes(f)) || []);
         }
@@ -61,30 +66,64 @@ const CsvExportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     fetchFields();
   }, [bucket]);
 
+  // Build URL params
+  const buildParams = (isPreview = false) => {
+    const startDateTime = `${startDate}T${startTime}:00`;
+    const endDateTime = `${endDate}T${endTime}:00`;
+
+    const params = new URLSearchParams({
+      bucket,
+      startDate: startDateTime,
+      endDate: endDateTime,
+      measurement,
+      aggregation,
+      includeEnergy: includeEnergy.toString(),
+      format: isPreview ? 'json' : 'csv',
+      preview: isPreview.toString()
+    });
+
+    if (fields.length > 0) {
+      params.append('fields', fields.join(','));
+    }
+
+    if (measurement === 'energy_per_phase' && phase !== 'ALL') {
+      params.append('phase', phase);
+    }
+
+    return params;
+  };
+
+  // Preview handler
+  const handlePreview = async () => {
+    setPreviewLoading(true);
+    setError(null);
+    setPreviewData(null);
+
+    try {
+      const params = buildParams(true);
+      const res = await fetch(`${getApiBase()}/api/data/export?${params}`);
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || t('common.error'));
+      }
+
+      const data = await res.json();
+      setPreviewData(data.data || []);
+      setPreviewFields(data.fields || []);
+    } catch (err: any) {
+      setError(err.message || t('common.error'));
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const handleExport = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Build start and end datetime
-      const startDateTime = `${startDate}T${startTime}:00`;
-      const endDateTime = `${endDate}T${endTime}:00`;
-
-      const params = new URLSearchParams({
-        bucket,
-        startDate: startDateTime,
-        endDate: endDateTime,
-        format: 'csv'
-      });
-
-      if (fields.length > 0) {
-        params.append('fields', fields.join(','));
-      }
-
-      if (phase !== 'ALL') {
-        params.append('phase', phase);
-      }
-
+      const params = buildParams(false);
       const response = await fetch(`${getApiBase()}/api/data/export?${params}`);
 
       if (!response.ok) {
@@ -92,13 +131,12 @@ const CsvExportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         throw new Error(errData.error || t('common.error'));
       }
 
-      // Download the CSV file
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const phaseLabel = phase !== 'ALL' ? `_${phase}` : '';
-      a.download = `energy_export_${bucket}${phaseLabel}_${startDate}_to_${endDate}.csv`;
+      const phaseLabel = measurement === 'energy_per_phase' && phase !== 'ALL' ? `_${phase}` : '';
+      a.download = `energy_export_${bucket}_${measurement}${phaseLabel}_${startDate}_to_${endDate}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -131,9 +169,35 @@ const CsvExportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       </div>
 
       <div className="csv-export-body">
-        {/* Row 1: Bucket + Phase */}
+        {/* Row 1: Data Type + Aggregation */}
         <div className="form-row">
-          {/* Bucket Selection */}
+          <div className="form-group flex-1">
+            <label><Database className="w-4 h-4" /> {t('export.dataType') || 'Data Type'}</label>
+            <div className="custom-select-wrapper">
+              <select value={measurement} onChange={e => setMeasurement(e.target.value)}>
+                <option value="energy_3phase">3-Phase Total ({t('common.all')})</option>
+                <option value="energy_per_phase">Per Phase (L1/L2/L3)</option>
+              </select>
+              <div className="custom-select-arrow">▼</div>
+            </div>
+          </div>
+
+          <div className="form-group flex-1">
+            <label>{t('export.aggregation') || 'Aggregation'}</label>
+            <div className="custom-select-wrapper">
+              <select value={aggregation} onChange={e => setAggregation(e.target.value)}>
+                <option value="none">Raw Data</option>
+                <option value="1h">Hourly Avg</option>
+                <option value="1d">Daily Avg</option>
+                <option value="1mo">Monthly Avg</option>
+              </select>
+              <div className="custom-select-arrow">▼</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Bucket + Phase (only if per-phase selected) */}
+        <div className="form-row">
           <div className="form-group flex-1">
             <label><Database className="w-4 h-4" /> {t('export.dataSource')}</label>
             <div className="custom-select-wrapper">
@@ -141,38 +205,44 @@ const CsvExportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <option value="raw">{t('export.buckets.raw')}</option>
                 <option value="hourly">{t('export.buckets.hourly')}</option>
                 <option value="daily">{t('export.buckets.daily')}</option>
-                <option value="weekly">{t('export.buckets.weekly')}</option>
-                <option value="monthly">{t('export.buckets.monthly')}</option>
-                <option value="yearly">{t('export.buckets.yearly')}</option>
               </select>
               <div className="custom-select-arrow">▼</div>
             </div>
           </div>
 
-          {/* Phase Selection */}
-          <div className="form-group flex-1">
-            <label>{t('export.phase')}</label>
-            <div className="custom-select-wrapper">
-              <select value={phase} onChange={e => setPhase(e.target.value)}>
-                <option value="ALL">ALL ({t('common.all')})</option>
-                <option value="L1">L1</option>
-                <option value="L2">L2</option>
-                <option value="L3">L3</option>
-              </select>
-              <div className="custom-select-arrow">▼</div>
+          {measurement === 'energy_per_phase' && (
+            <div className="form-group flex-1">
+              <label>{t('export.phase')}</label>
+              <div className="custom-select-wrapper">
+                <select value={phase} onChange={e => setPhase(e.target.value)}>
+                  <option value="ALL">ALL ({t('common.all')})</option>
+                  <option value="L1">L1</option>
+                  <option value="L2">L2</option>
+                  <option value="L3">L3</option>
+                </select>
+                <div className="custom-select-arrow">▼</div>
+              </div>
             </div>
-          </div>
+          )}
+        </div>
+
+        {/* Include Energy Checkbox */}
+        <div className="form-group" style={{ marginTop: '0.5rem' }}>
+          <label className="field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={includeEnergy}
+              onChange={e => setIncludeEnergy(e.target.checked)}
+            />
+            <span>📊 {t('export.includeEnergy') || 'Include Energy (kWh) calculation'}</span>
+          </label>
         </div>
 
         {/* Date-Time Range: Start */}
         <div className="form-group date-range">
           <label><Calendar className="w-4 h-4" /> {t('export.startDate')}</label>
           <div className="datetime-inputs">
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-            />
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
             <div className="time-select-wrapper">
               <select value={startTime} onChange={e => setStartTime(e.target.value)}>
                 {timeOptions.map(tOption => (
@@ -188,11 +258,7 @@ const CsvExportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="form-group date-range">
           <label><Calendar className="w-4 h-4" /> {t('export.endDate')}</label>
           <div className="datetime-inputs">
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-            />
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
             <div className="time-select-wrapper">
               <select value={endTime} onChange={e => setEndTime(e.target.value)}>
                 {timeOptions.map(tOption => (
@@ -229,11 +295,50 @@ const CsvExportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
         </div>
 
+        {/* Preview Table */}
+        {previewData && previewData.length > 0 && (
+          <div className="preview-table-container" style={{ marginTop: '1rem', maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+            <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-secondary)', position: 'sticky', top: 0 }}>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>Time</th>
+                  {previewFields.slice(0, 5).map(f => (
+                    <th key={f} style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border-color)' }}>{f}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {previewData.map((row, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '0.4rem', fontSize: '0.7rem' }}>{new Date(row.time).toLocaleString()}</td>
+                    {previewFields.slice(0, 5).map(f => (
+                      <td key={f} style={{ padding: '0.4rem', textAlign: 'right' }}>
+                        {typeof row[f] === 'number' ? row[f].toFixed(4) : row[f] || '-'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+              👆 Showing 10 preview rows
+            </div>
+          </div>
+        )}
+
         {error && <div className="error-message">{error}</div>}
       </div>
 
       <div className="csv-export-footer">
         <button onClick={onClose} className="btn-cancel">{t('common.cancel')}</button>
+        <button
+          onClick={handlePreview}
+          disabled={previewLoading}
+          className="btn-preview"
+          style={{ background: 'var(--accent-secondary)', marginRight: '0.5rem' }}
+        >
+          {previewLoading ? '...' : '👁️ Preview'}
+        </button>
         <button
           onClick={handleExport}
           disabled={loading}

@@ -1030,11 +1030,11 @@ async function runDataIntegrityChecks(range = '-24h', deviceId = 'AI205') {
  * @returns {Promise<number>} Daily energy usage in kWh
  */
 async function getRealtimeDailyUsage(deviceId = 'AI205') {
-  // ✅ FIX: Use Cumulative Counter Difference (Last - First)
-  // This ensures that energy consumed during server downtime (gaps) is captured
-  // because the meter's cumulative counter continues to increase.
+  // ✅ FIX: Use same method as daily-consumption chart
+  // Method: aggregateWindow(1h, mean) then sum → matches chart exactly
+  // Formula: Total = Σ (power_avg_hour_n × 1h) for completed hours only
   
-  const queryFirst = `
+  const fluxQuery = `
     import "timezone"
     import "date"
     option location = timezone.location(name: "${TIMEZONE}")
@@ -1043,45 +1043,32 @@ async function getRealtimeDailyUsage(deviceId = 'AI205') {
     
     from(bucket: "${buckets.raw}")
       |> range(start: todayStart)
-      |> filter(fn: (r) => r.device_id == "${deviceId}")
-      |> filter(fn: (r) => r._measurement == "energy_3phase")
-      |> filter(fn: (r) => r._field == "energy_total")
-      |> first()
-  `;
-
-  const queryLast = `
-    import "timezone"
-    import "date"
-    option location = timezone.location(name: "${TIMEZONE}")
-    
-    todayStart = date.truncate(t: now(), unit: 1d)
-    
-    from(bucket: "${buckets.raw}")
-      |> range(start: todayStart)
-      |> filter(fn: (r) => r.device_id == "${deviceId}")
-      |> filter(fn: (r) => r._measurement == "energy_3phase")
-      |> filter(fn: (r) => r._field == "energy_total")
-      |> last()
+      |> filter(fn: (r) => r._measurement == "energy_3phase" and r._field == "power_active_kw" and r.device_id == "${deviceId}")
+      |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
   `;
 
   try {
-    // Execute queries in parallel
-    const [firstRows, lastRows] = await Promise.all([
-      queryApi.collectRows(queryFirst),
-      queryApi.collectRows(queryLast)
-    ]);
-
-    const firstValue = firstRows.length > 0 ? (firstRows[0]._value || 0) : 0;
-    const lastValue = lastRows.length > 0 ? (lastRows[0]._value || 0) : 0;
+    const rows = await queryApi.collectRows(fluxQuery);
     
-    // If we have data, calculate difference
-    let daily = 0;
-    if (firstRows.length > 0 && lastRows.length > 0) {
-      daily = Math.max(0, lastValue - firstValue);
+    // Get current hour to only count completed hours (same as chart)
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Sum energy: power_avg × 1h for each completed hour
+    let totalEnergy = 0;
+    for (const row of rows) {
+      const timestamp = new Date(row._time);
+      const hour = timestamp.getHours();
+      const power_kw = row._value || 0;
+      
+      // Only count hours up to current hour (same as chart logic)
+      if (hour <= currentHour) {
+        totalEnergy += power_kw * 1; // power × 1h = kWh
+      }
     }
     
-    console.log(`📊 Realtime Daily Usage (Counter Diff): ${daily.toFixed(3)} kWh (${firstValue} -> ${lastValue})`);
-    return daily;
+    console.log(`📊 Realtime Daily Usage (hourly mean sum): ${totalEnergy.toFixed(3)} kWh (${rows.length} hours, up to hour ${currentHour})`);
+    return totalEnergy;
   } catch (error) {
     console.error('❌ Error fetching realtime daily:', error.message);
     return 0;
@@ -1096,24 +1083,59 @@ async function getRealtimeDailyUsage(deviceId = 'AI205') {
  * @returns {Promise<number>} Monthly energy usage in kWh
  */
 async function getRealtimeMonthlyUsage(deviceId = 'AI205') {
-  const fluxQuery = `
-    import "timezone"
-    import "date"
-    option location = timezone.location(name: "${TIMEZONE}")
-    
-    monthStart = date.truncate(t: now(), unit: 1mo)
-    
-    from(bucket: "${buckets.raw}")
-      |> range(start: monthStart)
-      |> filter(fn: (r) => r._measurement == "energy_3phase" and r._field == "power_active_kw" and r.device_id == "${deviceId}")
-      |> integral(unit: 1h)
-  `;
+  // ✅ FIX: Use same method as monthly-chart
+  // Method: aggregateWindow(1h, mean) then aggregate by day → sum
+  // Only count days up to current day (same as chart logic)
+  
+  const now = new Date();
+  const currentDay = now.getDate();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const monthStart = new Date(currentYear, currentMonth, 1, 0, 0, 0).toISOString();
+  
+  // Initialize daily totals
+  const dailyMap = new Map();
+  for (let i = 1; i <= daysInMonth; i++) {
+    dailyMap.set(i, 0);
+  }
 
   try {
+    // Same query as monthly-chart
+    const fluxQuery = `
+      import "timezone"
+      import "date"
+      option location = timezone.location(name: "${TIMEZONE}")
+      
+      from(bucket: "${buckets.raw}")
+        |> range(start: ${monthStart})
+        |> filter(fn: (r) => r.device_id == "${deviceId}")
+        |> filter(fn: (r) => r._measurement == "energy_3phase")
+        |> filter(fn: (r) => r._field == "power_active_kw")
+        |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+    `;
+    
     const rows = await queryApi.collectRows(fluxQuery);
-    const value = rows.length > 0 ? rows[0]._value : 0;
-    console.log(`📊 Realtime Monthly Usage (Power×Time): ${value?.toFixed(3) || 0} kWh`);
-    return value || 0;
+    
+    // Aggregate hourly data into daily (same as chart)
+    for (const row of rows) {
+      const timestamp = new Date(row._time);
+      if (timestamp.getMonth() === currentMonth && timestamp.getFullYear() === currentYear) {
+        const day = timestamp.getDate();
+        const energyKwh = row._value || 0; // power_avg × 1h = kWh
+        const existing = dailyMap.get(day) || 0;
+        dailyMap.set(day, existing + energyKwh);
+      }
+    }
+    
+    // Sum only days up to current day (same as chart)
+    let totalEnergy = 0;
+    for (let i = 1; i <= currentDay; i++) {
+      totalEnergy += dailyMap.get(i) || 0;
+    }
+    
+    console.log(`📊 Realtime Monthly Usage (same as chart): ${totalEnergy.toFixed(3)} kWh (${rows.length} hourly points, up to day ${currentDay})`);
+    return totalEnergy;
   } catch (error) {
     console.error('❌ Error fetching realtime monthly:', error.message);
     return 0;
@@ -1128,24 +1150,56 @@ async function getRealtimeMonthlyUsage(deviceId = 'AI205') {
  * @returns {Promise<number>} Yearly energy usage in kWh
  */
 async function getRealtimeYearlyUsage(deviceId = 'AI205') {
-  const fluxQuery = `
-    import "timezone"
-    import "date"
-    option location = timezone.location(name: "${TIMEZONE}")
-    
-    yearStart = date.truncate(t: now(), unit: 1y)
-    
-    from(bucket: "${buckets.raw}")
-      |> range(start: yearStart)
-      |> filter(fn: (r) => r._measurement == "energy_3phase" and r._field == "power_active_kw" and r.device_id == "${deviceId}")
-      |> integral(unit: 1h)
-  `;
+  // ✅ FIX: Use same method as monthly - raw bucket with aggregateWindow
+  // This ensures consistency between Monthly and Yearly calculations
+  // For January 2026, Yearly should ≈ Monthly since it's the first month
+  
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const yearStart = new Date(currentYear, 0, 1, 0, 0, 0).toISOString();
+  
+  // Initialize monthly totals
+  const monthlyMap = new Map();
+  for (let i = 0; i < 12; i++) {
+    monthlyMap.set(i, 0);
+  }
 
   try {
+    // Use raw bucket with aggregateWindow (same as monthly-chart)
+    const fluxQuery = `
+      import "timezone"
+      option location = timezone.location(name: "${TIMEZONE}")
+      
+      from(bucket: "${buckets.raw}")
+        |> range(start: ${yearStart})
+        |> filter(fn: (r) => r.device_id == "${deviceId}")
+        |> filter(fn: (r) => r._measurement == "energy_3phase")
+        |> filter(fn: (r) => r._field == "power_active_kw")
+        |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+    `;
+    
     const rows = await queryApi.collectRows(fluxQuery);
-    const value = rows.length > 0 ? rows[0]._value : 0;
-    console.log(`📊 Realtime Yearly Usage (Power×Time): ${value?.toFixed(3) || 0} kWh`);
-    return value || 0;
+    
+    // Aggregate hourly data into monthly (similar to how monthly aggregates by day)
+    for (const row of rows) {
+      const timestamp = new Date(row._time);
+      if (timestamp.getFullYear() === currentYear) {
+        const month = timestamp.getMonth();
+        const energyKwh = row._value || 0; // power_avg × 1h = kWh
+        const existing = monthlyMap.get(month) || 0;
+        monthlyMap.set(month, existing + energyKwh);
+      }
+    }
+    
+    // Sum only months up to current month
+    let totalEnergy = 0;
+    for (let i = 0; i <= currentMonth; i++) {
+      totalEnergy += monthlyMap.get(i) || 0;
+    }
+    
+    console.log(`📊 Realtime Yearly Usage (same as monthly method): ${totalEnergy.toFixed(3)} kWh (${rows.length} hourly points, up to month ${currentMonth + 1})`);
+    return totalEnergy;
   } catch (error) {
     console.error('❌ Error fetching realtime yearly:', error.message);
     return 0;

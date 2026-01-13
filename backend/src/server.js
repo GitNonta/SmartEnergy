@@ -1072,6 +1072,10 @@ app.post('/api/alerts/clear', (req, res) => {
 //   - fields: comma-separated fields (e.g., power_active_kw,energy_total)
 //   - deviceId: device ID (default: AI205)
 //   - format: csv | json (default: csv)
+//   - measurement: energy_3phase | energy_per_phase (NEW)
+//   - aggregation: none | 1h | 1d | 1mo (NEW)
+//   - includeEnergy: true | false (NEW - calculates kWh)
+//   - preview: true | false (NEW - returns only 10 rows)
 app.get('/api/data/export', async (req, res) => {
   try {
     const { 
@@ -1079,32 +1083,32 @@ app.get('/api/data/export', async (req, res) => {
       startDate,
       endDate,
       fields,
-      phase,  // NEW: L1, L2, L3, or ALL
+      phase,
       deviceId = 'AI205',
-      format = 'csv'
+      format = 'csv',
+      measurement = 'energy_3phase',  // NEW
+      aggregation = 'none',           // NEW: none, 1h, 1d, 1mo
+      includeEnergy = 'false',        // NEW
+      preview = 'false'               // NEW
     } = req.query;
 
     // Parse dates (support dd/mm/yyyy, ISO, and ISO with time)
     const parseDate = (dateStr) => {
       if (!dateStr) return null;
-      // Check if dd/mm/yyyy format
       const ddmmyyyy = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       if (ddmmyyyy) {
         return new Date(`${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}T00:00:00`);
       }
-      // Check if dd/mm/yyyy HH:mm format
       const ddmmyyyyTime = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
       if (ddmmyyyyTime) {
         return new Date(`${ddmmyyyyTime[3]}-${ddmmyyyyTime[2]}-${ddmmyyyyTime[1]}T${ddmmyyyyTime[4]}:${ddmmyyyyTime[5]}:00`);
       }
-      // Standard ISO format (including with time)
       return new Date(dateStr);
     };
 
-    const start = parseDate(startDate) || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // Default: 7 days ago
-    const end = parseDate(endDate) || new Date(); // Default: now
+    const start = parseDate(startDate) || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const end = parseDate(endDate) || new Date();
 
-    // Validate dates
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return res.status(400).json({
         success: false,
@@ -1131,11 +1135,28 @@ app.get('/api/data/export', async (req, res) => {
       fieldsFilter = `|> filter(fn: (r) => ${fieldFilters})`;
     }
 
-    // Build phase filter
+    // Build measurement filter
+    let measurementFilter = `|> filter(fn: (r) => r._measurement == "${measurement}")`;
+
+    // Build phase filter (only for energy_per_phase)
     let phaseFilter = '';
-    if (phase && phase !== 'ALL') {
+    if (measurement === 'energy_per_phase' && phase && phase !== 'ALL') {
       phaseFilter = `|> filter(fn: (r) => r.phase == "${phase}")`;
     }
+
+    // Build aggregation
+    let aggregationQuery = '';
+    let aggregationUnit = 1; // hours
+    if (aggregation && aggregation !== 'none') {
+      const aggMap = { '1h': '1h', '1d': '1d', '1mo': '1mo' };
+      const aggUnit = aggMap[aggregation] || '1h';
+      aggregationQuery = `|> aggregateWindow(every: ${aggUnit}, fn: mean, createEmpty: false)`;
+      if (aggregation === '1d') aggregationUnit = 24;
+      if (aggregation === '1mo') aggregationUnit = 24 * 30;
+    }
+
+    // Limit for preview
+    const limitQuery = preview === 'true' ? '|> limit(n: 10)' : '';
 
     // Build Flux query
     const fluxQuery = `
@@ -1145,42 +1166,19 @@ app.get('/api/data/export', async (req, res) => {
       from(bucket: "${bucketName}")
         |> range(start: ${start.toISOString()}, stop: ${end.toISOString()})
         |> filter(fn: (r) => r.device_id == "${deviceId}")
+        ${measurementFilter}
         ${phaseFilter}
         ${fieldsFilter}
+        ${aggregationQuery}
         |> sort(columns: ["_time"], desc: false)
+        ${limitQuery}
     `;
 
-    console.log(`📊 Export query: bucket=${bucketName}, range=${start.toISOString()} to ${end.toISOString()}, phase=${phase || 'ALL'}`);
+    console.log(`📊 Export query: bucket=${bucketName}, measurement=${measurement}, aggregation=${aggregation}, preview=${preview}`);
 
     const rows = await influxService.queryApi.collectRows(fluxQuery);
 
-    if (format === 'json') {
-      return res.json({
-        success: true,
-        bucket: bucketName,
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
-        deviceId,
-        count: rows.length,
-        data: rows.map(r => ({
-          time: r._time,
-          field: r._field,
-          value: r._value,
-          measurement: r._measurement,
-          phase: r.phase
-        }))
-      });
-    }
-
-    // CSV format
-    if (rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'No data found for the specified criteria'
-      });
-    }
-
-    // Pivot data to have fields as columns
+    // Pivot data
     const dataByTime = new Map();
     const allFields = new Set();
     
@@ -1194,9 +1192,47 @@ app.get('/api/data/export', async (req, res) => {
       allFields.add(row._field);
     });
 
+    // Calculate energy if requested
+    if (includeEnergy === 'true' && allFields.has('power_active_kw')) {
+      allFields.add('energy_kwh');
+      dataByTime.forEach(record => {
+        const power = record['power_active_kw'] || 0;
+        // Energy = Power × Time (in hours based on aggregation)
+        record['energy_kwh'] = power * (aggregation === '1d' ? 24 : aggregation === '1mo' ? 720 : 1);
+      });
+    }
+
     const fieldList = Array.from(allFields).sort();
+    const dataArray = Array.from(dataByTime.values());
+
+    // JSON format (for preview or API use)
+    if (format === 'json' || preview === 'true') {
+      return res.json({
+        success: true,
+        bucket: bucketName,
+        measurement,
+        aggregation,
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        deviceId,
+        count: dataArray.length,
+        totalCount: rows.length,
+        fields: fieldList,
+        preview: preview === 'true',
+        data: dataArray
+      });
+    }
+
+    // CSV format
+    if (dataArray.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No data found for the specified criteria'
+      });
+    }
+
     const csvHeader = ['time', 'phase', ...fieldList].join(',');
-    const csvRows = Array.from(dataByTime.values()).map(record => {
+    const csvRows = dataArray.map(record => {
       const values = [
         record.time,
         record.phase || '',
@@ -1207,8 +1243,7 @@ app.get('/api/data/export', async (req, res) => {
 
     const csvContent = [csvHeader, ...csvRows].join('\n');
 
-    // Set headers for file download
-    const filename = `energy_export_${resolvedBucket}_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}.csv`;
+    const filename = `energy_export_${resolvedBucket}_${measurement}_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(csvContent);
@@ -1511,20 +1546,20 @@ app.get('/api/energy/yearly-chart', async (req, res) => {
     // Start of year
     const yearStart = new Date(currentYear, 0, 1, 0, 0, 0);
     
-    // Query daily bucket for this year
+    // ✅ FIX: Use same method as monthly-chart (raw bucket + aggregateWindow)
+    // This ensures consistency between Monthly and Yearly calculations
     const fluxQuery = `
       import "timezone"
       option location = timezone.location(name: "${TIMEZONE}")
       
-      from(bucket: "${influxService.buckets.daily}")
+      from(bucket: "${influxService.buckets.raw}")
         |> range(start: ${yearStart.toISOString()})
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
-        |> filter(fn: (r) => r._field == "energy_total" or r._field == "power_active_kw")
-        |> sum()
+        |> filter(fn: (r) => r._field == "power_active_kw")
+        |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
     `;
     
-    let hasData = false;
     const monthlyMap = new Map();
     
     // Initialize all months
@@ -1532,52 +1567,18 @@ app.get('/api/energy/yearly-chart', async (req, res) => {
       monthlyMap.set(i, 0);
     }
     
-    try {
-      const rows = await influxService.queryApi.collectRows(fluxQuery);
-      
-      rows.forEach(row => {
-        const timestamp = new Date(row._time);
-        if (timestamp.getFullYear() === currentYear) {
-          const month = timestamp.getMonth();
-          hasData = true;
-          const existing = monthlyMap.get(month) || 0;
-          monthlyMap.set(month, existing + (row._value || 0));
-        }
-      });
-    } catch (e) {
-      console.warn('❌ Daily bucket query failed, trying raw bucket');
-    }
+    const rows = await influxService.queryApi.collectRows(fluxQuery);
     
-    // Fallback: aggregate from raw bucket if no data in daily bucket
-    if (!hasData) {
-      try {
-        const rawQuery = `
-          import "timezone"
-          option location = timezone.location(name: "${TIMEZONE}")
-          
-          from(bucket: "${influxService.buckets.raw}")
-            |> range(start: ${yearStart.toISOString()})
-            |> filter(fn: (r) => r.device_id == "${deviceId}")
-            |> filter(fn: (r) => r._measurement == "energy_3phase")
-            |> filter(fn: (r) => r._field == "power_active_kw")
-            |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)
-        `;
-        
-        const rawRows = await influxService.queryApi.collectRows(rawQuery);
-        
-        rawRows.forEach(row => {
-          const timestamp = new Date(row._time);
-          if (timestamp.getFullYear() === currentYear) {
-            const month = timestamp.getMonth();
-            hasData = true;
-            const existing = monthlyMap.get(month) || 0;
-            monthlyMap.set(month, existing + (row._value || 0) * 24);
-          }
-        });
-      } catch (e) {
-        console.error('❌ Raw bucket fallback also failed:', e);
+    // Aggregate hourly data into monthly
+    rows.forEach(row => {
+      const timestamp = new Date(row._time);
+      if (timestamp.getFullYear() === currentYear) {
+        const month = timestamp.getMonth();
+        const energyKwh = row._value || 0; // power_avg × 1h = kWh
+        const existing = monthlyMap.get(month) || 0;
+        monthlyMap.set(month, existing + energyKwh);
       }
-    }
+    });
     
     // Convert to chart format
     const chartData = [];
@@ -1588,6 +1589,8 @@ app.get('/api/energy/yearly-chart', async (req, res) => {
     
     const totalEnergy = chartData.reduce((sum, d) => sum + d.y, 0);
     
+    console.log(`📊 Yearly chart: ${rows.length} hourly points, total ${totalEnergy.toFixed(2)} kWh`);
+    
     res.json({
       success: true,
       chartData,
@@ -1595,6 +1598,7 @@ app.get('/api/energy/yearly-chart', async (req, res) => {
       currentMonth: currentMonth + 1,
       year: currentYear,
       unit: 'kWh',
+      calculationMethod: 'aggregateWindow(1h, mean) + sum (same as monthly)',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -2447,8 +2451,8 @@ app.get('/api/energy/daily-realtime', async (req, res) => {
     res.json({
       success: true,
       daily: dailyValue || 0,
-      source: 'InfluxDB (Last - First)',
-      calculationMethod: 'Cumulative Counter Difference',
+      source: 'InfluxDB (hourly mean sum)',
+      calculationMethod: 'aggregateWindow(1h, mean) + sum (same as chart)',
       calculatedAt: new Date().toISOString(),
       calculatedAtLocal: formatLocal(new Date(), TIMEZONE),
       timezone: TIMEZONE,
