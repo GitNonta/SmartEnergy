@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { Pencil, RotateCcw, X, Check, Loader2 } from 'lucide-react';
 import { useDashboardLayout } from '../context/DashboardLayoutContext';
 import { useLanguage } from '../context/LanguageContext';
 import './EditModeToggle.css';
@@ -47,7 +48,7 @@ const EditModeToggle: React.FC = () => {
                         disabled={isSaving}
                         title={t('dashboard.resetLayout') || 'Reset to Default'}
                     >
-                        <span className="btn-icon">↺</span>
+                        <RotateCcw size={18} />
                     </button>
                     <button
                         className="edit-btn cancel-btn"
@@ -55,7 +56,7 @@ const EditModeToggle: React.FC = () => {
                         disabled={isSaving}
                         title={t('dashboard.cancelEdit') || 'Cancel'}
                     >
-                        <span className="btn-icon">✕</span>
+                        <X size={18} />
                     </button>
                     <button
                         className="edit-btn save-btn"
@@ -64,9 +65,9 @@ const EditModeToggle: React.FC = () => {
                         title={t('dashboard.saveLayout') || 'Save Layout'}
                     >
                         {isSaving ? (
-                            <span className="btn-icon spinning">⏳</span>
+                            <Loader2 size={18} className="spinning" />
                         ) : (
-                            <span className="btn-icon">✓</span>
+                            <Check size={18} />
                         )}
                     </button>
                 </div>
@@ -77,7 +78,7 @@ const EditModeToggle: React.FC = () => {
                     onClick={toggleEditMode}
                     title={t('dashboard.editLayout') || 'Edit Layout'}
                 >
-                    <span className="btn-icon">✏️</span>
+                    <Pencil size={18} />
                 </button>
             )}
         </div>

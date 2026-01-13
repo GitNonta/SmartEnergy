@@ -94,7 +94,8 @@
     line-height: 1;
 }
 
-.btn-icon.spinning {
+.btn-icon.spinning,
+.spinning {
     animation: spin 1s linear infinite;
 }
 
