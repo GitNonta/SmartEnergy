@@ -431,41 +431,41 @@ export default function CurrentRealtimeChart({ initialViewMode = 'all', onClose,
 
             {/* AI Result Popup - Liquid Glass */}
             {aiResult && (
-                <div className="absolute inset-x-6 bottom-24 z-50 animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
-                    <div className="relative overflow-hidden rounded-3xl liquid-glass-container p-6 backdrop-blur-2xl border border-white/30 dark:border-white/10 shadow-2xl">
+                <div className="absolute bottom-22 right-4 left-4 sm:left-auto sm:w-[280px] z-50 animate-in zoom-in-95 slide-in-from-bottom-6 duration-500">
+                    <div className="relative overflow-hidden rounded-2xl liquid-glass-container p-3.5 backdrop-blur-2xl border border-white/30 dark:border-white/10 shadow-2xl">
                         <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
 
                         <div className="relative z-10">
-                            <div className="flex justify-between items-center mb-4">
+                            <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-2">
-                                    <div className="p-2 rounded-xl bg-violet-500/20 text-violet-500">
-                                        {aiResult.isLocal ? <BarChart3 size={18} /> : <Brain size={18} />}
+                                    <div className="p-1.5 rounded-lg bg-violet-500/20 text-violet-500">
+                                        {aiResult.isLocal ? <BarChart3 size={14} /> : <Brain size={14} />}
                                     </div>
                                     <div>
-                                        <span className="text-xs font-bold text-violet-500 uppercase tracking-widest leading-none block mb-0.5">
+                                        <span className="text-[10px] font-bold text-violet-500 uppercase tracking-widest leading-none block mb-0.5">
                                             {aiResult.isLocal ? 'Local Insight' : 'AI Intelligence'}
                                         </span>
-                                        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white uppercase">
+                                        <h3 className="text-xs font-extrabold text-slate-800 dark:text-white uppercase">
                                             {aiResult.phase}
                                         </h3>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setAiResult(null)}
-                                    className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-slate-400 hover:text-red-500 transition-colors"
+                                    className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-slate-400 hover:text-red-500 transition-colors"
                                 >
-                                    <X size={20} />
+                                    <X size={16} />
                                 </button>
                             </div>
 
-                            <div className="relative max-h-[200px] overflow-y-auto pr-2 liquid-glass-scroll
-                                text-sm text-slate-800 dark:text-slate-100 leading-relaxed font-semibold 
-                                bg-white/20 dark:bg-black/20 rounded-xl p-4 border border-white/10
+                            <div className="relative max-h-[160px] overflow-y-auto pr-2 liquid-glass-scroll
+                                text-[11px] text-slate-800 dark:text-slate-100 leading-relaxed font-bold 
+                                bg-white/10 dark:bg-black/10 rounded-xl p-3 border border-white/10
                                 transition-all duration-300">
                                 <TextWithIcons text={aiResult.text} />
 
                                 {aiResult.isLocal && (
-                                    <div className="mt-4 pt-4 border-t border-white/10 text-[10px] text-center text-slate-500 dark:text-slate-400 italic">
+                                    <div className="mt-2 pt-2 border-t border-white/5 text-[9px] text-center text-slate-500 dark:text-slate-400 italic">
                                         💡 Local Analysis Fallback
                                     </div>
                                 )}
