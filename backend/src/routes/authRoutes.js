@@ -206,6 +206,22 @@ router.post('/login', async (req, res) => {
     
     await logActivity(user.id, ACTIONS.LOGIN_SUCCESS, 'auth',
       { ip: ipAddress, method: 'credentials' }, ipAddress);
+
+    // Audit Log for Login Success (Session Tracking)
+    await logAudit(
+      user.id, 
+      'LOGIN_SUCCESS', 
+      'users', 
+      user.id, 
+      null, 
+      { 
+        sessionId: session.sessionId, 
+        ip: ipAddress, 
+        userAgent 
+      }, 
+      ipAddress, 
+      userAgent
+    );
     
     // Set HttpOnly cookie for web clients
     res.cookie('jwt', session.token, getCookieOptions());
@@ -234,6 +250,18 @@ router.post('/logout', authMiddleware(), async (req, res) => {
     
     await invalidateSession(req.token);
     await logActivity(req.user.userId, ACTIONS.LOGOUT, 'auth', null, ipAddress);
+    
+    // Audit Log for Logout
+    await logAudit(
+      req.user.userId,
+      'LOGOUT',
+      'users',
+      req.user.userId,
+      null,
+      { ip: ipAddress },
+      ipAddress,
+      req.headers['user-agent']
+    );
     
     // Clear cookie
     res.clearCookie('jwt');
