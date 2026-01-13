@@ -20,11 +20,37 @@ const LoginPage: React.FC = () => {
     // Redirect to original destination or dashboard if already authenticated
     const from = (location.state as any)?.from?.pathname || '/dashboard';
 
+    // Check for existing lockout on mount
+    React.useEffect(() => {
+        const storedLockout = localStorage.getItem('lockoutUntil');
+        if (storedLockout) {
+            const lockoutTime = parseInt(storedLockout, 10);
+            const now = Date.now();
+            if (lockoutTime > now) {
+                const remaining = Math.ceil((lockoutTime - now) / 1000);
+                setCooldown(remaining);
+                // Ensure error message is shown to trigger popup
+                setError(t('auth.lockedMessage') || 'Too many failed attempts. Please contact administrator.');
+            } else {
+                localStorage.removeItem('lockoutUntil');
+            }
+        }
+    }, [t]);
+
     // Timer effect for cooldown
     React.useEffect(() => {
         if (cooldown > 0) {
             const timer = setInterval(() => {
-                setCooldown((prev) => prev - 1);
+                setCooldown((prev) => {
+                    const newValue = prev - 1;
+                    if (newValue <= 0) {
+                        // Auto-close: Clear error and storage when time validates
+                        setError('');
+                        localStorage.removeItem('lockoutUntil');
+                        return 0;
+                    }
+                    return newValue;
+                });
             }, 1000);
             return () => clearInterval(timer);
         }
@@ -60,6 +86,10 @@ const LoginPage: React.FC = () => {
                 // Use remainingSeconds from backend if available, otherwise default to 120s
                 const remaining = typeof loginRes.remainingSeconds === 'number' ? loginRes.remainingSeconds : 120;
                 setCooldown(remaining);
+
+                // Persist lockout time
+                const lockoutUntil = Date.now() + (remaining * 1000);
+                localStorage.setItem('lockoutUntil', lockoutUntil.toString());
             }
         }
 
