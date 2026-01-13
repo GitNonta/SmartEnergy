@@ -1,1 +1,0 @@
-{"success":true,"daily":0.683126560384723,"source":"InfluxDB (Power×Time integral)","calculationMethod":"integral(power_active_kw)","calculatedAt":"2026-01-08T01:19:51.490Z","calculatedAtLocal":"2026-01-08T08:19:51","timezone":"Asia/Bangkok","deviceId":"AI205"}
