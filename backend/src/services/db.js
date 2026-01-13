@@ -1,12 +1,13 @@
 /**
- * MySQL Database Connection Pool
+ * MySQL Database Connection Pool with Failover Support
  * 
  * Provides connection to MariaDB/MySQL for authentication and session management.
+ * Supports automatic failover to secondary database when primary is unavailable.
  */
 
 const mysql = require('mysql2/promise');
 
-// Validate required environment variables
+// Validate required environment variables for primary database
 const requiredEnvVars = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
@@ -16,9 +17,8 @@ if (missingEnvVars.length > 0) {
   throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
 }
 
-// Database configuration from environment
-// SECURITY: All values must be set via environment variables
-const dbConfig = {
+// Primary database configuration
+const primaryConfig = {
   host: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT, 10),
   user: process.env.DB_USER,
@@ -31,13 +31,150 @@ const dbConfig = {
   keepAliveInitialDelay: 10000
 };
 
-// Create connection pool
-const pool = mysql.createPool(dbConfig);
+// Secondary database configuration (failover)
+const secondaryConfig = process.env.DB_SECONDARY_HOST ? {
+  host: process.env.DB_SECONDARY_HOST,
+  port: parseInt(process.env.DB_SECONDARY_PORT || '3306', 10),
+  user: process.env.DB_SECONDARY_USER || process.env.DB_USER,
+  password: process.env.DB_SECONDARY_PASSWORD || process.env.DB_PASSWORD,
+  database: process.env.DB_SECONDARY_NAME || process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000
+} : null;
+
+// Failover enabled flag
+const failoverEnabled = process.env.DB_FAILOVER_ENABLED !== 'false' && secondaryConfig !== null;
+
+// Create connection pools
+const primaryPool = mysql.createPool(primaryConfig);
+const secondaryPool = secondaryConfig ? mysql.createPool(secondaryConfig) : null;
+
+// Track database health status
+let primaryHealthy = true;
+let lastHealthCheck = Date.now();
+const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+
+/**
+ * Check if primary database is healthy
+ */
+async function checkPrimaryHealth() {
+  try {
+    const connection = await primaryPool.getConnection();
+    await connection.ping();
+    connection.release();
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Periodically check and recover primary database connection
+ */
+async function tryRecoverPrimary() {
+  if (!primaryHealthy && Date.now() - lastHealthCheck > HEALTH_CHECK_INTERVAL) {
+    lastHealthCheck = Date.now();
+    const isHealthy = await checkPrimaryHealth();
+    if (isHealthy) {
+      primaryHealthy = true;
+      console.log('✅ Primary database recovered, switching back');
+    }
+  }
+}
+
+/**
+ * Execute query with automatic failover
+ */
+async function executeWithFailover(pool, sql, params) {
+  try {
+    const [results] = await pool.execute(sql, params);
+    return results;
+  } catch (error) {
+    // Check if this is a connection error
+    const isConnectionError = [
+      'ECONNREFUSED',
+      'ETIMEDOUT', 
+      'ENOTFOUND',
+      'PROTOCOL_CONNECTION_LOST',
+      'ER_ACCESS_DENIED_ERROR',
+      'ER_HOST_IS_BLOCKED',
+      'ER_HOST_NOT_PRIVILEGED'
+    ].some(code => error.code === code || error.message?.includes(code));
+    
+    if (isConnectionError) {
+      throw { ...error, isConnectionError: true };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Execute a query with parameters (with failover support)
+ */
+async function query(sql, params = []) {
+  // Try to recover primary if it was down
+  tryRecoverPrimary();
+  
+  // Use primary if healthy, otherwise try secondary
+  if (primaryHealthy) {
+    try {
+      return await executeWithFailover(primaryPool, sql, params);
+    } catch (error) {
+      if (error.isConnectionError && failoverEnabled && secondaryPool) {
+        console.warn('⚠️ Primary database failed, switching to secondary');
+        primaryHealthy = false;
+        lastHealthCheck = Date.now();
+        
+        try {
+          return await executeWithFailover(secondaryPool, sql, params);
+        } catch (secondaryError) {
+          console.error('❌ Secondary database also failed');
+          throw secondaryError;
+        }
+      }
+      throw error;
+    }
+  } else if (failoverEnabled && secondaryPool) {
+    // Primary is known to be down, use secondary
+    try {
+      return await executeWithFailover(secondaryPool, sql, params);
+    } catch (error) {
+      // Try primary as last resort
+      console.warn('⚠️ Secondary failed, trying primary as fallback');
+      return await executeWithFailover(primaryPool, sql, params);
+    }
+  } else {
+    // No failover available, use primary
+    return await executeWithFailover(primaryPool, sql, params);
+  }
+}
+
+/**
+ * Get a single row (with failover support)
+ */
+async function queryOne(sql, params = []) {
+  const results = await query(sql, params);
+  return results[0] || null;
+}
+
+/**
+ * Get the active pool (primary or secondary based on health)
+ */
+function getActivePool() {
+  if (primaryHealthy) {
+    return primaryPool;
+  }
+  return failoverEnabled && secondaryPool ? secondaryPool : primaryPool;
+}
 
 /**
  * Initialize database tables
  */
 async function initDatabase() {
+  const pool = getActivePool();
   const connection = await pool.getConnection();
   
   try {
@@ -86,7 +223,7 @@ async function initDatabase() {
     
     console.log('✅ Users table ready');
 
-    // Create sessions table (new schema with last_active, payload)
+    // Create sessions table
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS sessions (
         session_id VARCHAR(128) PRIMARY KEY,
@@ -207,41 +344,61 @@ async function initDatabase() {
 }
 
 /**
- * Execute a query with parameters
- */
-async function query(sql, params = []) {
-  const [results] = await pool.execute(sql, params);
-  return results;
-}
-
-/**
- * Get a single row
- */
-async function queryOne(sql, params = []) {
-  const results = await query(sql, params);
-  return results[0] || null;
-}
-
-/**
- * Test database connection
+ * Test database connection (both primary and secondary)
  */
 async function testConnection() {
+  let primaryOk = false;
+  let secondaryOk = false;
+  
   try {
-    const connection = await pool.getConnection();
+    const connection = await primaryPool.getConnection();
     await connection.ping();
     connection.release();
-    console.log('✅ Database connection successful');
-    return true;
+    console.log('✅ Primary database connection successful');
+    primaryOk = true;
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-    return false;
+    console.error('❌ Primary database connection failed:', error.message);
+    primaryHealthy = false;
   }
+  
+  if (secondaryPool) {
+    try {
+      const connection = await secondaryPool.getConnection();
+      await connection.ping();
+      connection.release();
+      console.log('✅ Secondary database connection successful');
+      secondaryOk = true;
+    } catch (error) {
+      console.error('❌ Secondary database connection failed:', error.message);
+    }
+  }
+  
+  return primaryOk || secondaryOk;
 }
+
+/**
+ * Get database health status
+ */
+function getHealthStatus() {
+  return {
+    primaryHealthy,
+    failoverEnabled,
+    hasSecondary: secondaryPool !== null,
+    lastHealthCheck: new Date(lastHealthCheck).toISOString()
+  };
+}
+
+// Legacy pool export for backwards compatibility
+const pool = primaryPool;
 
 module.exports = {
   pool,
+  primaryPool,
+  secondaryPool,
   query,
   queryOne,
   initDatabase,
-  testConnection
+  testConnection,
+  getHealthStatus,
+  getActivePool
 };

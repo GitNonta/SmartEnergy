@@ -45,8 +45,12 @@ router.post('/login', async (req, res) => {
     // Find user by username, email, or phone number
     const user = await queryOne(
       `SELECT * FROM users 
-       WHERE (username = ? OR email = ? OR phone_number = ?) 
-       AND is_active = TRUE`,
+       WHERE is_active = TRUE 
+       AND (
+         username = ? 
+         OR (email IS NOT NULL AND email = ?) 
+         OR (phone_number IS NOT NULL AND phone_number = ?)
+       )`,
       [identifier, identifier, identifier]
     );
 
