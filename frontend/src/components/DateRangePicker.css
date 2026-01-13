@@ -1,14 +1,92 @@
+/* Liquid Glass Styling */
+.liquid-glass-container {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(30px) saturate(200%);
+    -webkit-backdrop-filter: blur(30px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow:
+        0 8px 32px 0 rgba(31, 38, 135, 0.2),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.dark .liquid-glass-container {
+    background: rgba(15, 23, 42, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow:
+        0 8px 40px 0 rgba(0, 0, 0, 0.5),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.liquid-glass-gloss {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%, rgba(255, 255, 255, 0.05) 100%);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.liquid-gradient-bg {
+    background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
+}
+
+.dark .liquid-gradient-bg {
+    background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.15), rgba(126, 34, 206, 0.15));
+}
+
+.calendar-day-selected {
+    background: linear-gradient(135deg, #6366f1, #a855f7) !important;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    color: white !important;
+    font-weight: 800 !important;
+}
+
+.calendar-day-in-range {
+    background: rgba(139, 92, 246, 0.15) !important;
+    position: relative;
+}
+
+.dark .calendar-day-in-range {
+    background: rgba(139, 92, 246, 0.2) !important;
+}
+
+.calendar-day-in-range::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.05), transparent);
+    pointer-events: none;
+}
+
+.calendar-grid-header {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
 @media (min-width: 1025px) and (max-width: 1920px) {
     .custom-calendar-grid {
-        grid-template-columns: repeat(auto-fit, minmax(30px, 1fr)) !important;
-        gap: 1.5rem !important;
+        grid-template-columns: repeat(7, 44px) !important;
+        gap: 0.5rem !important;
+        justify-content: center;
     }
 }
 
 @media (max-width: 768px) {
     .custom-calendar-grid {
-        grid-template-columns: repeat(auto-fit, minmax(30px, 1fr)) !important;
-        /* Using a smaller gap for mobile to ensure 7 columns fit */
-        gap: 0.25rem !important;
+        grid-template-columns: repeat(7, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .custom-calendar-grid>button {
+        width: 100% !important;
+        aspect-ratio: 1/1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }

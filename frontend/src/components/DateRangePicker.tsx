@@ -129,19 +129,19 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ className = '' }) => 
             const inRange = isInRange(date);
 
             // Logic for styling
-            let buttonClass = "flex justify-center items-center w-[40px] h-[40px] cursor-pointer rounded-full hover:border-2 hover:border-blue-500 border-transparent border-2 transition-all duration-200";
+            let buttonClass = "flex justify-center items-center w-[40px] h-[40px] cursor-pointer rounded-xl hover:bg-white/30 dark:hover:bg-white/10 transition-all duration-300 border border-transparent hover:border-white/40";
             let textClass = "";
             let containerClass = "flex flex-col justify-center items-center relative";
 
             if (isStart || isEnd) {
                 // Selected start or end
-                buttonClass = "flex justify-center items-center w-[40px] h-[40px] cursor-pointer bg-blue-600 text-white font-bold rounded-full shadow-md transform scale-105";
+                buttonClass = "flex justify-center items-center w-[40px] h-[40px] cursor-pointer calendar-day-selected text-white font-bold rounded-xl transform scale-110 z-10";
             } else if (inRange) {
                 // In range
-                buttonClass = `flex justify-center items-center w-[40px] h-[40px] cursor-pointer rounded-full ${currentTheme.accentLight} bg-opacity-20`;
+                buttonClass = "flex justify-center items-center w-[40px] h-[40px] cursor-pointer rounded-none calendar-day-in-range first:rounded-l-xl last:rounded-r-xl";
             } else {
                 // Normal day
-                textClass = "text-gray-700 dark:text-gray-300";
+                textClass = "text-slate-800 dark:text-slate-200 font-semibold";
             }
 
             days.push(
@@ -166,9 +166,9 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ className = '' }) => 
                 <div className="font-bold text-center py-4 text-lg text-gray-900 dark:text-gray-100">
                     {months[monthDate.getMonth()]} {yearDisplay}
                 </div>
-                <div className="grid grid-cols-[repeat(7,30px)] justify-center mb-2 gap-1 border-b border-gray-100 dark:border-gray-700 pb-2 custom-calendar-grid">
+                <div className="grid grid-cols-[repeat(7,30px)] md:grid-cols-[repeat(7,44px)] justify-center mb-4 gap-1 border-b border-white/20 dark:border-white/10 pb-3 custom-calendar-grid">
                     {daysWeek.map((day, i) => (
-                        <div key={i} className={`text-center text-sm font-medium ${i === 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-500'}`}>
+                        <div key={i} className={`text-center calendar-grid-header ${i === 0 ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`}>
                             {day}
                         </div>
                     ))}
@@ -188,47 +188,53 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ className = '' }) => 
     return (
         <div
             ref={containerRef}
-            className={`absolute right 0 z-[100] min-w-[320px] md:min-w-[650px] bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${className}`}
-            style={{ top: '100%', marginTop: '0.5rem' }}
+            className={`absolute right-0 z-[100] min-w-[320px] md:min-w-[800px] liquid-glass-container rounded-[2.5rem] overflow-hidden animate-in fade-in zoom-in-95 duration-500 shadow-2xl ${className}`}
+            style={{ top: '100%', marginTop: '1rem' }}
         >
-            <div className="relative p-6">
+            {/* Glossy Reflection Effect */}
+            <div className="liquid-glass-gloss" />
+
+            <div className="relative p-8">
+                {/* Background Decor */}
+                <div className="absolute top-0 left-0 w-full h-full liquid-gradient-bg -z-10 opacity-30"></div>
+
                 {/* Two Month View - Responsive Stack */}
-                <div className="relative flex flex-col md:flex-row gap-8">
+                <div className="relative flex flex-col md:flex-row gap-10">
                     {renderMonth(currentMonth, 0)}
                     {/* Divider for mobile only */}
-                    <div className="md:hidden w-full h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
+                    <div className="md:hidden w-full h-px bg-white/20 dark:bg-gray-700/50 my-2"></div>
                     {renderMonth(nextMonthDate, 1)}
                 </div>
 
                 {/* Navigation Buttons (Absolute) */}
-                <div className="absolute top-6 left-0 right-0 px-6 flex justify-between pointer-events-none">
+                <div className="absolute top-7 left-0 right-0 px-8 flex justify-between pointer-events-none">
                     <button
                         type="button"
                         onClick={() => changeMonth(-1)}
-                        className="pointer-events-auto h-10 w-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+                        className="pointer-events-auto h-11 w-11 flex items-center justify-center rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/40 dark:hover:bg-white/10 text-gray-800 dark:text-white transition-all backdrop-blur-md border border-white/30 dark:border-white/10"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
                     </button>
                     <button
                         type="button"
                         onClick={() => changeMonth(1)}
-                        className="pointer-events-auto h-10 w-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+                        className="pointer-events-auto h-11 w-11 flex items-center justify-center rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/40 dark:hover:bg-white/10 text-gray-800 dark:text-white transition-all backdrop-blur-md border border-white/30 dark:border-white/10"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                     </button>
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex justify-end pt-6 mt-2 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex justify-end pt-6 mt-4 border-t border-white/20 dark:border-white/10">
                     <button
                         type="button"
                         onClick={handleApply}
                         disabled={!startDate || !endDate}
                         className={`
-                            px-8 py-2.5 rounded-xl font-bold text-white transition-all transform hover:-translate-y-0.5
+                            px-10 py-3 rounded-2xl font-bold text-white transition-all transform hover:-translate-y-1 active:scale-95
                             ${startDate && endDate
-                                ? 'bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-500/30 hover:shadow-red-500/40'
-                                : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'}
+                                ? 'calendar-day-selected shadow-xl'
+                                : 'bg-gray-400/30 dark:bg-gray-700/50 cursor-not-allowed opacity-50'}
                         `}
                     >
                         {t('common.confirm') || 'Confirm'}
