@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { getApiBase } from '../config/api';
 
 // Types
@@ -8,16 +8,23 @@ interface Message {
     content: string;
     timestamp: Date;
     toolsUsed?: string[];
+    model?: string;
 }
+
+type AIModel = 'gemini' | 'gpt';
 
 interface ChatContextType {
     messages: Message[];
     isLoading: boolean;
+    selectedModel: AIModel;
+    setSelectedModel: (model: AIModel) => void;
     sendMessage: (message: string) => Promise<void>;
     clearChat: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
+
+const MODEL_STORAGE_KEY = 'smart_chat_model';
 
 export const useChatContext = () => {
     const context = useContext(ChatContext);
@@ -34,6 +41,20 @@ interface ChatProviderProps {
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [selectedModel, setSelectedModelState] = useState<AIModel>(() => {
+        // Load from localStorage on init
+        const saved = localStorage.getItem(MODEL_STORAGE_KEY);
+        return (saved === 'gpt' || saved === 'gemini') ? saved : 'gemini';
+    });
+
+    // Persist model selection to localStorage
+    useEffect(() => {
+        localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
+    }, [selectedModel]);
+
+    const setSelectedModel = useCallback((model: AIModel) => {
+        setSelectedModelState(model);
+    }, []);
 
     const sendMessage = useCallback(async (content: string) => {
         if (!content.trim() || isLoading) return;
@@ -54,7 +75,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: content
+                    message: content,
+                    model: selectedModel
                 })
             });
 
@@ -66,7 +88,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
                     role: 'assistant',
                     content: data.message,
                     timestamp: new Date(),
-                    toolsUsed: data.toolsUsed
+                    toolsUsed: data.toolsUsed,
+                    model: data.model
                 };
 
                 setMessages(prev => [...prev, aiMessage]);
@@ -90,14 +113,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [isLoading]);
+    }, [isLoading, selectedModel]);
 
     const clearChat = useCallback(() => {
         setMessages([]);
     }, []);
 
     return (
-        <ChatContext.Provider value={{ messages, isLoading, sendMessage, clearChat }}>
+        <ChatContext.Provider value={{ messages, isLoading, selectedModel, setSelectedModel, sendMessage, clearChat }}>
             {children}
         </ChatContext.Provider>
     );

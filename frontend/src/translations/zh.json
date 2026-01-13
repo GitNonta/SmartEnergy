@@ -268,6 +268,9 @@
         "welcomeMessage": "我可以帮助分析您的能源数据",
         "placeholder": "随便问...",
         "usedTools": "使用",
+        "model": "AI模型",
+        "modelGemini": "Gemini",
+        "modelGpt": "ChatGPT",
         "quickActions": {
             "daily": "今天用了多少电？",
             "compare": "与昨天比较",

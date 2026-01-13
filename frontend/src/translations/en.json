@@ -268,6 +268,9 @@
         "welcomeMessage": "I can help analyze your energy data",
         "placeholder": "Ask anything...",
         "usedTools": "Used",
+        "model": "AI Model",
+        "modelGemini": "Gemini",
+        "modelGpt": "ChatGPT",
         "quickActions": {
             "daily": "How much electricity today?",
             "compare": "Compare with yesterday",

@@ -1,21 +1,32 @@
 /**
- * AI Chat Service - Google Gemini Function Calling
+ * AI Chat Service - Multi-Model Support (Gemini & OpenAI)
  * Enables AI to query InfluxDB, export CSV, and analyze energy data
  */
 
 const { GoogleGenAI } = require('@google/genai');
+const OpenAI = require('openai');
 const influxService = require('./influxdb');
 const fs = require('fs');
 const path = require('path');
 
 // Initialize Gemini client
-let ai = null;
+let geminiAI = null;
 
 if (process.env.GEMINI_API_KEY) {
-  ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  geminiAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   console.log(`✅ Gemini AI initialized`);
 } else {
-  console.warn('⚠️ GEMINI_API_KEY is not set. AI Chat features will be disabled.');
+  console.warn('⚠️ GEMINI_API_KEY is not set. Gemini AI features will be disabled.');
+}
+
+// Initialize OpenAI client
+let openaiClient = null;
+
+if (process.env.OPENAI_API_KEY) {
+  openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  console.log(`✅ OpenAI initialized`);
+} else {
+  console.warn('⚠️ OPENAI_API_KEY is not set. ChatGPT features will be disabled.');
 }
 
 // CSV export directory
@@ -454,31 +465,85 @@ const SYSTEM_PROMPT = `คุณเป็น AI Assistant สำหรับร�
 ตอบเป็นภาษาไทยเสมอ ยกเว้นข้อมูลทางเทคนิค
 ใช้ emoji เพื่อทำให้ข้อความน่าอ่าน`;
 
+// Convert Gemini function declarations to OpenAI format
+const openAITools = functionDeclarations.map(fn => ({
+  type: 'function',
+  function: {
+    name: fn.name,
+    description: fn.description,
+    parameters: fn.parameters
+  }
+}));
+
 /**
- * Process chat message with Gemini function calling (@google/genai SDK)
+ * Process chat message with Gemini function calling
  */
-async function processMessage(userMessage, conversationHistory = []) {
-  try {
-    if (!ai) {
-      return {
-        success: false,
-        message: 'AI Chat is currently disabled because the server is missing the Gemini API Key. Please contact the administrator.',
-        error: 'GEMINI_API_KEY_MISSING'
-      };
+async function processMessageWithGemini(userMessage) {
+  if (!geminiAI) {
+    return {
+      success: false,
+      message: 'Gemini AI is currently disabled because the server is missing the GEMINI_API_KEY. Please contact the administrator.',
+      error: 'GEMINI_API_KEY_MISSING'
+    };
+  }
+
+  console.log('🤖 Sending to Gemini...');
+
+  const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const toolsUsed = [];
+
+  // Build contents with conversation history
+  const contents = [
+    { role: 'user', parts: [{ text: userMessage }] }
+  ];
+
+  // Initial request with function declarations
+  let response = await geminiAI.models.generateContent({
+    model: modelName,
+    contents,
+    config: {
+      systemInstruction: SYSTEM_PROMPT,
+      tools: [{ functionDeclarations }]
+    }
+  });
+
+  // Handle function calls loop
+  while (response.functionCalls && response.functionCalls.length > 0) {
+    console.log(`🔧 Gemini wants to use ${response.functionCalls.length} function(s)`);
+    
+    const functionResponses = [];
+    
+    for (const call of response.functionCalls) {
+      const toolName = call.name;
+      const toolArgs = call.args || {};
+      toolsUsed.push(toolName);
+      
+      const toolResult = await executeTool(toolName, toolArgs);
+      
+      functionResponses.push({
+        name: toolName,
+        response: toolResult
+      });
     }
 
-    console.log('🤖 Sending to Gemini...');
+    // Add assistant response and function results to contents
+    contents.push({
+      role: 'model',
+      parts: response.functionCalls.map(fc => ({ functionCall: fc }))
+    });
+    
+    contents.push({
+      role: 'user',
+      parts: functionResponses.map(fr => ({
+        functionResponse: {
+          name: fr.name,
+          response: fr.response
+        }
+      }))
+    });
 
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-    const toolsUsed = [];
-
-    // Build contents with conversation history
-    const contents = [
-      { role: 'user', parts: [{ text: userMessage }] }
-    ];
-
-    // Initial request with function declarations
-    let response = await ai.models.generateContent({
+    // Get next response
+    response = await geminiAI.models.generateContent({
       model: modelName,
       contents,
       config: {
@@ -486,77 +551,148 @@ async function processMessage(userMessage, conversationHistory = []) {
         tools: [{ functionDeclarations }]
       }
     });
+  }
 
-    // Handle function calls loop
-    while (response.functionCalls && response.functionCalls.length > 0) {
-      console.log(`🔧 Gemini wants to use ${response.functionCalls.length} function(s)`);
-      
-      const functionResponses = [];
-      
-      for (const call of response.functionCalls) {
-        const toolName = call.name;
-        const toolArgs = call.args || {};
-        toolsUsed.push(toolName);
-        
-        const toolResult = await executeTool(toolName, toolArgs);
-        
-        functionResponses.push({
-          name: toolName,
-          response: toolResult
-        });
-      }
+  console.log('✅ Gemini response received');
 
-      // Add assistant response and function results to contents
-      contents.push({
-        role: 'model',
-        parts: response.functionCalls.map(fc => ({ functionCall: fc }))
-      });
-      
-      contents.push({
-        role: 'user',
-        parts: functionResponses.map(fr => ({
-          functionResponse: {
-            name: fr.name,
-            response: fr.response
-          }
-        }))
-      });
+  // Extract text from response
+  const text = response.text || '';
 
-      // Get next response
-      response = await ai.models.generateContent({
-        model: modelName,
-        contents,
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          tools: [{ functionDeclarations }]
-        }
+  return {
+    success: true,
+    message: text || 'ขออภัย ไม่สามารถประมวลผลได้',
+    toolsUsed,
+    model: 'gemini'
+  };
+}
+
+/**
+ * Process chat message with OpenAI function calling
+ */
+async function processMessageWithOpenAI(userMessage) {
+  if (!openaiClient) {
+    return {
+      success: false,
+      message: 'ChatGPT is currently disabled because the server is missing the OPENAI_API_KEY. Please contact the administrator.',
+      error: 'OPENAI_API_KEY_MISSING'
+    };
+  }
+
+  console.log('🤖 Sending to OpenAI...');
+
+  const modelName = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const toolsUsed = [];
+
+  // Build messages
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: userMessage }
+  ];
+
+  // Initial request with tools
+  let response = await openaiClient.chat.completions.create({
+    model: modelName,
+    messages,
+    tools: openAITools,
+    tool_choice: 'auto'
+  });
+
+  let assistantMessage = response.choices[0].message;
+
+  // Handle function calls loop
+  while (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+    console.log(`🔧 OpenAI wants to use ${assistantMessage.tool_calls.length} function(s)`);
+    
+    // Add assistant message to conversation
+    messages.push(assistantMessage);
+    
+    // Execute each tool call
+    for (const toolCall of assistantMessage.tool_calls) {
+      const toolName = toolCall.function.name;
+      const toolArgs = JSON.parse(toolCall.function.arguments || '{}');
+      toolsUsed.push(toolName);
+      
+      const toolResult = await executeTool(toolName, toolArgs);
+      
+      // Add tool result to messages
+      messages.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        content: JSON.stringify(toolResult)
       });
     }
 
-    console.log('✅ Gemini response received');
+    // Get next response
+    response = await openaiClient.chat.completions.create({
+      model: modelName,
+      messages,
+      tools: openAITools,
+      tool_choice: 'auto'
+    });
 
-    // Extract text from response
-    const text = response.text || '';
+    assistantMessage = response.choices[0].message;
+  }
 
-    return {
-      success: true,
-      message: text || 'ขออภัย ไม่สามารถประมวลผลได้',
-      toolsUsed
-    };
+  console.log('✅ OpenAI response received');
 
+  return {
+    success: true,
+    message: assistantMessage.content || 'ขออภัย ไม่สามารถประมวลผลได้',
+    toolsUsed,
+    model: 'gpt'
+  };
+}
+
+/**
+ * Main process message handler - routes to appropriate AI provider
+ * @param {string} userMessage - User's message
+ * @param {Array} conversationHistory - Previous conversation (unused for now)
+ * @param {string} model - AI model to use: 'gemini' | 'gpt' (default: 'gemini')
+ */
+async function processMessage(userMessage, conversationHistory = [], model = 'gemini') {
+  try {
+    console.log(`🔄 processMessage called with model: "${model}"`);
+    
+    if (model === 'gpt') {
+      console.log('➡️ Routing to OpenAI...');
+      return await processMessageWithOpenAI(userMessage);
+    } else {
+      console.log('➡️ Routing to Gemini...');
+      return await processMessageWithGemini(userMessage);
+    }
   } catch (error) {
     console.error('❌ AI Chat error:', error);
     return {
       success: false,
       message: `ขออภัย เกิดข้อผิดพลาด: ${error.message}`,
-      error: error.message
+      error: error.message,
+      model
     };
   }
+}
+
+/**
+ * Get available AI models
+ */
+function getAvailableModels() {
+  const models = [];
+  if (geminiAI) {
+    models.push({ id: 'gemini', name: 'Gemini', available: true });
+  } else {
+    models.push({ id: 'gemini', name: 'Gemini', available: false });
+  }
+  if (openaiClient) {
+    models.push({ id: 'gpt', name: 'ChatGPT', available: true });
+  } else {
+    models.push({ id: 'gpt', name: 'ChatGPT', available: false });
+  }
+  return models;
 }
 
 module.exports = {
   processMessage,
   executeTool,
   tools: functionDeclarations,
+  getAvailableModels,
   CSV_DIR
 };

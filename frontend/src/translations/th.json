@@ -268,6 +268,9 @@
         "welcomeMessage": "ผมช่วยวิเคราะห์ข้อมูลพลังงานได้",
         "placeholder": "ถามอะไรก็ได้...",
         "usedTools": "ใช้",
+        "model": "โมเดล AI",
+        "modelGemini": "Gemini",
+        "modelGpt": "ChatGPT",
         "quickActions": {
             "daily": "วันนี้ใช้ไฟเท่าไหร่?",
             "compare": "เปรียบเทียบกับเมื่อวาน",

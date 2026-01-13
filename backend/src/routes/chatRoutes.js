@@ -12,10 +12,11 @@ module.exports = function(aiChatService) {
   /**
    * POST /api/chat/message
    * Send a message to AI and get response (stateless - no history)
+   * Supports model selection: 'gemini' or 'gpt'
    */
   router.post('/message', async (req, res) => {
     try {
-      const { message } = req.body;
+      const { message, model = 'gemini' } = req.body;
 
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ 
@@ -24,20 +25,41 @@ module.exports = function(aiChatService) {
         });
       }
 
-      console.log(`💬 Chat message received: ${message.substring(0, 50)}...`);
+      console.log(`💬 Chat message received (model: ${model}): ${message.substring(0, 50)}...`);
 
       // Process message with AI (no history - stateless)
-      const result = await aiChatService.processMessage(message, []);
+      const result = await aiChatService.processMessage(message, [], model);
 
       res.json({
         success: result.success,
         message: result.message,
         error: result.error,
-        toolsUsed: result.toolsUsed || []
+        toolsUsed: result.toolsUsed || [],
+        model: result.model || model
       });
 
     } catch (error) {
       console.error('❌ Chat API error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  /**
+   * GET /api/chat/models
+   * Get available AI models
+   */
+  router.get('/models', (req, res) => {
+    try {
+      const models = aiChatService.getAvailableModels();
+      res.json({
+        success: true,
+        models
+      });
+    } catch (error) {
+      console.error('❌ Get models error:', error);
       res.status(500).json({ 
         success: false, 
         error: error.message 
