@@ -501,7 +501,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
 
             {/* AI Result - Liquid Glass Popup */}
             {aiResult && (
-                <div className="absolute bottom-22 right-6 left-6 sm:left-auto sm:w-[280px] 
+                <div className="absolute bottom-[76px] right-6 left-6 sm:left-auto sm:w-[280px] 
                     bg-gradient-to-br from-white/40 to-white/10 dark:from-slate-800/40 dark:to-slate-900/10 
                     backdrop-blur-2xl border border-white/30 dark:border-white/10 
                     rounded-2xl p-3.5 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] 

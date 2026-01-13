@@ -518,7 +518,7 @@ export default function VoltageRealtimeChart({ initialViewMode = 'all', onClose,
 
             {/* AI Result Popup - Liquid Glass */}
             {aiResult && (
-                <div className="absolute bottom-22 right-4 left-4 sm:left-auto sm:w-[280px] z-50 animate-in zoom-in-95 slide-in-from-bottom-6 duration-500">
+                <div className="absolute bottom-[76px] right-4 left-4 sm:left-auto sm:w-[280px] z-50 animate-in zoom-in-95 slide-in-from-bottom-6 duration-500">
                     <div className="relative overflow-hidden rounded-2xl liquid-glass-container p-3.5 backdrop-blur-2xl border border-white/30 dark:border-white/10 shadow-2xl">
                         {/* Glossy Reflection Layer */}
                         <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
