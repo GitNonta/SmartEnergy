@@ -6,7 +6,8 @@ import {
     AlertTriangle,
     Info,
     Zap,
-    AlertCircle
+    AlertCircle,
+    X
 } from 'lucide-react';
 
 export interface AlertItem {
@@ -214,9 +215,17 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
                             {t('notifications.title')}
                         </h2>
                     </div>
-                    <button className="p-2 hover:bg-white/20 dark:hover:bg-black/20 rounded-full text-slate-500 dark:text-slate-400 transition-all active:scale-90">
-                        <MoreHorizontal size={20} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button className="p-2 hover:bg-white/20 dark:hover:bg-black/20 rounded-full text-slate-500 dark:text-slate-400 transition-all active:scale-90 hidden sm:block">
+                            <MoreHorizontal size={20} />
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-white/20 dark:hover:bg-black/20 rounded-full text-slate-500 dark:text-slate-400 transition-all active:scale-90"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Tabs */}

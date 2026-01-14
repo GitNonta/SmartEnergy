@@ -7,9 +7,10 @@ import ProfileModal from './ProfileModal';
 interface UserMenuDropdownProps {
     className?: string;
     onNavigate?: (path: string) => void;
+    dropUp?: boolean;
 }
 
-const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({ className = '', onNavigate }) => {
+const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({ className = '', onNavigate, dropUp = false }) => {
     const { user, logout, isAuthenticated } = useAuth();
     const { t } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
@@ -64,7 +65,7 @@ const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({ className = '', onN
                     onClick={() => setIsOpen(!isOpen)}
                     className="ml-1 w-8 h-8 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-xs font-bold shadow-sm text-white hover:bg-white/30 transition-colors"
                 >
-                    {initials}
+                    {dropUp ? <UserIcon className="w-5 h-5" /> : initials}
                 </button>
 
                 {/* Dropdown Menu */}
@@ -77,7 +78,7 @@ const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({ className = '', onN
                         />
 
                         {/* Menu */}
-                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl ring-1 ring-black/5 z-50 overflow-hidden">
+                        <div className={`absolute right-0 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl ring-1 ring-black/5 z-50 overflow-hidden ${dropUp ? 'bottom-full mb-2' : 'mt-2'}`}>
                             {/* User Info */}
                             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                                 <div className="flex items-center gap-3">

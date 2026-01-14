@@ -394,7 +394,112 @@
 
     .chat-fab {
         right: 1rem !important;
-        bottom: 1rem !important;
+        bottom: 5.5rem !important;
+    }
+
+    /* =========================================
+     EDIT TOGGLE - Above Chat
+     ========================================= */
+    .edit-mode-toggle {
+        position: fixed !important;
+        bottom: 11rem !important;
+        /* Above chat (5.5rem + size + gap) */
+        right: 1.5rem !important;
+        /* Staggered offset */
+        z-index: 40 !important;
+    }
+
+    .edit-mode-toggle .edit-btn {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        border-radius: 50% !important;
+        padding: 0 !important;
+    }
+
+    /* =========================================
+     MOBILE NAVIGATION (Floating Pill)
+     ========================================= */
+    .mobile-nav-container {
+        position: fixed !important;
+        bottom: 5px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 400px !important;
+        background: #0f172a !important;
+        /* slate-900 */
+        border-radius: 30px !important;
+        padding: 0.75rem 1.5rem !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+        z-index: 50 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .mobile-nav-item {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0.75rem !important;
+        border-radius: 9999px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        color: #94a3b8 !important;
+        /* slate-400 */
+        text-decoration: none !important;
+        position: relative !important;
+    }
+
+    .mobile-nav-item .nav-icon {
+        width: 1.5rem !important;
+        height: 1.5rem !important;
+        transition: color 0.2s ease !important;
+    }
+
+    /* Active State (Pill) */
+    .mobile-nav-item.active {
+        background: #1e293b !important;
+        /* slate-800/lighten */
+        color: #38bdf8 !important;
+        /* sky-400 */
+        padding-left: 1.25rem !important;
+        padding-right: 1.5rem !important;
+        gap: 0.5rem !important;
+    }
+
+    .mobile-nav-item.active .nav-label {
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        white-space: nowrap !important;
+        display: block !important;
+    }
+
+    /* Inactive items just icon */
+    /* Inactive items just icon */
+    .mobile-nav-item .nav-label {
+        display: none !important;
+    }
+
+    /* =========================================
+     LIGHT MODE OVERRIDES
+     ========================================= */
+    html:not(.dark) .mobile-nav-container {
+        background: #ffffff !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    html:not(.dark) .mobile-nav-item {
+        color: #64748b !important;
+        /* slate-500 */
+    }
+
+    html:not(.dark) .mobile-nav-item.active {
+        background: #f1f5f9 !important;
+        /* slate-100 */
+        color: #0284c7 !important;
+        /* sky-600 */
     }
 
     /* =========================================

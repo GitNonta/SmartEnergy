@@ -24,4 +24,100 @@
     .grid {
         grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)) !important;
     }
+
+    /* Adjust Chat FAB to avoid potential bottom nav on tablet */
+    .chat-fab {
+        bottom: 5.5rem !important;
+        right: 1.5rem !important;
+    }
+
+    /* Edit Toggle for Tablet */
+    .edit-mode-toggle {
+        position: fixed !important;
+        bottom: 11rem !important;
+        right: 2rem !important;
+        /* Staggered from chat */
+        z-index: 40 !important;
+    }
+
+    .edit-mode-toggle .edit-btn {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        border-radius: 50% !important;
+    }
+
+    /* =========================================
+     TABLET NAVIGATION (Same as Mobile)
+     ========================================= */
+    .mobile-nav-container {
+        position: fixed !important;
+        bottom: 5px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 80% !important;
+        /* Slightly narrower on tablet */
+        max-width: 500px !important;
+        background: #0f172a !important;
+        border-radius: 9999px !important;
+        padding: 0.75rem 2rem !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+        z-index: 50 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .mobile-nav-item {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0.75rem !important;
+        border-radius: 9999px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        color: #94a3b8 !important;
+        text-decoration: none !important;
+        position: relative !important;
+    }
+
+    .mobile-nav-item .nav-icon {
+        width: 1.75rem !important;
+        /* Larger icons for tablet */
+        height: 1.75rem !important;
+    }
+
+    .mobile-nav-item.active {
+        background: #1e293b !important;
+        color: #38bdf8 !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.75rem !important;
+        gap: 0.75rem !important;
+    }
+
+    .mobile-nav-item.active .nav-label {
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        white-space: nowrap !important;
+        display: block !important;
+    }
+
+    .mobile-nav-item .nav-label {
+        display: none !important;
+    }
+
+    /* Light Mode Overrides for Tablet */
+    html:not(.dark) .mobile-nav-container {
+        background: #ffffff !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    html:not(.dark) .mobile-nav-item {
+        color: #64748b !important;
+    }
+
+    html:not(.dark) .mobile-nav-item.active {
+        background: #f1f5f9 !important;
+        color: #0284c7 !important;
+    }
 }

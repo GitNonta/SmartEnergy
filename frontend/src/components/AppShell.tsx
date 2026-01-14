@@ -69,72 +69,39 @@ const TranslatedLabel: React.FC<{ labelKey: string }> = ({ labelKey }) => {
 // Mobile Bottom Navigation Component
 const MobileBottomNav = ({ navItems }: { navItems: { id: string; labelKey: string; path: string; icon: any }[] }) => {
   const location = useLocation();
-  // Fixed theme used directly
   const theme = THEME;
 
   // Find active index based on current path
   const activeIndex = navItems.findIndex(item =>
     location.pathname === item.path || (item.path === '/dashboard' && location.pathname === '/')
   );
-  // Default to 0 if not found
   const safeActiveIndex = activeIndex === -1 ? 0 : activeIndex;
 
   return (
-    <div className="fixed bottom-0 left-0 w-full h-[70px] bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 lg:hidden z-50 rounded-t-2xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)]">
-      <div className="relative flex w-full h-full">
-        {navItems.map((item, index) => {
-          const isActive = index === safeActiveIndex;
-          const Icon = item.icon;
+    <div className="mobile-nav-container lg:hidden">
+      {navItems.map((item, index) => {
+        const isActive = index === safeActiveIndex;
+        const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.id}
-              to={item.path}
-              className="relative z-20 flex-1 flex flex-col items-center justify-center group"
-            >
-              <span
-                className={`
-                  absolute transition-all duration-500 ease-in-out
-                  ${isActive ? '-top-6' : 'top-5'}
-                `}
-              >
-                <span className={`
-                  flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300
-                  ${isActive ? 'text-white' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}
-                `}>
-                  <Icon className={`w-6 h-6 ${isActive ? 'animate-bounce-small' : ''}`} />
-                </span>
-              </span>
-
-              <span className={`
-                absolute bottom-4 text-[10px] font-medium transition-all duration-300
-                ${isActive ? 'opacity-100 translate-y-0 text-gray-800 dark:text-white' : 'opacity-0 translate-y-4'}
-              `}>
+        return (
+          <Link
+            key={item.id}
+            to={item.path}
+            className={`mobile-nav-item ${isActive ? 'active' : ''}`}
+          >
+            <Icon className="nav-icon" />
+            {isActive && (
+              <span className="nav-label">
                 <TranslatedLabel labelKey={item.labelKey} />
               </span>
-            </Link>
-          );
-        })}
+            )}
+          </Link>
+        );
+      })}
 
-        {/* Sliding Indicator (The "Gooey" Background) */}
-        {/* We use calculated left position based on percentage width of number of items */}
-        <div
-          className="absolute -top-6 h-16 w-16 bg-transparent z-10 transition-all duration-500 ease-in-out"
-          style={{
-            left: `calc((100% / ${navItems.length}) * ${safeActiveIndex} + (100% / ${navItems.length} / 2) - 32px)`
-          }}
-        >
-          {/* The Circle */}
-          <div className={`w-16 h-16 rounded-full border-[6px] border-gray-50 dark:border-gray-900 ${THEME.accent} flex items-center justify-center shadow-lg`}>
-            {/* Icon placeholder is handled by the Link above */}
-          </div>
-
-          {/* Left Curve Pseudo-element simulation */}
-          <div className="absolute top-[26px] -left-[21px] w-6 h-6 bg-transparent rounded-tr-[24px] shadow-[4px_-4px_0_0_#f9fafb] dark:shadow-[4px_-4px_0_0_#111827]"></div>
-
-          {/* Right Curve Pseudo-element simulation */}
-          <div className="absolute top-[26px] -right-[21px] w-6 h-6 bg-transparent rounded-tl-[24px] shadow-[-4px_-4px_0_0_#f9fafb] dark:shadow-[-4px_-4px_0_0_#111827]"></div>
-        </div>
+      {/* User Info / Profile (replaces Reports) */}
+      <div className="mobile-nav-item">
+        <UserMenuDropdown dropUp />
       </div>
     </div>
   );
@@ -260,7 +227,6 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
     { id: 'dashboard', labelKey: 'nav.dashboard', path: '/dashboard', icon: LayoutDashboard },
     { id: 'status', labelKey: 'nav.status', path: '/status', icon: Activity },
     { id: 'devices', labelKey: 'nav.devices', path: '/devices', icon: Plug },
-    { id: 'reports', labelKey: 'nav.alerts', path: '/reports', icon: BarIcon },
   ];
 
   return (
@@ -348,7 +314,7 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
                       />
                     </div>
 
-                    <UserMenuDropdown />
+                    <UserMenuDropdown className="hidden lg:block" />
                   </div>
                 </div>
               </div>
