@@ -187,8 +187,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ className = '' }) => 
     return (
         <div
             ref={containerRef}
-            className={`absolute right0 z-[100] min-w-[320px] md:min-w-[800px] liquid-glass-container rounded-[2.5rem] overflow-hidden animate-in fade-in zoom-in-95 duration-500 shadow-2xl ${className}`}
-            style={{ top: '100%', marginTop: '1rem' }}
+            className={`
+                fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[95vw] max-w-[400px] 
+                md:absolute md:top-full md:right 0 md:left-auto md:translate-x-0 md:max-w-none md:w-auto md:min-w-[800px] md:mt-4
+                liquid-glass-container rounded-[2rem] md:rounded-[2.5rem] overflow-hidden animate-in fade-in zoom-in-95 duration-500 shadow-2xl 
+                ${className}
+            `}
         >
             {/* Glossy Reflection Effect */}
             <div className="liquid-glass-gloss" />

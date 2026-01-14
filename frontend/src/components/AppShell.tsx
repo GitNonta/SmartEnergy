@@ -147,12 +147,12 @@ const TimeSelectorBlock: React.FC = () => {
   const { mode, setMode, openCalendar, getDisplayLabel } = useTimeRange();
   const { t } = useLanguage();
 
-  const options: { label: string; value: TimeRangeMode }[] = [
-    { label: t('time.realtime'), value: 'realtime' },
-    { label: t('time.hour'), value: 'hour' },
-    { label: t('time.day'), value: 'day' },
-    { label: t('time.week'), value: 'week' },
-    { label: t('time.month'), value: 'month' },
+  const options: { label: string; abbr: string; value: TimeRangeMode }[] = [
+    { label: t('time.realtime'), abbr: 'RT', value: 'realtime' },
+    { label: t('time.hour'), abbr: '1H', value: 'hour' },
+    { label: t('time.day'), abbr: '24H', value: 'day' },
+    { label: t('time.week'), abbr: '7D', value: 'week' },
+    { label: t('time.month'), abbr: '30D', value: 'month' },
   ];
 
   return (
@@ -163,13 +163,14 @@ const TimeSelectorBlock: React.FC = () => {
             key={option.value}
             onClick={() => setMode(option.value)}
             className={`
-              px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 whitespace-nowrap
+              px-3 py-1 sm:px-4 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full transition-all duration-200 whitespace-nowrap
               ${mode === option.value
                 ? `bg-white dark:bg-gray-600 shadow-sm ring-1 ring-black/5 dark:ring-white/10 ${theme.accent.replace('bg-', 'text-')}`
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-600/50'}
             `}
           >
-            {option.label}
+            <span className="hidden sm:inline">{option.label}</span>
+            <span className="inline sm:hidden">{option.abbr}</span>
           </button>
         ))}
       </div>
@@ -178,7 +179,7 @@ const TimeSelectorBlock: React.FC = () => {
       <button
         onClick={openCalendar}
         className={`
-          p-2.5 rounded-full border transition-all duration-200
+          w-8 h-8 sm:w-auto sm:h-auto flex items-center justify-center sm:block p-0 sm:p-2.5 rounded-full border transition-all duration-200
           ${mode === 'custom'
             ? `${theme.accent} text-white border-transparent shadow-md`
             : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'}
@@ -190,7 +191,7 @@ const TimeSelectorBlock: React.FC = () => {
 
       {/* Custom Range Label */}
       {mode === 'custom' && (
-        <span className="text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+        <span className="text-[10px] sm:text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full whitespace-nowrap">
           {getDisplayLabel()}
         </span>
       )}
