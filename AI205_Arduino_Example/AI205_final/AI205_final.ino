@@ -56,7 +56,7 @@ unsigned long lastOledTick = 0;
 #define WDT_TIMEOUT_MS 15000
 
 // 🔹 เวอร์ชันเฟิร์มแวร์ปัจจุบัน
-#define FW_VERSION "0.1.17.0701205"
+#define FW_VERSION "0.1.19.1401205"
 
 // ===== Default WiFi & MQTT (Static Fallback) =====
 const char* DEFAULT_SSID        = "Speedlow";
@@ -1513,17 +1513,9 @@ void autoCloseAP() {
 
 // ======================= TASK RS485 (CORE 0) =============
 void Task_RS485(void *pv) {
-  // Use reconfigure instead of init to avoid "TWDT already initialized" error
-  const esp_task_wdt_config_t twdt_config = {
-    .timeout_ms = WDT_TIMEOUT_MS,
-    .idle_core_mask = (1 << 0),
-    .trigger_panic = false
-  };
-  esp_err_t wdt_err = esp_task_wdt_reconfigure(&twdt_config);
-  if (wdt_err != ESP_OK) {
-    // If reconfigure fails, WDT is likely not initialized yet, try init
-    esp_task_wdt_init(&twdt_config);
-  }
+  // Initialize watchdog timer using ESP-IDF 4.x API (compatible with Arduino core 2.0.17)
+  // esp_task_wdt_init(timeout_sec, panic_on_trigger)
+  esp_task_wdt_init(WDT_TIMEOUT_MS / 1000, false);  // Convert ms to seconds
   esp_task_wdt_add(NULL);
 
   uint32_t dynamicDelay = 10;
@@ -1942,8 +1934,23 @@ void initSystem() {
   connectWiFi_STA();
   wifiStartTime = millis();
 
-  if (!syncTimeNTP()) {
-    loadTimeFromRTC();   // ถ้าไม่ได้ก็ยังให้ระบบรัน
+  // Wait for WiFi to connect before NTP sync (max 10 seconds)
+  Serial.println("⏳ Waiting for WiFi connection...");
+  unsigned long wifiWaitStart = millis();
+  while (!wifiConnected() && (millis() - wifiWaitStart < 10000)) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+
+  if (wifiConnected()) {
+    Serial.println("✅ WiFi connected, syncing NTP...");
+    if (!syncTimeNTP()) {
+      loadTimeFromRTC();
+    }
+  } else {
+    Serial.println("⚠️ WiFi not connected yet, using RTC time");
+    loadTimeFromRTC();
   }
 
   // MAC
