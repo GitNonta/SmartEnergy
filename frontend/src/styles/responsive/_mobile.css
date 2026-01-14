@@ -335,6 +335,29 @@
         border-radius: 1rem !important;
     }
 
+    /* Notification Popup Mobile Optimization */
+    .notification-popup-container {
+        position: fixed !important;
+        top: 5rem !important;
+        /* Below header */
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 95vw !important;
+        max-width: 380px !important;
+        max-height: 80vh !important;
+        margin: 0 !important;
+        border-radius: 2rem !important;
+    }
+
+    /* Adjust notification content for mobile */
+    .notification-popup-container h2 {
+        font-size: 1.25rem !important;
+    }
+
+    .notification-popup-container button {
+        padding: 0.5rem !important;
+    }
+
     .modal-backdrop {
         padding: 0.5rem !important;
     }

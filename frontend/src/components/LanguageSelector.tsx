@@ -29,14 +29,14 @@ const LanguageSelector: React.FC = () => {
         <div ref={dropdownRef} className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg 
+                className="flex items-center gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg 
           bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600
           text-gray-700 dark:text-gray-200 transition-colors"
                 title="Change language"
             >
-                <Globe className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">{currentLang.flag}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <Globe className="w-4 h-4 hidden sm:block" />
+                <span className="text-xl sm:text-sm font-medium leading-none">{currentLang.flag}</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''} hidden sm:block`} />
             </button>
 
             {isOpen && (

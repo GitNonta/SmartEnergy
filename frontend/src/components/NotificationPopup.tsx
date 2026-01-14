@@ -193,7 +193,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
     return (
         <div
             ref={popupRef}
-            className="absolute right-0 top-14 w-[380px] max-w-[95vw] overflow-hidden z-[60] flex flex-col max-h-[85vh]
+            className="notification-popup-container absolute right-0 top-14 w-[380px] max-w-[95vw] overflow-hidden z-[60] flex flex-col max-h-[85vh]
                 bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl 
                 border border-white/30 dark:border-white/10 rounded-[2rem] 
                 shadow-[0_20px_50px_rgba(0,0,0,0.3)] 
