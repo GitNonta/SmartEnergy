@@ -8,14 +8,23 @@ interface UserMenuDropdownProps {
     className?: string;
     onNavigate?: (path: string) => void;
     dropUp?: boolean;
+    onProfileOpenChange?: (isOpen: boolean) => void;
+    isActive?: boolean;
 }
 
-const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({ className = '', onNavigate, dropUp = false }) => {
+const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({ className = '', onNavigate, dropUp = false, onProfileOpenChange, isActive = false }) => {
     const { user, logout, isAuthenticated } = useAuth();
     const { t } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Notify parent about modal state changes
+    useEffect(() => {
+        if (onProfileOpenChange) {
+            onProfileOpenChange(showProfileModal);
+        }
+    }, [showProfileModal, onProfileOpenChange]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -59,13 +68,26 @@ const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({ className = '', onN
 
     return (
         <>
-            <div className={`relative ${className}`} ref={dropdownRef}>
+            <div
+                className={`relative ${className} ${dropUp ? `mobile-nav-item ${showProfileModal || isActive ? 'active' : ''}` : ''}`}
+                ref={dropdownRef}
+            >
                 {/* Avatar Button */}
                 <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="ml-1 w-8 h-8 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-xs font-bold shadow-sm text-white hover:bg-white/30 transition-colors"
+                    onClick={() => dropUp ? setShowProfileModal(true) : setIsOpen(!isOpen)}
+                    className={dropUp
+                        ? "flex items-center justify-center gap-2 w-full h-full bg-transparent border-none p-0 cursor-pointer text-inherit"
+                        : "ml-1 w-8 h-8 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-xs font-bold shadow-sm text-white hover:bg-white/30 transition-colors"
+                    }
                 >
-                    {dropUp ? <UserIcon className="w-5 h-5" /> : initials}
+                    {dropUp ? (
+                        <>
+                            <UserIcon className="nav-icon" />
+                            {showProfileModal && <span className="nav-label">{t('auth.profile')}</span>}
+                        </>
+                    ) : (
+                        initials
+                    )}
                 </button>
 
                 {/* Dropdown Menu */}

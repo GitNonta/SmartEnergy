@@ -70,12 +70,19 @@ const TranslatedLabel: React.FC<{ labelKey: string }> = ({ labelKey }) => {
 const MobileBottomNav = ({ navItems }: { navItems: { id: string; labelKey: string; path: string; icon: any }[] }) => {
   const location = useLocation();
   const theme = THEME;
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // Check if current path is a profile-related page (not in standard nav)
+  const isProfilePage = location.pathname.startsWith('/admin') || location.pathname === '/profile';
 
   // Find active index based on current path
-  const activeIndex = navItems.findIndex(item =>
+  // If profile is open OR we are on a profile page, force no active index
+  const activeIndex = (isProfileOpen || isProfilePage) ? -1 : navItems.findIndex(item =>
     location.pathname === item.path || (item.path === '/dashboard' && location.pathname === '/')
   );
-  const safeActiveIndex = activeIndex === -1 ? 0 : activeIndex;
+
+  // Only use safe default if NOT in profile mode
+  const safeActiveIndex = (isProfileOpen || isProfilePage) ? -1 : (activeIndex === -1 ? 0 : activeIndex);
 
   return (
     <div className="mobile-nav-container lg:hidden">
@@ -100,9 +107,11 @@ const MobileBottomNav = ({ navItems }: { navItems: { id: string; labelKey: strin
       })}
 
       {/* User Info / Profile (replaces Reports) */}
-      <div className="mobile-nav-item">
-        <UserMenuDropdown dropUp />
-      </div>
+      <UserMenuDropdown
+        dropUp
+        onProfileOpenChange={setIsProfileOpen}
+        isActive={isProfilePage}
+      />
     </div>
   );
 };
