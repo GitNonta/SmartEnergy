@@ -161,11 +161,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ className = '' }) => 
         const yearDisplay = language === 'th' ? monthDate.getFullYear() + 543 : monthDate.getFullYear();
 
         return (
-            <div id={`calendar_${index}`} className="flex-1 w-full min-w-[300px] md:min-w-[400px]">
+            <div id={`calendar_${index}`} className="flex-1 w-full min-w-[300px] lg:min-w-[400px]">
                 <div className="font-bold text-center py-4 text-lg text-gray-900 dark:text-gray-100">
                     {months[monthDate.getMonth()]} {yearDisplay}
                 </div>
-                <div className="grid grid-cols-[repeat(7,30px)] md:grid-cols-[repeat(7,44px)] justify-center mb-4 gap-1 border-b border-white/20 dark:border-white/10 pb-3 custom-calendar-grid">
+                <div className="grid grid-cols-[repeat(7,30px)] lg:grid-cols-[repeat(7,44px)] justify-center mb-4 gap-1 border-b border-white/20 dark:border-white/10 pb-3 custom-calendar-grid">
                     {daysWeek.map((day, i) => (
                         <div key={i} className={`text-center calendar-grid-header ${i === 0 ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`}>
                             {day}
@@ -189,8 +189,8 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ className = '' }) => 
             ref={containerRef}
             className={`
                 fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[95vw] max-w-[400px] 
-                md:absolute md:top-full md:right 0 md:left-auto md:translate-x-0 md:max-w-none md:w-auto md:min-w-[800px] md:mt-4
-                liquid-glass-container rounded-[2rem] md:rounded-[2.5rem] overflow-hidden animate-in fade-in zoom-in-95 duration-500 shadow-2xl 
+                lg:absolute lg:top-full lg:right-0 lg:left-auto lg:translate-x-0 lg:max-w-none lg:w-auto lg:min-w-[800px] lg:mt-4
+                liquid-glass-container rounded-[2rem] lg:rounded-[2.5rem] overflow-hidden animate-in fade-in zoom-in-95 duration-500 shadow-2xl 
                 ${className}
             `}
         >
@@ -202,10 +202,10 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ className = '' }) => 
                 <div className="absolute top-0 left-0 w-full h-full liquid-gradient-bg -z-10 opacity-30"></div>
 
                 {/* Two Month View - Responsive Stack */}
-                <div className="relative flex flex-col md:flex-row gap-10">
+                <div className="relative flex flex-col lg:flex-row gap-10">
                     {renderMonth(currentMonth, 0)}
                     {/* Divider for mobile only */}
-                    <div className="md:hidden w-full h-px bg-white/20 dark:bg-gray-700/50 my-2"></div>
+                    <div className="lg:hidden w-full h-px bg-white/20 dark:bg-gray-700/50 my-2"></div>
                     {renderMonth(nextMonthDate, 1)}
                 </div>
 

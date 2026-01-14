@@ -105,6 +105,61 @@
         display: none !important;
     }
 
+    /* =========================================
+     TABLET CALENDAR (Mobile-like Layout)
+     ========================================= */
+    .liquid-glass-container {
+        position: fixed !important;
+        top: 55% !important;
+        /* Slightly lower center */
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 80vw !important;
+        max-width: 450px !important;
+        max-height: 85vh !important;
+        overflow-y: auto !important;
+        border-radius: 2.5rem !important;
+        padding: 1.5rem !important;
+    }
+
+    /* Month Title */
+    .liquid-glass-container .font-bold.text-lg {
+        font-size: 1.25rem !important;
+        padding-top: 1.5rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    /* Calendar Grid - Consistent spacing */
+    .custom-calendar-grid {
+        grid-template-columns: repeat(7, 1fr) !important;
+        gap: 2px !important;
+        width: 100% !important;
+        justify-items: center !important;
+    }
+
+    /* Day Cells */
+    .custom-calendar-grid button {
+        width: 40px !important;
+        height: 40px !important;
+        margin: 2px 0 !important;
+    }
+
+    /* Navigation Buttons */
+    .liquid-glass-container button.h-11.w-11 {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Hide Desktop-specific elements if any leak through */
+    .md\:flex-row {
+        flex-direction: column !important;
+    }
+
+    .md\:min-w-\[800px\] {
+        min-width: 0 !important;
+    }
+
     /* Light Mode Overrides for Tablet */
     html:not(.dark) .mobile-nav-container {
         background: #ffffff !important;
