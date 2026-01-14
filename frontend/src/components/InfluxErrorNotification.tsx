@@ -6,7 +6,6 @@
 import React, { useEffect } from 'react';
 import { AlertCircle, X, RefreshCw } from 'lucide-react';
 import { useInfluxData } from '../context/InfluxContext';
-import './InfluxErrorNotification.css';
 
 export const InfluxErrorNotification: React.FC = () => {
   const { error, clearError, refreshData, isConnected } = useInfluxData();
@@ -37,7 +36,7 @@ export const InfluxErrorNotification: React.FC = () => {
         <div className="influx-error-icon">
           <AlertCircle className="w-5 h-5" />
         </div>
-        
+
         <div className="influx-error-message">
           <div className="influx-error-title">
             {isConnected ? 'Data Loading Error' : 'InfluxDB Connection Failed'}
@@ -46,7 +45,7 @@ export const InfluxErrorNotification: React.FC = () => {
             {error}
           </div>
         </div>
-        
+
         <div className="influx-error-actions">
           <button
             onClick={handleRetry}
@@ -55,7 +54,7 @@ export const InfluxErrorNotification: React.FC = () => {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
-          
+
           <button
             onClick={handleClose}
             className="influx-error-close"

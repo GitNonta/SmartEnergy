@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTimeRange } from '../context/TimeRangeContext';
 import { useTheme, THEME } from './AppShell';
 import { useLanguage } from '../context/LanguageContext';
-import './DateRangePicker.css';
 
 const THAI_MONTHS = [
     'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',

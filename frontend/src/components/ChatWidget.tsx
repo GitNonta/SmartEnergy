@@ -3,7 +3,6 @@ import { MessageCircle, X, Send, Trash2, Sparkles, Zap, BarChart3, Bell, Downloa
 import { useChatContext } from '../context/ChatContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getApiBase } from '../config/api';
-import './ChatWidget.css';
 
 const ChatWidget: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);

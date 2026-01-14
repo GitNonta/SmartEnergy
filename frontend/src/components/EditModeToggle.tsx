@@ -9,7 +9,6 @@ import React from 'react';
 import { Pencil, RotateCcw, X, Check, Loader2 } from 'lucide-react';
 import { useDashboardLayout } from '../context/DashboardLayoutContext';
 import { useLanguage } from '../context/LanguageContext';
-import './EditModeToggle.css';
 
 const EditModeToggle: React.FC = () => {
     const {

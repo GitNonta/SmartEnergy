@@ -3,7 +3,6 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Plug, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
-import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
     const { isAuthenticated, isLoading, login } = useAuth();

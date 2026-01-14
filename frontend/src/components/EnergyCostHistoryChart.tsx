@@ -14,7 +14,6 @@ import { TrendingUp, X, Zap, DollarSign } from 'lucide-react';
 import { getApiBase } from '../config/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from './AppShell';
-import './EnergyCostHistoryChart.css';
 
 export type ViewMode = 'daily' | 'monthly' | 'yearly';
 

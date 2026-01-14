@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getApiBase } from '../config/api';
-import './HourlyEnergyChart.css';
 import { BarChart3, TrendingUp, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from './AppShell';

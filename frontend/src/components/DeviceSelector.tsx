@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { getApiBase } from '../config/api';
-import './DeviceSelector.css';
 
 interface DeviceSelectorProps {
     selectedDevice: string;

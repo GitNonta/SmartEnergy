@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import './EnergyCostBlock.css';
 import { getApiBase } from '../config/api';
 import { calculateBill, formatCurrency, TARIFF_CONFIG, type BillBreakdown } from '../utils/tariffCalc';
 import { useTheme, THEME } from './AppShell';

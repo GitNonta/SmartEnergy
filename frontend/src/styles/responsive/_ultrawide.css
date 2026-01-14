@@ -1,0 +1,69 @@
+/* =========================================
+   ULTRA WIDE STYLES
+   Range: >= 1400px
+   ========================================= */
+
+@media (min-width: 1400px) {
+    :root {
+        font-size: 18px;
+    }
+
+    .container-responsive {
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+}
+
+/* =========================================
+   VISIBILITY UTILITIES
+   ========================================= */
+.hide-xs {
+    display: none !important;
+}
+
+@media (min-width: 576px) {
+    .hide-xs {
+        display: block !important;
+    }
+}
+
+.hide-sm {
+    display: none !important;
+}
+
+@media (min-width: 768px) {
+    .hide-sm {
+        display: block !important;
+    }
+}
+
+.hide-md {
+    display: none !important;
+}
+
+@media (min-width: 992px) {
+    .hide-md {
+        display: block !important;
+    }
+}
+
+/* Show only on specific breakpoints */
+.show-xs-only {
+    display: block !important;
+}
+
+@media (min-width: 576px) {
+    .show-xs-only {
+        display: none !important;
+    }
+}
+
+.show-mobile-only {
+    display: block !important;
+}
+
+@media (min-width: 768px) {
+    .show-mobile-only {
+        display: none !important;
+    }
+}

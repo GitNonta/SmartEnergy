@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import './StatisticsBlock.css';
 import { getApiBase } from '../config/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from './AppShell';

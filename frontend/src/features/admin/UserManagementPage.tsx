@@ -7,7 +7,6 @@ import {
     User, CreateUserData
 } from '../../services/userService';
 import { Users, Plus, Edit2, Trash2, Key, Check, X, Shield, User as UserIcon, Mail, Phone } from 'lucide-react';
-import './UserManagementPage.css';
 
 const UserManagementPage: React.FC = () => {
     const { user: currentUser, token } = useAuth();

@@ -1,0 +1,74 @@
+/* =========================================
+   MAIN CSS ENTRY POINT
+   SmartEnergy Application Styles
+   
+   Note: All @imports MUST come before any 
+   @tailwind directives for PostCSS.
+   ========================================= */
+
+/* =========================================
+   1. BASE STYLES (imported first)
+   ========================================= */
+@import './base/_variables.css';
+@import './base/_reset.css';
+@import './base/_global.css';
+
+/* =========================================
+   2. COMPONENT STYLES - BLOCKS
+   ========================================= */
+@import './components/blocks/_active-power.css';
+@import './components/blocks/_current.css';
+@import './components/blocks/_energy-accumulated.css';
+@import './components/blocks/_energy-cost.css';
+@import './components/blocks/_frequency.css';
+@import './components/blocks/_power-factor.css';
+@import './components/blocks/_statistics.css';
+@import './components/blocks/_usage-summary.css';
+
+/* =========================================
+   3. COMPONENT STYLES - CHARTS
+   ========================================= */
+@import './components/charts/_energy-cost-history.css';
+@import './components/charts/_hourly-energy.css';
+
+/* =========================================
+   4. COMPONENT STYLES - FORMS
+   ========================================= */
+@import './components/forms/_date-range-picker.css';
+@import './components/forms/_device-selector.css';
+@import './components/forms/_edit-mode-toggle.css';
+
+/* =========================================
+   5. COMPONENT STYLES - MODALS
+   ========================================= */
+@import './components/modals/_profile.css';
+@import './components/modals/_influx-error.css';
+
+/* =========================================
+   6. COMPONENT STYLES - WIDGETS
+   ========================================= */
+@import './components/widgets/_chat.css';
+@import './components/widgets/_custom-energy-card.css';
+
+/* =========================================
+   7. FEATURE STYLES
+   ========================================= */
+@import './features/_login.css';
+@import './features/_dashboard.css';
+@import './features/_user-management.css';
+
+/* =========================================
+   8. RESPONSIVE STYLES
+   ========================================= */
+@import './responsive/_breakpoints.css';
+@import './responsive/_mobile.css';
+@import './responsive/_tablet.css';
+@import './responsive/_desktop.css';
+@import './responsive/_ultrawide.css';
+
+/* =========================================
+   9. TAILWIND LAYERS (after all imports)
+   ========================================= */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
-import './responsive.css';
+import './styles/main.css';
 import App from './App';
 import { BUILD_VERSION } from './utils/versioning';
 import reportWebVitals from './reportWebVitals';

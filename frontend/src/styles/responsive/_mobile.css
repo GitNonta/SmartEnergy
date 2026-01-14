@@ -1,0 +1,58 @@
+/* =========================================
+   MOBILE STYLES
+   Range: < 576px
+   ========================================= */
+
+@media (max-width: 575.98px) {
+    :root {
+        font-size: 14px;
+    }
+
+    /* Layout */
+    .container-responsive {
+        width: 100%;
+        padding: 0 1rem;
+    }
+
+    /* Spacing overrides */
+    .p-6 {
+        padding: 1rem !important;
+    }
+
+    .p-4 {
+        padding: 0.75rem !important;
+    }
+
+    .gap-6 {
+        gap: 0.75rem !important;
+    }
+
+    /* Typography */
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    h2 {
+        font-size: 1.25rem !important;
+    }
+
+    h3 {
+        font-size: 1.125rem !important;
+    }
+
+    /* Grid - Stack everything */
+    .grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Touch Optimizations */
+@media (hover: none) and (pointer: coarse) {
+
+    .btn,
+    button,
+    a {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}

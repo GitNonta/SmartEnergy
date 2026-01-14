@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getMyProfile, updateMyProfile, changeMyPassword, User } from '../services/userService';
 import { X, Save, User as UserIcon, Mail, Phone, Lock, Check } from 'lucide-react';
-import './ProfileModal.css';
 
 interface ProfileModalProps {
     isOpen: boolean;

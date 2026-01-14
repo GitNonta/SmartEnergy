@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import './ActivePowerBlock.css';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useLanguage } from '../context/LanguageContext';
 import ActivePowerRealtimeChart, { PowerViewMode } from './ActivePowerRealtimeChart';

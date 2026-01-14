@@ -25,7 +25,6 @@ import { DashboardLayoutProvider, useDashboardLayout } from '../../context/Dashb
 import EditModeToggle from '../../components/EditModeToggle';
 import DeviceSelector from '../../components/DeviceSelector';
 import { LayoutItem, widgetConfig } from '../../config/defaultDashboardLayout';
-import './DashboardPage.css';
 
 // Widget component map
 const widgetComponents: Record<string, { component: React.FC; title: string }> = {

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import './UsageSummaryBlock.css';
 import { getApiBase } from '../config/api';
 import { useLanguage } from '../context/LanguageContext';
 import { TrendingUp, TrendingDown, Zap, DollarSign, BarChart3, RefreshCw, Calendar, Clock, Activity } from 'lucide-react';

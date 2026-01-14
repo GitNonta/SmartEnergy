@@ -1,0 +1,27 @@
+/* =========================================
+   TABLET STYLES
+   Range: 576px - 991px
+   ========================================= */
+
+/* Small Tablet / Landscape Mobile (sm): 576px - 767.98px */
+@media (min-width: 576px) and (max-width: 767.98px) {
+    :root {
+        font-size: 15px;
+    }
+
+    .grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* Tablet (md): 768px - 991.98px */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    :root {
+        font-size: 15px;
+    }
+
+    /* 2-3 columns depending on content */
+    .grid {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)) !important;
+    }
+}

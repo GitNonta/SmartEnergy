@@ -1,5 +1,4 @@
 import React from 'react';
-import './PowerFactorBlock.css';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useLanguage } from '../context/LanguageContext';
 

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import './FrequencyBlock.css';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useLanguage } from '../context/LanguageContext';
 import VoltageRealtimeChart, { ViewMode } from './VoltageRealtimeChart'; // Import Chart Component
