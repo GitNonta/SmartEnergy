@@ -186,7 +186,7 @@ export default function HourlyEnergyChart({
         const options = {
             chart: {
                 type: chartType,
-                height: 350,
+                height: '100%',  // Use parent container height
                 background: 'transparent',
                 toolbar: { show: false },
                 animations: { enabled: true, easing: 'easeinout', speed: 300 }
@@ -286,8 +286,9 @@ export default function HourlyEnergyChart({
         }
     };
 
+
     return (
-        <div className="energy-chart-quality">
+        <div className="energy-chart-quality" style={{ minHeight: '400px' }}>
             {/* Header */}
             <div className="chart-header">
                 <div className="title-section">
@@ -342,11 +343,11 @@ export default function HourlyEnergyChart({
             </div>
 
             {/* Chart */}
-            <div className="chart-container">
+            <div className="chart-container" style={{ position: 'relative', width: '100%', height: '280px' }}>
                 {loading && chartData.length === 0 ? (
                     <div className="loading">{t('history.loading')}</div>
                 ) : (
-                    <div ref={chartDivRef} />
+                    <div ref={chartDivRef} style={{ minHeight: '280px', width: '100%' }} />
                 )}
             </div>
 

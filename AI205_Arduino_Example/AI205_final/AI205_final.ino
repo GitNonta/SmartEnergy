@@ -1,5 +1,6 @@
 #include <WiFi.h>
-#include <PubSubClient.h>
+// ✅ ESP-MQTT Native (ESP-IDF) for QoS 1/2 support
+#include "mqtt_client.h"
 #include <ModbusMaster.h>
 #include <WebServer.h>
 #include <DNSServer.h>
@@ -56,7 +57,7 @@ unsigned long lastOledTick = 0;
 #define WDT_TIMEOUT_MS 15000
 
 // 🔹 เวอร์ชันเฟิร์มแวร์ปัจจุบัน
-#define FW_VERSION "0.1.19.1401205"
+#define FW_VERSION "0.1.21.1401205"
 
 // ===== Default WiFi & MQTT (Static Fallback) =====
 const char* DEFAULT_SSID        = "Speedlow";
@@ -219,8 +220,9 @@ bool firstWifiTryDone = false;
 DNSServer dnsServer;
 WebServer server(80);
 
-WiFiClient   espClient;
-PubSubClient client(espClient);
+// ✅ ESP-MQTT Native client (replaces PubSubClient)
+esp_mqtt_client_handle_t mqttClient = NULL;
+bool mqttConnected = false;
 ModbusMaster node;
 
 QueueHandle_t dataQueue;
@@ -271,11 +273,14 @@ void startAPMode();
 void checkWiFiFail();
 void autoCloseAP();
 void Task_RS485(void *pv);
-void mqReconnect();
 void Task_MQTT(void *pv);
 void initSystem();
 bool performHttpUpdateFromUrl(const String& url, uint32_t expectedSize);
-void mqttCallback(char* topic, byte* payload, unsigned int length);
+
+// ✅ ESP-MQTT Native prototypes
+void initMqtt();
+void handleMqttMessage(const char* topic, int topic_len, const char* data, int data_len);
+static void mqtt_event_handler(void *args, esp_event_base_t base, int32_t event_id, void *event_data);
 
 // login / session helpers
 String generateSessionToken();
@@ -594,8 +599,9 @@ void publishAlert(AlertType type, const char* message, SensorData &d) {
   payload += "\"PFsys\":" + String(d.PFsys, 3) + ","; 
   payload += "}";
 
-  if (client.connected()) {
-    client.publish(conf.topicAlert.c_str(), payload.c_str(), true);
+  // ✅ ESP-MQTT Native: Publish alert with QoS 1
+  if (mqttConnected) {
+    esp_mqtt_client_publish(mqttClient, conf.topicAlert.c_str(), payload.c_str(), 0, 2, 1);  // qos=2, retain=1
   }
 
   Serial.print(info.emoji);
@@ -655,7 +661,8 @@ void checkAlerts(SensorData &d) {
     publishAlert(ALERT_WIFI_DISCONNECTED, msg.c_str(), d);
   }
 
-  if (!client.connected()) {
+  // ✅ ESP-MQTT Native
+  if (!mqttConnected) {
     String msg = "MQTT disconnected";
     publishAlert(ALERT_MQTT_DISCONNECTED, msg.c_str(), d);
   }
@@ -934,7 +941,8 @@ void handleFirmwareUpdateDone() {
     fw_last_ts = time(nullptr);
     
     // Publish firmware update success notification via MQTT
-    if (client.connected()) {
+    // ✅ ESP-MQTT Native
+    if (mqttConnected) {
       StaticJsonDocument<256> doc;
       doc["event"] = "firmware_updated";
       doc["message"] = "Firmware update successful";
@@ -943,7 +951,7 @@ void handleFirmwareUpdateDone() {
       doc["timestamp"] = nowISO();
       char buf[256];
       serializeJson(doc, buf);
-      client.publish("AI205/notifications", buf);
+      esp_mqtt_client_publish(mqttClient, "AI205/notifications", buf, 0, 2, 0);  // QoS 2
       Serial.println("📢 Firmware update notification sent");
     }
     
@@ -983,10 +991,10 @@ void publishSensorData(const SensorData &d) {
     return;
   }
   
-  if (!client.connected()) {
-    Serial.println("⚠️ MQTT skip: client not connected, attempting reconnect...");
-    mqReconnect();
-    if (!client.connected()) return;
+  // ✅ ESP-MQTT Native: Check connection state
+  if (!mqttConnected) {
+    Serial.println("⚠️ MQTT skip: not connected");
+    return;
   }
 
   StaticJsonDocument<512> doc;
@@ -1008,24 +1016,19 @@ void publishSensorData(const SensorData &d) {
   char buf[512];
   size_t n = serializeJson(doc, buf, sizeof(buf));
 
-  // Attempt to publish with retry
-  bool published = false;
-  for (int retry = 0; retry < 2 && !published; retry++) {
-    if (retry > 0) {
-      client.loop();  // Process pending messages
-      delay(50);
-    }
-    published = client.publish(conf.topicData.c_str(), (uint8_t*)buf, n, true);
-  }
+  // ✅ ESP-MQTT Native: Publish with QoS 2 (exactly once delivery)
+  int msg_id = esp_mqtt_client_publish(mqttClient, conf.topicData.c_str(), buf, n, 2, 1);  // qos=2, retain=1
   
-  if (!published) {
+  if (msg_id < 0) {
     Serial.println("❌ MQTT publish failed!");
   }
 }
 
 
 void publishStatus() {
-  if (!client.connected()) return;
+  // ✅ ESP-MQTT Native: Check connection state
+  if (!mqttConnected) return;
+  
   StaticJsonDocument<256> doc;
   doc["ssid"] = conf.ssid;
   doc["ip"] = WiFi.localIP().toString();
@@ -1036,8 +1039,11 @@ void publishStatus() {
   doc["uptime_sec"] = millis() / 1000;
   char buf[256];
   size_t n = serializeJson(doc, buf, sizeof(buf));
-  client.publish(conf.topicStatus.c_str(), (uint8_t*)buf, n, true);
+  
+  // ✅ ESP-MQTT Native: Publish with QoS 2
+  esp_mqtt_client_publish(mqttClient, conf.topicStatus.c_str(), buf, n, 2, 1);  // qos=2, retain=1
 }
+
 
 // ======================= WEB API =========================
 void api_status() {
@@ -1049,7 +1055,7 @@ void api_status() {
   j += "\"ssid\":\"" + conf.ssid + "\",";
   j += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
 
-  j += "\"mqtt\":" + String(client.connected() ? 1 : 0) + ",";
+  j += "\"mqtt\":" + String(mqttConnected ? 1 : 0) + ",";  // ✅ ESP-MQTT Native
 
   j += "\"V1\":" + String(lastData.v1,2) + ",";
   j += "\"V2\":" + String(lastData.v2,2) + ",";
@@ -1095,7 +1101,7 @@ void api_status_v2() {
   j += "\"rssi\": " + String(rssi) + ",";
   j += "\"ip\": \"" + WiFi.localIP().toString() + "\",";
 
-  j += "\"mqtt\": " + String(client.connected() ? 1 : 0) + ",";
+  j += "\"mqtt\": " + String(mqttConnected ? 1 : 0) + ",";  // ✅ ESP-MQTT Native
   j += "\"mqtt_server\": \"" + conf.mqttServer + "\",";
   j += "\"mqtt_user\": \"" + conf.mqttUser + "\",";
   j += "\"mqtt_port\": " + String(conf.mqttPort) + ",";
@@ -1513,9 +1519,14 @@ void autoCloseAP() {
 
 // ======================= TASK RS485 (CORE 0) =============
 void Task_RS485(void *pv) {
-  // Initialize watchdog timer using ESP-IDF 4.x API (compatible with Arduino core 2.0.17)
-  // esp_task_wdt_init(timeout_sec, panic_on_trigger)
-  esp_task_wdt_init(WDT_TIMEOUT_MS / 1000, false);  // Convert ms to seconds
+  // Initialize watchdog timer
+  // ✅ ESP-IDF 5.1 API uses esp_task_wdt_config_t struct
+  esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = WDT_TIMEOUT_MS,
+    .idle_core_mask = 0,  // Don't watch idle tasks
+    .trigger_panic = false
+  };
+  esp_task_wdt_init(&wdt_config);
   esp_task_wdt_add(NULL);
 
   uint32_t dynamicDelay = 10;
@@ -1593,7 +1604,13 @@ void Task_RS485(void *pv) {
     lastData = d;
     addHistory(d);
 
-    xQueueOverwrite(dataQueue,&d);
+    // ✅ Changed from xQueueOverwrite to xQueueSend (xQueueOverwrite only works with queue size 1)
+    // If queue is full, drop oldest data by receiving and discarding before sending
+    if (uxQueueSpacesAvailable(dataQueue) == 0) {
+      SensorData discarded;
+      xQueueReceive(dataQueue, &discarded, 0);  // Remove oldest item
+    }
+    xQueueSend(dataQueue, &d, 0);  // Non-blocking send
     digitalWrite(LED_PIN,!digitalRead(LED_PIN));
 
     unsigned long rtt = micros() - start;
@@ -1618,91 +1635,205 @@ void Task_RS485(void *pv) {
   }
 }
 
-// ======================= MQTT RECONNECT ==================
-void mqReconnect() {
-  static unsigned long lastReconnectAttempt = 0;
+// ======================= ESP-MQTT NATIVE IMPLEMENTATION ==================
+
+// ✅ Handle incoming MQTT messages (called from event handler)
+void handleMqttMessage(const char* topic, int topic_len, const char* data, int data_len) {
+  // Create null-terminated strings
+  char topicStr[128];
+  char dataStr[1024];
+  int tLen = min(topic_len, 127);
+  int dLen = min(data_len, 1023);
+  memcpy(topicStr, topic, tLen);
+  topicStr[tLen] = '\0';
+  memcpy(dataStr, data, dLen);
+  dataStr[dLen] = '\0';
   
-  if (client.connected()) return;
-  if (!wifiConnected()) {
-    // Log WiFi status for debugging
-    static unsigned long lastWifiLog = 0;
-    if (millis() - lastWifiLog > 10000UL) {
-      lastWifiLog = millis();
-      if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-        Serial.printf("⏳ MQTT waiting for WiFi... status=%d\n", WiFi.status());
-        xSemaphoreGive(serialMutex);
-      }
+  String t(topicStr);
+  
+  if (t == "AI205/firmware/info") {
+    StaticJsonDocument<512> doc;
+    DeserializationError err = deserializeJson(doc, dataStr);
+    if (err) {
+      Serial.printf("❌ FW info JSON error: %s\n", err.c_str());
+      return;
+    }
+
+    const char* device   = doc["device"]   | "";
+    const char* ver      = doc["version"]  | "";
+    const char* urlField = doc["url"]      | "";
+    uint32_t size        = doc["size"]     | 0;
+
+    if (strlen(device) > 0 && String(device) != "AI205") {
+      return;
+    }
+
+    if (String(ver).length() == 0 || String(urlField).length() == 0) {
+      return;
+    }
+
+    String base = getFwBaseUrl();
+    String fullUrl;
+    String urlStr = String(urlField);
+
+    if (urlStr.startsWith("http://") || urlStr.startsWith("https://")) {
+      fullUrl = urlStr;
+    } else if (urlStr.startsWith("/")) {
+      fullUrl = base + urlStr;
+    } else {
+      fullUrl = base + "/" + urlStr;
+    }
+
+    Serial.printf("📥 FW update available: v%s\n", ver);
+
+    if (String(ver) == FW_VERSION) {
+      fwInfo.available = false;
+      fwInfo.newVersion = "";
+      fwInfo.url = "";
+      fwInfo.size = 0;
+    } else {
+      fwInfo.newVersion = ver;
+      fwInfo.url = fullUrl;
+      fwInfo.size = size;
+      fwInfo.available = true;
     }
     return;
   }
-  
-  // Cooldown: Don't try to reconnect too frequently (minimum 5 seconds between attempts)
-  if (millis() - lastReconnectAttempt < 5000UL && lastReconnectAttempt != 0) {
-    return;
+
+  if (t == "AI205/commands") {
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, dataStr);
+    if (err) {
+      Serial.printf("❌ Command JSON error: %s\n", err.c_str());
+      return;
+    }
+
+    const char* action = doc["action"] | "";
+    Serial.printf("📥 Command received: action=%s\n", action);
+
+    if (String(action) == "restart") {
+      Serial.println("🔄 Restart command received via MQTT. Restarting in 2s...");
+      
+      StaticJsonDocument<128> ack;
+      ack["action"] = "restart";
+      ack["status"] = "acknowledged";
+      ack["mac"] = deviceMac;
+      char buf[128];
+      serializeJson(ack, buf);
+      esp_mqtt_client_publish(mqttClient, "AI205/status", buf, 0, 2, 0);  // QoS 2
+      
+      delay(2000);
+      ESP.restart();
+      return;
+    }
+
+    if (String(action) == "status") {
+      publishStatus();
+      return;
+    }
   }
-  lastReconnectAttempt = millis();
+}
+
+// ✅ ESP-MQTT Event Handler (handles all MQTT events)
+static void mqtt_event_handler(void *args, esp_event_base_t base, int32_t event_id, void *event_data) {
+  esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
   
-  // Ensure server is configured (might have changed)
-  client.setServer(conf.mqttServer.c_str(), conf.mqttPort);
+  switch ((esp_mqtt_event_id_t)event_id) {
+    case MQTT_EVENT_CONNECTED:
+      mqttConnected = true;
+      Serial.println("✅ MQTT connected (ESP-IDF Native with QoS 2)");
+      
+      // Subscribe with QoS 2 for exactly once delivery
+      esp_mqtt_client_subscribe(mqttClient, "AI205/firmware/info", 2);
+      esp_mqtt_client_subscribe(mqttClient, "AI205/commands", 2);
+      
+      // Publish online presence with QoS 2
+      {
+        StaticJsonDocument<128> doc;
+        doc["online"] = 1;
+        doc["mac"] = deviceMac;
+        char buf[128];
+        serializeJson(doc, buf);
+        esp_mqtt_client_publish(mqttClient, conf.topicStatus.c_str(), buf, 0, 2, 1);  // QoS 2, retain
+      }
+      break;
+      
+    case MQTT_EVENT_DISCONNECTED:
+      mqttConnected = false;
+      Serial.println("⚠️ MQTT disconnected - auto reconnecting...");
+      break;
+      
+    case MQTT_EVENT_DATA:
+      handleMqttMessage(event->topic, event->topic_len, event->data, event->data_len);
+      break;
+      
+    case MQTT_EVENT_PUBLISHED:
+      // Message delivered with QoS 1 confirmation (PUBACK received)
+      Serial.printf("📤 Message delivered (msg_id=%d) ✅ QoS1 ACK\n", event->msg_id);
+      break;
+      
+    case MQTT_EVENT_ERROR:
+      Serial.println("❌ MQTT error occurred");
+      if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
+        Serial.printf("   TCP error: %d\n", event->error_handle->esp_tls_last_esp_err);
+      }
+      break;
+      
+    case MQTT_EVENT_BEFORE_CONNECT:
+      Serial.println("🔁 MQTT connecting...");
+      break;
+      
+    default:
+      break;
+  }
+}
 
-  client.setBufferSize(1024);  // Increase buffer for larger messages
-  client.setKeepAlive(60);     // Send keepalive every 60 seconds
-
+// ✅ Initialize ESP-MQTT Native client
+void initMqtt() {
+  if (mqttClient != NULL) {
+    esp_mqtt_client_destroy(mqttClient);
+    mqttClient = NULL;
+  }
+  
+  // Build broker URI
+  char brokerUri[128];
+  snprintf(brokerUri, sizeof(brokerUri), "mqtt://%s:%d", 
+           conf.mqttServer.c_str(), conf.mqttPort);
+  
+  // Build client ID
   String clientId = "AI205-" + deviceMac;
+  
+  // Build LWT payload
   String willPayload = "{\"online\":0,\"mac\":\"" + deviceMac + "\"}";
-
-  // Use mutex for serial output to prevent corruption
-  if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-    Serial.printf("🔁 MQTT connecting to %s:%d as %s...\n", 
-      conf.mqttServer.c_str(), conf.mqttPort, conf.mqttUser.c_str());
-    xSemaphoreGive(serialMutex);
+  
+  // Configure MQTT client
+  esp_mqtt_client_config_t mqtt_cfg = {};
+  mqtt_cfg.broker.address.uri = brokerUri;
+  mqtt_cfg.credentials.username = conf.mqttUser.c_str();
+  mqtt_cfg.credentials.authentication.password = conf.mqttPass.c_str();
+  mqtt_cfg.credentials.client_id = clientId.c_str();
+  mqtt_cfg.session.keepalive = 60;
+  mqtt_cfg.session.last_will.topic = conf.topicStatus.c_str();
+  mqtt_cfg.session.last_will.msg = willPayload.c_str();
+  mqtt_cfg.session.last_will.msg_len = willPayload.length();
+  mqtt_cfg.session.last_will.qos = 1;
+  mqtt_cfg.session.last_will.retain = true;
+  mqtt_cfg.network.reconnect_timeout_ms = 2000;  // ✅ Fast reconnect (2 seconds)
+  mqtt_cfg.buffer.size = 1024;
+  mqtt_cfg.buffer.out_size = 1024;
+  
+  Serial.printf("🔌 Initializing ESP-MQTT: %s as %s\n", brokerUri, conf.mqttUser.c_str());
+  
+  mqttClient = esp_mqtt_client_init(&mqtt_cfg);
+  if (mqttClient == NULL) {
+    Serial.println("❌ Failed to initialize MQTT client");
+    return;
   }
   
-  if (client.connect(
-        clientId.c_str(),
-        conf.mqttUser.c_str(),
-        conf.mqttPass.c_str(),
-        conf.topicStatus.c_str(),   // LWT topic
-        1,
-        true,
-        willPayload.c_str()
-      )) {
-
-    if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      Serial.println("✅ MQTT connected!");
-      xSemaphoreGive(serialMutex);
-    }
-    client.subscribe("AI205/firmware/info");
-    client.subscribe("AI205/commands");
-
-    // online presence
-    StaticJsonDocument<128> doc;
-    doc["online"] = 1;
-    doc["mac"] = deviceMac;
-    char buf[128];
-    serializeJson(doc, buf);
-    client.publish(conf.topicStatus.c_str(), buf, true);
-
-  } else {
-    if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-      int rc = client.state();
-      Serial.printf("❌ MQTT failed rc=%d ", rc);
-      // Decode error
-      switch(rc) {
-        case -4: Serial.println("(TIMEOUT)"); break;
-        case -3: Serial.println("(CONNECTION_LOST)"); break;
-        case -2: Serial.println("(CONNECT_FAILED)"); break;
-        case -1: Serial.println("(DISCONNECTED)"); break;
-        case 1: Serial.println("(BAD_PROTOCOL)"); break;
-        case 2: Serial.println("(BAD_CLIENT_ID)"); break;
-        case 3: Serial.println("(UNAVAILABLE)"); break;
-        case 4: Serial.println("(BAD_CREDENTIALS)"); break;
-        case 5: Serial.println("(UNAUTHORIZED)"); break;
-        default: Serial.println("(UNKNOWN)"); break;
-      }
-      xSemaphoreGive(serialMutex);
-    }
-  }
+  esp_mqtt_client_register_event(mqttClient, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
+  esp_mqtt_client_start(mqttClient);
+  
+  Serial.println("✅ ESP-MQTT Native client started");
 }
 
 // ======================= Firmware HTTP Base URL ==========
@@ -1717,120 +1848,22 @@ String getFwBaseUrl() {
   return base;
 }
 
-// ======================= MQTT CALLBACK ===================
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  String t(topic);
 
-  if (t == "AI205/firmware/info") {
-    StaticJsonDocument<512> doc;
-    DeserializationError err = deserializeJson(doc, payload, length);
-    if (err) {
-      Serial.printf("❌ FW info JSON error: %s\n", err.c_str());
-      return;
-    }
+// OLD mqttCallback REMOVED - now using handleMqttMessage() in ESP-MQTT Native
 
-    const char* device   = doc["device"]   | "";
-    const char* ver      = doc["version"]  | "";
-    const char* filename = doc["filename"] | "";
-    const char* urlField = doc["url"]      | "";
-    uint32_t size        = doc["size"]     | 0;
-    const char* md5      = doc["md5"]      | "";
-    const char* notes    = doc["notes"]    | "";
-
-    if (strlen(device) > 0 && String(device) != "AI205") {
-      Serial.printf("ℹ️ FW info for other device: %s, ignore\n", device);
-      return;
-    }
-
-    if (String(ver).length() == 0 || String(urlField).length() == 0) {
-      Serial.println("❌ FW info invalid (no version/url)");
-      return;
-    }
-
-    String base   = getFwBaseUrl();
-    String fullUrl;
-    String urlStr = String(urlField);
-
-    if (urlStr.startsWith("http://") || urlStr.startsWith("https://")) {
-      fullUrl = urlStr;
-    } else if (urlStr.startsWith("/")) {
-      fullUrl = base + urlStr;
-    } else {
-      fullUrl = base + "/" + urlStr;
-    }
-
-    // Simplified logging - only show version info
-    Serial.printf("📥 FW update available: v%s\n", ver);
-
-    if (String(ver) == FW_VERSION) {
-      fwInfo.available  = false;
-      fwInfo.newVersion = "";
-      fwInfo.url        = "";
-      fwInfo.size       = 0;
-    } else {
-      fwInfo.newVersion = ver;
-      fwInfo.url        = fullUrl;
-      fwInfo.size       = size;
-      fwInfo.available  = true;
-    }
-
-    return;
-  }
-
-  // --- Commands Topic Handler ---
-  if (t == "AI205/commands") {
-    StaticJsonDocument<256> doc;
-    DeserializationError err = deserializeJson(doc, payload, length);
-    if (err) {
-      Serial.printf("❌ Command JSON error: %s\n", err.c_str());
-      return;
-    }
-
-    const char* action = doc["action"] | "";
-    Serial.printf("📥 Command received: action=%s\n", action);
-
-    // Handle restart command
-    if (String(action) == "restart") {
-      Serial.println("🔄 Restart command received via MQTT. Restarting in 2s...");
-      
-      // Publish acknowledgment
-      StaticJsonDocument<128> ack;
-      ack["action"] = "restart";
-      ack["status"] = "acknowledged";
-      ack["mac"] = deviceMac;
-      char buf[128];
-      serializeJson(ack, buf);
-      client.publish("AI205/status", buf);
-      
-      delay(2000);
-      ESP.restart();
-      return;
-    }
-
-    // Handle status request command
-    if (String(action) == "status") {
-      publishStatus();
-      return;
-    }
-
-    Serial.printf("⚠️ Unknown command action: %s\n", action);
-    return;
-  }
-
-  // future topics ...
-}
 
 // ======================= TASK MQTT (CORE 1) ==============
 void Task_MQTT(void *pv) {
   SensorData d;
   uint32_t sendDelay = 200;
   unsigned long lastStatus = 0;
+  static bool mqttInitialized = false;
 
   for (;;) {
     unsigned long loopStart = micros();
 
     if (apMode) {
-      client.loop();
+      // In AP mode, just wait
       unsigned long loopUs = micros() - loopStart;
       core1LastLoopUs = loopUs;
       if (core1AvgLoopUs == 0) core1AvgLoopUs = loopUs;
@@ -1841,7 +1874,7 @@ void Task_MQTT(void *pv) {
     }
 
     if (!wifiConnected()) {
-      // Only try to connect if not in AP mode (AP mode handles its own reconnection)
+      // Only try to connect if not in AP mode
       if (!apMode && !firstWifiTryDone) {
         connectWiFi_STA();
         firstWifiTryDone = true;
@@ -1856,16 +1889,18 @@ void Task_MQTT(void *pv) {
     } else if (firstWifiTryDone) {
       // WiFi just reconnected, sync time if needed
       if (!timeReady) {
-        syncTimeNTP(10000);  // Quick NTP sync attempt
+        syncTimeNTP(10000);
       }
-      firstWifiTryDone = false;  // Reset for next disconnect
+      firstWifiTryDone = false;
     }
 
-    if (!client.connected()) {
-      mqReconnect();
+    // ✅ ESP-MQTT Native: Initialize MQTT once when WiFi is ready
+    if (!mqttInitialized && wifiConnected()) {
+      initMqtt();
+      mqttInitialized = true;
     }
 
-    // Retry NTP sync periodically if time is not ready (don't block MQTT!)
+    // Retry NTP sync periodically if time is not ready
     static unsigned long lastNtpRetry = 0;
     if (!timeReady && wifiConnected() && (millis() - lastNtpRetry > 60000UL || lastNtpRetry == 0)) {
       lastNtpRetry = millis();
@@ -1873,27 +1908,28 @@ void Task_MQTT(void *pv) {
         Serial.println("⏰ Retrying NTP sync...");
         xSemaphoreGive(serialMutex);
       }
-      syncTimeNTP(5000);  // Quick 5 second attempt
+      syncTimeNTP(5000);
     }
 
+    // Process sensor data from queue
     if (xQueueReceive(dataQueue, &d, pdMS_TO_TICKS(100))) {
       lastData = d;
       checkAlerts(d);
 
-      // publish sensor JSON (uses publishSensorData)
+      // publish sensor JSON with QoS 1
       publishSensorData(d);
 
       Serial.printf("📡 MQTT sent: V1=%.2f I1=%.3f kWsum=%.3f PF=%.3f\n", d.v1, d.i1, d.kWsum, d.PFsys);
     }
 
-    // ส่ง STATUS ทุก 10 วิ + MAC + FW_VERSION
-    if(millis()-lastStatus > 10000UL){
+    // Send STATUS every 10 seconds
+    if (millis() - lastStatus > 10000UL) {
       lastStatus = millis();
       publishStatus();
       Serial.println("📊 ESP STATUS published");
     }
 
-    client.loop();
+    // ✅ ESP-MQTT Native: No client.loop() needed - handled automatically
 
     unsigned long loopUs = micros() - loopStart;
     core1LastLoopUs = loopUs;
@@ -1963,7 +1999,7 @@ void initSystem() {
   readCT();
   applyConfigRuntime();
 
-  dataQueue = xQueueCreate(1, sizeof(SensorData));
+  dataQueue = xQueueCreate(16, sizeof(SensorData));  // ✅ Increased from 1 to 16 for better buffering during MQTT reconnect
 
   // เก็บ Cookie header สำหรับ session
   const char* headerKeys[] = {"Cookie"};
@@ -1973,11 +2009,8 @@ void initSystem() {
   server.begin();
   Serial.println("🌐 WebServer (STA Mode) started");
 
-  // Initialize MQTT client BEFORE creating tasks
-  client.setServer(conf.mqttServer.c_str(), conf.mqttPort);
-  client.setCallback(mqttCallback);
-  client.setBufferSize(1024);
-  client.setKeepAlive(60);
+  // ✅ ESP-MQTT Native: Initialization moved to Task_MQTT (when WiFi is ready)
+  // Old PubSubClient code removed
 
   // Create mutex for Serial output synchronization
   serialMutex = xSemaphoreCreateMutex();
@@ -2031,7 +2064,7 @@ void renderOLEDPage() {
       display.setTextColor(SSD1306_WHITE);
       char s1[32], s2[32];
       snprintf(s1, sizeof(s1), "WiFi: %s", wifiConnected() ? "OK" : "NO");
-      snprintf(s2, sizeof(s2), "MQTT: %s", client.connected() ? "OK" : "NO");
+      snprintf(s2, sizeof(s2), "MQTT: %s", mqttConnected ? "OK" : "NO");  // ✅ ESP-MQTT Native
       display.println(s1);
       display.println(s2);
       display.display();

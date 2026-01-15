@@ -54,7 +54,8 @@
         transform: none !important;
         width: 100% !important;
         height: auto !important;
-        min-height: 200px !important;
+        min-height: 380px !important;
+        /* Increased for chart visibility */
         left: 0 !important;
         top: 0 !important;
     }
@@ -79,14 +80,16 @@
 
     .widget-wrapper {
         width: 100% !important;
-        min-height: 200px !important;
+        min-height: 380px !important;
+        /* Increased for chart visibility */
         height: auto !important;
         position: relative !important;
     }
 
     .widget-content {
         height: auto !important;
-        min-height: 180px !important;
+        min-height: 350px !important;
+        /* Increased for chart visibility */
     }
 
     /* =========================================
@@ -157,12 +160,56 @@
     }
 
     /* =========================================
-     CHARTS - Reduce height on mobile
+     CHARTS - Ensure visibility on mobile
      ========================================= */
-    .chart-container,
+    .chart-container {
+        min-height: 280px !important;
+        /* Don't override height - let inline styles control it */
+    }
+
     .recharts-responsive-container {
-        height: 200px !important;
-        min-height: 180px !important;
+        min-height: 250px !important;
+    }
+
+    /* Ensure recharts wrapper is visible */
+    .recharts-wrapper {
+        width: 100% !important;
+        min-height: 250px !important;
+        overflow: visible !important;
+    }
+
+    /* Ensure SVG is visible */
+    .recharts-surface {
+        overflow: visible !important;
+    }
+
+    /* Bar charts specific */
+    .recharts-bar,
+    .recharts-bar-rectangle {
+        opacity: 1 !important;
+    }
+
+    /* ApexCharts container */
+    .apexcharts-canvas {
+        min-height: 250px !important;
+    }
+
+    /* Energy cost history chart */
+    .cost-history-chart .chart-container {
+        min-height: 300px !important;
+        height: 320px !important;
+    }
+
+    /* Hourly energy chart */
+    .energy-chart-quality .chart-container {
+        min-height: 280px !important;
+        height: 300px !important;
+    }
+
+    /* Power chart */
+    .power-chart-modern .p-chart-container {
+        min-height: 300px !important;
+        height: 320px !important;
     }
 
     /* =========================================

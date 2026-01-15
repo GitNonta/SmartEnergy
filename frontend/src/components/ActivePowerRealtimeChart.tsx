@@ -265,7 +265,7 @@ export default function ActivePowerRealtimeChart({ initialViewMode = 'total', on
     const getChartOptions = (mode: PowerViewMode) => ({
         chart: {
             type: mode === 'total' ? 'area' : 'line', // Total uses Area chart for impact
-            height: isPopup ? 400 : 350,
+            height: '100%',  // Use parent container height
             background: 'transparent',
             animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 1000 } },
             toolbar: {
@@ -388,7 +388,7 @@ export default function ActivePowerRealtimeChart({ initialViewMode = 'total', on
     };
 
     return (
-        <div className={`power-chart-modern ${isPopup ? 'popup-mode' : ''}`}>
+        <div className={`power-chart-modern ${isPopup ? 'popup-mode' : ''}`} style={{ minHeight: '500px' }}>
             {/* Header */}
             <div className="p-header">
                 <div className="p-title-group">
@@ -412,8 +412,8 @@ export default function ActivePowerRealtimeChart({ initialViewMode = 'total', on
 
             {/* Chart */}
             <style>{scrollbarStyles}</style>
-            <div className="p-chart-container relative group">
-                <div ref={chartDivRef} id="power-chart" />
+            <div className="p-chart-container relative group" style={{ minHeight: '350px', height: '350px', width: '100%' }}>
+                <div ref={chartDivRef} id="power-chart" style={{ height: '100%', width: '100%' }} />
                 {!isConnected && <div className="p-overlay">OFFLINE</div>}
 
                 {/* AI Activator Icon */}

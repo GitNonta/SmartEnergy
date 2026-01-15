@@ -70,6 +70,18 @@ export default function EnergyCostHistoryChart({
     const [loading, setLoading] = useState(false);
     const { t } = useLanguage();
     const { darkMode } = useTheme();
+    // Delay rendering for popup to allow animation to finish
+    const [readyToRender, setReadyToRender] = useState(!isPopup);
+
+    useEffect(() => {
+        if (isPopup) {
+            // Wait for popup animation (500ms) to complete before rendering Recharts
+            const timer = setTimeout(() => setReadyToRender(true), 600);
+            return () => clearTimeout(timer);
+        } else {
+            setReadyToRender(true);
+        }
+    }, [isPopup]);
 
     useEffect(() => {
         setViewMode(initialMode);
@@ -115,7 +127,7 @@ export default function EnergyCostHistoryChart({
     };
 
     return (
-        <div className={`cost-history-chart ${isPopup ? 'popup-mode' : ''} bg-white dark:bg-transparent text-slate-900 dark:text-slate-100 w-full h-full flex flex-col p-6`}>
+        <div className={`cost-history-chart ${isPopup ? 'popup-mode' : ''} bg-white dark:bg-transparent text-slate-900 dark:text-slate-100 w-full flex flex-col p-6`} style={{ minHeight: isPopup ? '500px' : '420px' }}>
             {/* Header */}
             <div className="chart-header flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                 <div className="header-left flex items-center">
@@ -173,14 +185,14 @@ export default function EnergyCostHistoryChart({
             </div>
 
             {/* Chart */}
-            <div className="chart-container">
-                {loading ? (
+            <div className="chart-container" style={{ position: 'relative', width: '99%', height: isPopup ? '340px' : '280px', overflow: 'hidden' }}>
+                {loading || !readyToRender ? (
                     <div className="chart-loading">
                         <div className="loading-spinner"></div>
                         <span>{t('history.loading')}</span>
                     </div>
                 ) : (
-                    <ResponsiveContainer width="100%" height={isPopup ? 380 : 320}>
+                    <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart
                             data={chartData}
                             margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
