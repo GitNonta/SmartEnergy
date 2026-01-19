@@ -189,7 +189,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ className = '' }) => 
             ref={containerRef}
             className={`
                 fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[95vw] max-w-[400px] 
-                lg:absolute lg:top-full lg:right-0 lg:left-auto lg:translate-x-0 lg:max-w-none lg:w-auto lg:min-w-[800px] lg:mt-4
+                lg:absolute lg:top-full lg:right 1 lg:left-auto lg:translate-x-0 lg:max-w-none lg:w-auto lg:min-w-[800px] lg:mt-4
                 liquid-glass-container rounded-[2rem] lg:rounded-[2.5rem] overflow-hidden animate-in fade-in zoom-in-95 duration-500 shadow-2xl 
                 ${className}
             `}

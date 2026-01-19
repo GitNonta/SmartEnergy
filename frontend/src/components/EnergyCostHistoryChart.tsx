@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     ComposedChart,
     Bar,
@@ -71,16 +71,55 @@ export default function EnergyCostHistoryChart({
     const { t } = useLanguage();
     const { darkMode } = useTheme();
     // Delay rendering for popup to allow animation to finish
-    const [readyToRender, setReadyToRender] = useState(!isPopup);
+    const [readyToRender, setReadyToRender] = useState(false);
+    // เก็บขนาดจริงของ container เพื่อบังคับ ResponsiveContainer ให้ใช้ค่าที่ถูกต้อง
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
+    // ✅ สร้าง Unique ID สำหรับ Gradient ป้องกัน ID ชนกันเมื่อมีหลาย chart instance
+    // ใช้ useMemo เพื่อล็อกค่า ID ให้คงที่ตลอดการใช้งาน ไม่เปลี่ยนทุกครั้งที่ re-render
+    const chartId = React.useMemo(() => Math.random().toString(36).slice(2), []);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Use ResizeObserver to wait for valid container dimensions
     useEffect(() => {
-        if (isPopup) {
-            // Wait for popup animation (500ms) to complete before rendering Recharts
-            const timer = setTimeout(() => setReadyToRender(true), 600);
-            return () => clearTimeout(timer);
-        } else {
-            setReadyToRender(true);
-        }
+        const container = containerRef.current;
+        if (!container) return;
+
+        const checkDimensions = () => {
+            const rect = container.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                setContainerSize({ width: rect.width, height: rect.height });
+                setReadyToRender(true);
+                return true;
+            }
+            return false;
+        };
+
+        // Check immediately (for non-popup cases)
+        if (!isPopup && checkDimensions()) return;
+
+        // For popup, wait for animation to complete before checking
+        const delay = isPopup ? 600 : 100;
+        const timer = setTimeout(() => {
+            if (!checkDimensions()) {
+                // If still not ready, use ResizeObserver
+                const observer = new ResizeObserver((entries) => {
+                    for (const entry of entries) {
+                        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+                            setContainerSize({
+                                width: entry.contentRect.width,
+                                height: entry.contentRect.height
+                            });
+                            setReadyToRender(true);
+                            observer.disconnect();
+                        }
+                    }
+                });
+                observer.observe(container);
+            }
+        }, delay);
+
+        return () => clearTimeout(timer);
     }, [isPopup]);
 
     useEffect(() => {
@@ -127,51 +166,20 @@ export default function EnergyCostHistoryChart({
     };
 
     return (
-        <div className={`cost-history-chart ${isPopup ? 'popup-mode' : ''} bg-white dark:bg-transparent text-slate-900 dark:text-slate-100 w-full flex flex-col p-6`} style={{ minHeight: isPopup ? '500px' : '420px' }}>
+        <div className={`cost-history-chart ${isPopup ? 'popup-mode' : ''} bg-white dark:bg-transparent text-slate-900 dark:text-slate-100 w-full flex flex-col p-3 sm:p-6`} style={{ minHeight: isPopup ? '480px' : '400px' }}>
             {/* Header */}
-            <div className="chart-header flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-                <div className="header-left flex items-center">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4 bg-amber-100 text-amber-500 dark:bg-amber-500/10 dark:text-amber-500 transition-colors">
-                        <TrendingUp size={24} />
-                    </div>
-                    <div className="header-text flex flex-col">
-                        <h3 className="chart-title text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                            {getTitle()}
-                        </h3>
-                        <div className="chart-summary flex items-center mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
-                            <span className="summary-item flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded text-xs">
-                                <Zap size={12} className="text-cyan-500" />
-                                <span>{totalEnergy.toLocaleString('th-TH', { minimumFractionDigits: 2 })} {t('energy.unit')}</span>
-                            </span>
-                            <span className="mx-2 text-slate-300 dark:text-slate-600">•</span>
-                            <span className="summary-item cost flex items-center gap-1.5 bg-amber-100/50 dark:bg-amber-500/10 px-2 py-0.5 rounded text-xs text-amber-600 dark:text-amber-400">
-                                <DollarSign size={12} />
-                                <span>฿{totalCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                            </span>
+            <div className="chart-header flex flex-col gap-3 mb-4 sm:mb-6">
+                <div className="header-top flex items-center justify-between">
+                    <div className="header-left flex items-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mr-3 sm:mr-4 bg-amber-100 text-amber-500 dark:bg-amber-500/10 dark:text-amber-500 transition-colors">
+                            <TrendingUp size={20} className="sm:hidden" />
+                            <TrendingUp size={24} className="hidden sm:block" />
                         </div>
-                    </div>
-                </div>
-
-                <div className="header-right flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                    <div className="bg-slate-100 dark:bg-black/20 p-1 rounded-lg flex space-x-1">
-                        <button
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'daily' ? 'bg-amber-500 text-white shadow-md scale-105' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
-                            onClick={() => setViewMode('daily')}
-                        >
-                            {t('export.buckets.hourly')}
-                        </button>
-                        <button
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'monthly' ? 'bg-amber-500 text-white shadow-md scale-105' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
-                            onClick={() => setViewMode('monthly')}
-                        >
-                            {t('export.buckets.daily')}
-                        </button>
-                        <button
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'yearly' ? 'bg-amber-500 text-white shadow-md scale-105' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
-                            onClick={() => setViewMode('yearly')}
-                        >
-                            {t('export.buckets.yearly')}
-                        </button>
+                        <div className="header-text flex flex-col">
+                            <h3 className="chart-title text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                                {getTitle()}
+                            </h3>
+                        </div>
                     </div>
                     {onClose && (
                         <button
@@ -182,29 +190,69 @@ export default function EnergyCostHistoryChart({
                         </button>
                     )}
                 </div>
+
+                {/* Summary badges - แสดงแยกบรรทัดบนมือถือ */}
+                <div className="header-summary flex flex-wrap items-center gap-2">
+                    <span className="summary-item flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-medium">
+                        <Zap size={14} className="text-cyan-500" />
+                        <span className="text-slate-700 dark:text-slate-300">{totalEnergy.toLocaleString('th-TH', { minimumFractionDigits: 2 })} {t('energy.unit')}</span>
+                    </span>
+                    <span className="summary-item cost flex items-center gap-1.5 bg-amber-100/50 dark:bg-amber-500/10 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-medium text-amber-600 dark:text-amber-400">
+                        <DollarSign size={14} />
+                        <span>฿{totalCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                    </span>
+                </div>
+
+                {/* View mode toggle - เต็มความกว้างบนมือถือ */}
+                <div className="header-controls flex items-center w-full">
+                    <div className="bg-slate-100 dark:bg-black/20 p-1 rounded-lg flex flex-1 sm:flex-initial">
+                        <button
+                            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition-all ${viewMode === 'daily' ? 'bg-amber-500 text-white shadow-md' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
+                            onClick={() => setViewMode('daily')}
+                        >
+                            {t('export.buckets.hourly')}
+                        </button>
+                        <button
+                            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition-all ${viewMode === 'monthly' ? 'bg-amber-500 text-white shadow-md' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
+                            onClick={() => setViewMode('monthly')}
+                        >
+                            {t('export.buckets.daily')}
+                        </button>
+                        <button
+                            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition-all ${viewMode === 'yearly' ? 'bg-amber-500 text-white shadow-md' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
+                            onClick={() => setViewMode('yearly')}
+                        >
+                            {t('export.buckets.yearly')}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Chart */}
-            <div className="chart-container" style={{ position: 'relative', width: '99%', height: isPopup ? '340px' : '280px', overflow: 'hidden' }}>
+            <div ref={containerRef} className="chart-container" style={{ position: 'relative', width: '100%', minWidth: '200px', height: isPopup ? '340px' : '280px', minHeight: isPopup ? '340px' : '280px' }}>
                 {loading || !readyToRender ? (
                     <div className="chart-loading">
                         <div className="loading-spinner"></div>
                         <span>{t('history.loading')}</span>
                     </div>
                 ) : (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer
+                        key={`chart-${containerSize.width}-${containerSize.height}`}
+                        width={containerSize.width > 0 ? containerSize.width : "100%"}
+                        height={isPopup ? 320 : 260}
+                    >
                         <ComposedChart
                             data={chartData}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                            margin={{ top: 10, right: 10, left: 5, bottom: 10 }}
                         >
                             <defs>
-                                {/* Gradient for Cost bars */}
-                                <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
+                                {/* Gradient for Cost bars - ใช้ unique ID ป้องกันชนกัน */}
+                                <linearGradient id={`costGradient-${chartId}`} x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor={darkMode ? "#f59e0b" : "#d97706"} stopOpacity={0.9} />
                                     <stop offset="95%" stopColor={darkMode ? "#d97706" : "#b45309"} stopOpacity={0.7} />
                                 </linearGradient>
-                                {/* Gradient for Energy bars */}
-                                <linearGradient id="energyGradient" x1="0" y1="0" x2="0" y2="1">
+                                {/* Gradient for Energy bars - ใช้ unique ID ป้องกันชนกัน */}
+                                <linearGradient id={`energyGradient-${chartId}`} x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor={darkMode ? "#22d3ee" : "#0891b2"} stopOpacity={0.9} />
                                     <stop offset="95%" stopColor={darkMode ? "#0891b2" : "#0e7490"} stopOpacity={0.7} />
                                 </linearGradient>
@@ -274,7 +322,7 @@ export default function EnergyCostHistoryChart({
                                 yAxisId="left"
                                 dataKey="cost"
                                 name={t('history.cost')}
-                                fill="url(#costGradient)"
+                                fill={`url(#costGradient-${chartId})`}
                                 radius={[4, 4, 0, 0]}
                                 barSize={viewMode === 'yearly' ? 24 : viewMode === 'monthly' ? 12 : 14}
                             />
@@ -364,6 +412,6 @@ export default function EnergyCostHistoryChart({
                     background: #22d3ee;
                 }
             `}</style>
-        </div>
+        </div >
     );
 }
