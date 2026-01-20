@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend
@@ -51,6 +51,11 @@ const TimeRangeSummaryPanel: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<RangeSummaryResponse | null>(null);
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+    // สำหรับแก้ปัญหา wrapper 0x0 บนมือถือ
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+    const [chartReady, setChartReady] = useState(false);
+    const [containerWidth, setContainerWidth] = useState(0);
 
     // Determine granularity based on mode
     const getGranularity = useCallback(() => {
@@ -105,6 +110,43 @@ const TimeRangeSummaryPanel: React.FC = () => {
             fetchData();
         }
     }, [mode, fetchData]);
+
+    // ResizeObserver เพื่อตรวจจับขนาด container จริง
+    useEffect(() => {
+        const container = chartContainerRef.current;
+        if (!container) return;
+
+        const checkDimensions = () => {
+            const rect = container.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                setContainerWidth(rect.width);
+                setChartReady(true);
+                return true;
+            }
+            return false;
+        };
+
+        // เช็คทันที
+        if (checkDimensions()) return;
+
+        // ถ้ายังไม่พร้อม ใช้ ResizeObserver
+        const timer = setTimeout(() => {
+            if (!checkDimensions()) {
+                const observer = new ResizeObserver((entries) => {
+                    for (const entry of entries) {
+                        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+                            setContainerWidth(entry.contentRect.width);
+                            setChartReady(true);
+                            observer.disconnect();
+                        }
+                    }
+                });
+                observer.observe(container);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [data]);
 
     // Don't show panel for realtime mode
     if (mode === 'realtime') {
@@ -270,46 +312,60 @@ const TimeRangeSummaryPanel: React.FC = () => {
                                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
                                     {t('summary.energyConsumption')} ({getGranularity() === 'hour' ? t('chart.hourly') : t('chart.daily')})
                                 </h3>
-                                <div className="h-64">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={data.chartData}>
-                                            <CartesianGrid
-                                                strokeDasharray="3 3"
-                                                stroke={darkMode ? '#374151' : '#e5e7eb'}
-                                                vertical={false}
-                                            />
-                                            <XAxis
-                                                dataKey="time"
-                                                tickFormatter={formatXAxis}
-                                                tick={{ fill: darkMode ? '#9ca3af' : '#6b7280', fontSize: 11 }}
-                                                axisLine={{ stroke: darkMode ? '#374151' : '#e5e7eb' }}
-                                                tickLine={false}
-                                            />
-                                            <YAxis
-                                                tick={{ fill: darkMode ? '#9ca3af' : '#6b7280', fontSize: 11 }}
-                                                axisLine={false}
-                                                tickLine={false}
-                                                width={50}
-                                                tickFormatter={(value) => `${value}`}
-                                            />
-                                            <Tooltip content={<CustomTooltip />} />
-                                            <Legend
-                                                wrapperStyle={{ paddingTop: '10px' }}
-                                                formatter={(value) => (
-                                                    <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                                                        {value} ({value === 'energy' ? 'kWh' : 'kW'})
-                                                    </span>
-                                                )}
-                                            />
-                                            <Bar
-                                                dataKey="energy"
-                                                name="energy"
-                                                fill={darkMode ? '#10b981' : '#059669'}
-                                                radius={[4, 4, 0, 0]}
-                                                maxBarSize={40}
-                                            />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                <div
+                                    ref={chartContainerRef}
+                                    className="h-64"
+                                    style={{ minHeight: '250px', minWidth: '200px' }}
+                                >
+                                    {chartReady ? (
+                                        <ResponsiveContainer
+                                            key={`chart-${containerWidth}`}
+                                            width={containerWidth > 0 ? containerWidth : "100%"}
+                                            height={250}
+                                        >
+                                            <BarChart data={data.chartData}>
+                                                <CartesianGrid
+                                                    strokeDasharray="3 3"
+                                                    stroke={darkMode ? '#374151' : '#e5e7eb'}
+                                                    vertical={false}
+                                                />
+                                                <XAxis
+                                                    dataKey="time"
+                                                    tickFormatter={formatXAxis}
+                                                    tick={{ fill: darkMode ? '#9ca3af' : '#6b7280', fontSize: 11 }}
+                                                    axisLine={{ stroke: darkMode ? '#374151' : '#e5e7eb' }}
+                                                    tickLine={false}
+                                                />
+                                                <YAxis
+                                                    tick={{ fill: darkMode ? '#9ca3af' : '#6b7280', fontSize: 11 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    width={50}
+                                                    tickFormatter={(value) => `${value}`}
+                                                />
+                                                <Tooltip content={<CustomTooltip />} />
+                                                <Legend
+                                                    wrapperStyle={{ paddingTop: '10px' }}
+                                                    formatter={(value) => (
+                                                        <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                                                            {value} ({value === 'energy' ? 'kWh' : 'kW'})
+                                                        </span>
+                                                    )}
+                                                />
+                                                <Bar
+                                                    dataKey="energy"
+                                                    name="energy"
+                                                    fill={darkMode ? '#10b981' : '#059669'}
+                                                    radius={[4, 4, 0, 0]}
+                                                    maxBarSize={40}
+                                                />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full">
+                                            <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

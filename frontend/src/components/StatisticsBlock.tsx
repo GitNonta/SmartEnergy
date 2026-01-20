@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getApiBase } from '../config/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from './AppShell';
@@ -96,6 +96,12 @@ const StatisticsBlock: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [showChart, setShowChart] = useState(true);
 
+    // สำหรับแก้ปัญหา wrapper 0x0 บนมือถือ
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+    const [chartReady, setChartReady] = useState(false);
+    const [containerWidth, setContainerWidth] = useState(0);
+    const chartId = React.useMemo(() => Math.random().toString(36).slice(2), []);
+
     const { t, language } = useLanguage();
     const { darkMode } = useTheme();
 
@@ -172,6 +178,41 @@ const StatisticsBlock: React.FC = () => {
         return () => clearInterval(interval);
     }, [fetchStatistics]);
 
+    // ResizeObserver เพื่อตรวจจับขนาด container จริง
+    useEffect(() => {
+        const container = chartContainerRef.current;
+        if (!container) return;
+
+        const checkDimensions = () => {
+            const rect = container.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                setContainerWidth(rect.width);
+                setChartReady(true);
+                return true;
+            }
+            return false;
+        };
+
+        if (checkDimensions()) return;
+
+        const timer = setTimeout(() => {
+            if (!checkDimensions()) {
+                const observer = new ResizeObserver((entries) => {
+                    for (const entry of entries) {
+                        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+                            setContainerWidth(entry.contentRect.width);
+                            setChartReady(true);
+                            observer.disconnect();
+                        }
+                    }
+                });
+                observer.observe(container);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [chartData]);
+
     const timeRangeOptions = [
         { value: 'today', labelKey: 'statistics.today' },
         { value: 'yesterday', labelKey: 'statistics.yesterday' },
@@ -233,68 +274,84 @@ const StatisticsBlock: React.FC = () => {
                                 <Zap size={14} />
                                 <span>{t('statistics.powerTrend')}</span>
                             </div>
-                            <ResponsiveContainer width="100%" height={180}>
-                                <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="powerGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                                    <XAxis
-                                        dataKey="hour"
-                                        tick={{ fill: chartColors.text, fontSize: 10 }}
-                                        axisLine={{ stroke: chartColors.stroke }}
-                                        tickLine={false}
-                                        interval="preserveStartEnd"
-                                    />
-                                    <YAxis
-                                        tick={{ fill: chartColors.text, fontSize: 10 }}
-                                        axisLine={{ stroke: chartColors.stroke }}
-                                        tickLine={false}
-                                        tickFormatter={(v) => `${v}`}
-                                    />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="power"
-                                        stroke={chartColors.area}
-                                        fill="url(#powerGradient)"
-                                        strokeWidth={2}
-                                        dot={false}
-                                    />
-                                    {/* Average Reference Line */}
-                                    <ReferenceLine
-                                        y={stats.power.avg}
-                                        stroke="#facc15"
-                                        strokeDasharray="5 5"
-                                        strokeWidth={2}
-                                        label={{
-                                            value: `${t('statistics.avg')}: ${stats.power.avg.toFixed(0)} W`,
-                                            fill: '#facc15',
-                                            fontSize: 11,
-                                            position: 'right'
-                                        }}
-                                    />
-                                    {/* Max Reference Line */}
-                                    <ReferenceLine
-                                        y={stats.power.max}
-                                        stroke="#ef4444"
-                                        strokeDasharray="3 3"
-                                        strokeWidth={1}
-                                        opacity={0.6}
-                                    />
-                                    {/* Min Reference Line */}
-                                    <ReferenceLine
-                                        y={stats.power.min}
-                                        stroke="#22c55e"
-                                        strokeDasharray="3 3"
-                                        strokeWidth={1}
-                                        opacity={0.6}
-                                    />
-                                </ComposedChart>
-                            </ResponsiveContainer>
+                            <div
+                                ref={chartContainerRef}
+                                className="chart-wrapper"
+                                style={{ minHeight: '180px', minWidth: '200px' }}
+                            >
+                                {chartReady ? (
+                                    <ResponsiveContainer
+                                        key={`chart-${containerWidth}`}
+                                        width={containerWidth > 0 ? containerWidth : "100%"}
+                                        height={180}
+                                    >
+                                        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id={`powerGradient-${chartId}`} x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                                            <XAxis
+                                                dataKey="hour"
+                                                tick={{ fill: chartColors.text, fontSize: 10 }}
+                                                axisLine={{ stroke: chartColors.stroke }}
+                                                tickLine={false}
+                                                interval="preserveStartEnd"
+                                            />
+                                            <YAxis
+                                                tick={{ fill: chartColors.text, fontSize: 10 }}
+                                                axisLine={{ stroke: chartColors.stroke }}
+                                                tickLine={false}
+                                                tickFormatter={(v) => `${v}`}
+                                            />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="power"
+                                                stroke={chartColors.area}
+                                                fill={`url(#powerGradient-${chartId})`}
+                                                strokeWidth={2}
+                                                dot={false}
+                                            />
+                                            {/* Average Reference Line */}
+                                            <ReferenceLine
+                                                y={stats.power.avg}
+                                                stroke="#facc15"
+                                                strokeDasharray="5 5"
+                                                strokeWidth={2}
+                                                label={{
+                                                    value: `${t('statistics.avg')}: ${stats.power.avg.toFixed(0)} W`,
+                                                    fill: '#facc15',
+                                                    fontSize: 11,
+                                                    position: 'right'
+                                                }}
+                                            />
+                                            {/* Max Reference Line */}
+                                            <ReferenceLine
+                                                y={stats.power.max}
+                                                stroke="#ef4444"
+                                                strokeDasharray="3 3"
+                                                strokeWidth={1}
+                                                opacity={0.6}
+                                            />
+                                            {/* Min Reference Line */}
+                                            <ReferenceLine
+                                                y={stats.power.min}
+                                                stroke="#22c55e"
+                                                strokeDasharray="3 3"
+                                                strokeWidth={1}
+                                                opacity={0.6}
+                                            />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full" style={{ minHeight: '180px' }}>
+                                        <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                                    </div>
+                                )}
+                            </div>
                             <div className="chart-legend">
                                 <span className="legend-item"><span className="legend-line avg"></span>{t('statistics.average')}</span>
                                 <span className="legend-item"><span className="legend-line max"></span>{t('statistics.max')}</span>
