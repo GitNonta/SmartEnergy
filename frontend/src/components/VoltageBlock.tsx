@@ -127,11 +127,16 @@ const VoltageBlock: React.FC = () => {
 
                 <style>{`
           .voltage-block-compact {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
             background: #ffffff;
             border-radius: 12px;
             border: 1px solid #e2e8f0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            padding: 0.875rem;
+            padding: 0.75rem;
             font-family: 'Inter', sans-serif;
             transition: all 0.3s ease;
           }
@@ -324,8 +329,8 @@ const VoltageBlock: React.FC = () => {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 0.625rem;
-            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+            padding-top: 0.375rem;
             border-top: 1px solid #e2e8f0;
           }
           html.dark .vb-footer {
@@ -357,7 +362,7 @@ const VoltageBlock: React.FC = () => {
             font-weight: 700;
             font-family: 'Roboto Mono', monospace;
             background: #f1f5f9;
-            padding: 2px 4px;
+            padding: 1px 4px;
             border-radius: 3px;
           }
           html.dark .vb-stat-value {
@@ -368,7 +373,7 @@ const VoltageBlock: React.FC = () => {
           /* Mobile Responsive */
           @media (max-width: 480px) {
             .voltage-block-compact {
-              padding: 0.75rem;
+              padding: 0.625rem;
             }
             .vb-icon {
               width: 24px;

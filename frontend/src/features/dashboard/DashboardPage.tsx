@@ -24,7 +24,7 @@ import StatisticsBlock from '../../components/StatisticsBlock';
 import { DashboardLayoutProvider, useDashboardLayout } from '../../context/DashboardLayoutContext';
 import EditModeToggle from '../../components/EditModeToggle';
 import DeviceSelector from '../../components/DeviceSelector';
-import { LayoutItem, widgetConfig } from '../../config/defaultDashboardLayout';
+import { LayoutItem, widgetConfig, defaultLayouts } from '../../config/defaultDashboardLayout';
 
 // Widget component map
 const widgetComponents: Record<string, { component: React.FC; title: string }> = {
@@ -49,8 +49,8 @@ const BREAKPOINTS = {
 
 const COLS_BY_BREAKPOINT = {
   xxl: 12,
-  xl: 10,
-  lg: 8,
+  xl: 12,
+  lg: 12,
   md: 6,
   sm: 4,
   xs: 2
@@ -63,11 +63,22 @@ const MARGIN: [number, number] = [12, 12]; // Margins
 const DashboardContent: React.FC = () => {
   const { isConnected, lastUpdate } = useWebSocket();
   const { t } = useLanguage();
-  const { layouts, isEditMode, isAdmin, isLoading, updateLayouts } = useDashboardLayout();
+  const { layouts, isEditMode, setIsEditMode, isAdmin, isLoading, updateLayouts, resetLayoutToDefault } = useDashboardLayout();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [containerWidth, setContainerWidth] = useState(1200);
   const [selectedDevice, setSelectedDevice] = useState('AI205');
+
+  // Dashboard Mode State: 'default' or 'custom'
+  // Persist in localStorage
+  const [dashboardMode, setDashboardMode] = useState<'default' | 'custom'>(() => {
+    return (localStorage.getItem('dashboardMode') as 'default' | 'custom') || 'custom';
+  });
+
+  // Persist mode choice
+  useEffect(() => {
+    localStorage.setItem('dashboardMode', dashboardMode);
+  }, [dashboardMode]);
 
   // Real-time clock effect
   useEffect(() => {
@@ -75,17 +86,29 @@ const DashboardContent: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Track container width
+  // Track container width using ResizeObserver for accuracy
   useEffect(() => {
-    const updateWidth = () => {
-      const container = document.querySelector('.dashboard-grid-container');
-      if (container) {
-        setContainerWidth(container.clientWidth);
+    const container = document.querySelector('.dashboard-grid-container');
+    if (!container) return;
+
+    // Initial width
+    setContainerWidth(container.clientWidth);
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Use contentRect for precise content box width or clientWidth from target
+        // RGL uses width prop to calculate column widths.
+        // We use clientWidth to exclude scrollbars if any, though contentRect is often safer for standard boxes.
+        // Let's stick to clientWidth as RGL usually expects the full available width.
+        setContainerWidth(entry.target.clientWidth);
       }
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
     };
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
   // Determine current breakpoint based on container width
@@ -101,8 +124,17 @@ const DashboardContent: React.FC = () => {
   const currentBreakpoint = getCurrentBreakpoint(containerWidth);
   const currentCols = COLS_BY_BREAKPOINT[currentBreakpoint];
 
-  // Get current layout based on breakpoint
-  const currentLayout = layouts[currentBreakpoint] || layouts.lg || [];
+  // Desktop (lg+) allows free positioning (no vertical compaction)
+  // ONLY in Custom Mode. In Default Mode, we stick to the predefined layout structure (often compacted).
+  // Actually, default layouts are also designed for free positioning now on desktop?
+  // Let's keep logic simple: Desktop = Free, Mobile = Vertical.
+  const compactType = (['lg', 'xl', 'xxl'].includes(currentBreakpoint)) ? null : 'vertical';
+
+  // Select Layout Source
+  const sourceLayouts = dashboardMode === 'default' ? defaultLayouts : layouts;
+
+  // Get current layout based on breakpoint from the selected source
+  const currentLayout = sourceLayouts[currentBreakpoint] || sourceLayouts.lg || [];
 
   // Get hidden widgets (not in current layout)
   const hiddenWidgets = Object.keys(widgetComponents).filter(
@@ -129,7 +161,7 @@ const DashboardContent: React.FC = () => {
 
   // Handle layout change from react-grid-layout
   const handleLayoutChange = useCallback((newLayout: any[]) => {
-    // Convert back to our format and update all breakpoints
+    // Convert back to our format
     const layoutItems: LayoutItem[] = newLayout.map(item => ({
       i: item.i,
       x: item.x,
@@ -142,15 +174,27 @@ const DashboardContent: React.FC = () => {
       maxH: item.maxH,
     }));
 
-    updateLayouts({
-      xxl: layoutItems,
-      xl: layoutItems,
-      lg: layoutItems,
-      md: layoutItems,
-      sm: layoutItems,
-      xs: layoutItems,
-    });
-  }, [updateLayouts]);
+    // Logic: If on Desktop (Free Positioning), sync across desktop breakpoints.
+    // If on Mobile/Tablet (Vertical Compact), sync across mobile/tablet.
+    const isDesktop = ['lg', 'xl', 'xxl'].includes(currentBreakpoint);
+
+    if (isDesktop) {
+      updateLayouts({
+        ...layouts,
+        xxl: layoutItems,
+        xl: layoutItems,
+        lg: layoutItems,
+        // Keep mobile layouts as they were
+      });
+    } else {
+      updateLayouts({
+        ...layouts,
+        md: layoutItems,
+        sm: layoutItems,
+        xs: layoutItems,
+      });
+    }
+  }, [updateLayouts, currentBreakpoint, layouts]);
 
   // Handle add widget
   const handleAddWidget = useCallback((widgetId: string) => {
@@ -197,9 +241,16 @@ const DashboardContent: React.FC = () => {
     });
   }, [isEditMode, isAdmin, currentLayout, updateLayouts]);
 
+  // Handle Reset Layout
+  const handleResetLayout = () => {
+    if (window.confirm('Reset dashboard layout to default settings? This will rearrange all widgets.')) {
+      resetLayoutToDefault();
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-slate-400">
+      <div className="flex bg-[#0F172A] flex-col items-center justify-center min-h-[400px] gap-4 text-slate-400">
         <div className="w-12 h-12 border-4 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
         <p>Loading dashboard...</p>
       </div>
@@ -207,38 +258,57 @@ const DashboardContent: React.FC = () => {
   }
 
   return (
-    <div className={`p-4 sm:p-6 min-h-screen text-slate-900 dark:text-slate-50 font-sans relative flex flex-col overflow-x-hidden ${isEditMode ? 'editing' : ''}`}>
-
-      {/* Dashboard Header */}
-      <header className="relative flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-6 border-b border-slate-200 dark:border-white/10 gap-4">
-        <div className="flex-1 w-full md:w-auto">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-wide m-0 flex items-center gap-2 text-slate-800 dark:bg-gradient-to-r dark:from-white dark:to-slate-400 dark:bg-clip-text dark:text-transparent">
-            <span className="text-xl sm:text-2xl filter drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">⚡</span>
-            <span className="hidden sm:inline">{t('dashboard.title').toUpperCase()}</span>
-            <span className="sm:hidden">MDB</span>
+    <div className={`
+      flex h-full w-full flex-col gap-6 p-4 md:p-6 lg:p-8 
+      ${!isEditMode ? 'transition-all duration-300' : ''}
+    `}>
+      {/* Header Section */}
+      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-white/10 pb-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
+            {t('dashboard.title')}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm md:text-base mt-1 font-medium">{t('dashboard.subtitle')}</p>
+          <div className="mt-1 flex items-center gap-2 text-sm text-slate-400">
+            <span className={`inline-block h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'}`}></span>
+            <span>{isConnected ? t('status.c_connect') : t('status.disconnect')}</span>
+            <span className="mx-2 text-slate-700">|</span>
+            <span>{t('dashboard.last_update')}: {lastUpdate ? lastUpdate.toLocaleTimeString() : '-'}</span>
+          </div>
         </div>
 
-        <div className="w-full md:w-auto flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          {/* Device Selector */}
+        <div className="flex items-center gap-3">
+          {/* View Mode Switcher */}
+          <div className="bg-slate-800 dark:bg-white/5 rounded-lg p-1 flex border border-slate-700 dark:border-white/10">
+            <button
+              onClick={() => {
+                setDashboardMode('default');
+                if (isEditMode) setIsEditMode(false); // Force exit edit mode
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${dashboardMode === 'default' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+            >
+              Default
+            </button>
+            <button
+              onClick={() => setDashboardMode('custom')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${dashboardMode === 'custom' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+            >
+              Custom
+            </button>
+          </div>
+
           <DeviceSelector
             selectedDevice={selectedDevice}
-            onDeviceChange={setSelectedDevice}
+            onSelect={setSelectedDevice}
           />
-          <div className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 px-4 py-2 rounded-xl border border-slate-200 dark:border-white/5">
-            <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <div className="flex flex-col leading-tight">
-              <span className="text-[0.65rem] text-slate-500 dark:text-slate-400 font-bold tracking-wider">{t('dashboard.systemStatus').toUpperCase()}</span>
-              <span className={`text-xs font-bold tracking-wide ${isConnected ? 'text-emerald-400' : 'text-red-400'}`}>
-                {isConnected ? t('dashboard.operational').toUpperCase() : t('dashboard.disconnected').toUpperCase()}
-              </span>
-            </div>
-          </div>
-          <div className="text-left sm:text-right border-l-0 sm:border-l border-slate-200 dark:border-white/10 pl-0 sm:pl-6">
-            <span className="block text-xl font-bold font-mono text-slate-900 dark:text-white leading-none">{currentTime.toLocaleTimeString('th-TH', { hour12: false })}</span>
-            <span className="block text-xs text-slate-500 mt-0.5">{currentTime.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
-          </div>
+          {dashboardMode === 'custom' && isEditMode && isAdmin && (
+            <button
+              onClick={handleResetLayout}
+              className="px-3 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded text-xs transition-colors shadow-sm whitespace-nowrap"
+            >
+              Reset Layout
+            </button>
+          )}
+          {dashboardMode === 'custom' && isAdmin && <EditModeToggle />}
         </div>
       </header>
 
@@ -250,16 +320,8 @@ const DashboardContent: React.FC = () => {
       {/* Time Range Summary Panel */}
       <TimeRangeSummaryPanel />
 
-      {/* Edit Mode Indicator */}
-      {isEditMode && (
-        <div className="mb-4 p-3 bg-violet-500/10 border border-violet-500/30 rounded-lg text-violet-300 text-sm flex items-center gap-2">
-          <span className="text-lg">✏️</span>
-          <span>Edit Mode: ลาก widget ไปวางที่ใดก็ได้บนบอร์ด | Resize ที่มุมขวาล่าง</span>
-        </div>
-      )}
-
-      {/* Main Grid Layout - Free Positioning with auto-expand */}
-      <main className="dashboard-grid-container relative flex-1 w-full">
+      {/* Main Grid Layout - Forcing width 100% */}
+      <main className="dashboard-grid-container relative flex-1 w-full" style={{ width: '100%', maxWidth: '100%' }}>
         <GridLayout
           className="layout"
           layout={gridLayout}
@@ -269,7 +331,7 @@ const DashboardContent: React.FC = () => {
           margin={MARGIN}
           isDraggable={canEdit}
           isResizable={canEdit}
-          compactType="vertical"
+          compactType={compactType}
           preventCollision={false}
           autoSize={true}
           isBounded={false}
@@ -285,7 +347,7 @@ const DashboardContent: React.FC = () => {
             return (
               <div
                 key={item.i}
-                className={`widget-wrapper group flex flex-col h-full relative rounded-xl overflow-hidden transition-all duration-150 bg-white/5 dark:bg-slate-800/50 ${canEdit ? 'border border-dashed border-violet-400/50 hover:border-violet-400 cursor-move' : 'border border-transparent cursor-default'}`}
+                className={`widget-wrapper group flex flex-col h-full relative rounded-xl overflow-hidden transition-all duration-150 bg-transparent ${canEdit ? 'border border-dashed border-violet-400/50 hover:border-violet-400 cursor-move' : 'border border-transparent cursor-default'}`}
               >
                 {/* Edit Mode Controls - Only for admin */}
                 {canEdit && (
@@ -346,9 +408,6 @@ const DashboardContent: React.FC = () => {
           )}
         </div>
       )}
-
-      {/* Edit Mode Toggle */}
-      <EditModeToggle />
 
       {/* Footer */}
       <footer className="mt-8 pt-4 border-t border-slate-200 dark:border-white/5 flex justify-end text-slate-400 dark:text-white/30 text-xs">

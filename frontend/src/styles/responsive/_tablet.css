@@ -67,9 +67,10 @@
         transform: none !important;
         width: 100% !important;
         height: auto !important;
-        min-height: 320px !important;
+        min-height: auto !important;
         left: 0 !important;
         top: 0 !important;
+        margin-bottom: 0.75rem !important;
     }
 
     /* Disable resize handles on tablet */
@@ -85,6 +86,7 @@
         flex-direction: column !important;
         height: auto !important;
         padding: 0 0.5rem !important;
+        gap: 0.75rem !important;
     }
 
     .layout {
@@ -93,14 +95,14 @@
 
     .widget-wrapper {
         width: 100% !important;
-        min-height: 320px !important;
+        min-height: auto !important;
         height: auto !important;
         position: relative !important;
     }
 
     .widget-content {
         height: auto !important;
-        min-height: 300px !important;
+        min-height: auto !important;
     }
 
     /* =========================================
@@ -403,11 +405,11 @@
     }
 
     .pf-value {
-        font-size: 2.25rem;
+        font-size: 0.9rem;
     }
 
     .pf-label {
-        font-size: 0.8rem;
+        font-size: 0.6rem;
     }
 
     .energy-accumulated-card {
@@ -421,55 +423,105 @@
     /* =========================================
      DATE PICKER (Tablet)
      ========================================= */
+    /* =========================================
+     DATE PICKER (Tablet) - Vertical Layout
+     ========================================= */
     .liquid-glass-container {
         position: fixed !important;
-        top: 55% !important;
+        top: 50% !important;
+        /* Center vertically */
         left: 50% !important;
         transform: translate(-50%, -50%) !important;
-        width: 85vw !important;
-        max-width: 480px !important;
+        width: 80vw !important;
+        max-width: 420px !important;
+        /* constrain width */
         max-height: 85vh !important;
         overflow-y: auto !important;
-        border-radius: 2.5rem !important;
-        padding: 1.5rem !important;
+        border-radius: 1.5rem !important;
+        padding: 1.25rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(15, 23, 42, 0.95) !important;
+        /* Solid darker background */
+        backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
-    .liquid-glass-container .font-bold.text-lg {
-        font-size: 1.25rem !important;
-        padding-top: 1.5rem !important;
-        padding-bottom: 1rem !important;
+    /* Force months vertical stack */
+    .liquid-glass-container .flex-row.gap-10 {
+        flex-direction: column !important;
+        gap: 1.5rem !important;
     }
 
+    .liquid-glass-container .flex-1.min-w-\[300px\] {
+        min-width: 100% !important;
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
+    /* Month Title */
+    .liquid-glass-container .text-lg {
+        font-size: 1.1rem !important;
+        padding-bottom: 0.75rem !important;
+        padding-top: 0.25rem !important;
+        text-align: center !important;
+    }
+
+    /* Calendar Grid */
     .custom-calendar-grid {
+        display: grid !important;
         grid-template-columns: repeat(7, 1fr) !important;
-        gap: 2px !important;
+        gap: 4px !important;
         width: 100% !important;
         justify-items: center !important;
+        margin-bottom: 0.5rem !important;
     }
 
-    .custom-calendar-grid button {
-        width: 40px !important;
-        height: 40px !important;
-        margin: 2px 0 !important;
+    /* Day Cells */
+    .custom-calendar-grid button,
+    .liquid-glass-container button.w-10,
+    .liquid-glass-container div.w-10 {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+        font-size: 0.9rem !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
-    .liquid-glass-container button.h-11.w-11 {
-        width: 2.5rem !important;
-        height: 2.5rem !important;
-        background: rgba(255, 255, 255, 0.1) !important;
+    /* Navigation Buttons (Top Left/Right) */
+    .liquid-glass-container .absolute.top-7 {
+        display: none !important;
+        /* Hide default absolute positioning if conflict */
     }
 
-    .date-range-picker {
-        padding: 0.875rem;
+    /* Re-style nav buttons if they are inside the header flow */
+    .liquid-glass-container button.hover\:bg-white\/10 {
+        padding: 0.5rem !important;
     }
 
+    /* Confirm Button Area */
+    .liquid-glass-container .mt-6.flex.justify-end {
+        width: 100% !important;
+        margin-top: 1.5rem !important;
+        justify-content: center !important;
+    }
+
+    .liquid-glass-container button.px-10 {
+        width: 100% !important;
+        padding: 0.875rem !important;
+        border-radius: 9999px !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
+    }
+
+    /* Adjust padding for presets if visible */
     .date-range-picker .preset-buttons {
-        gap: 0.5rem;
-    }
-
-    .date-range-picker button {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.75rem;
+        display: none !important;
+        /* Hide presets on mobile/tablet for simpler UI if derived from image? Or keep flexible */
     }
 
     /* =========================================

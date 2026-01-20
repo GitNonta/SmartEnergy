@@ -54,10 +54,11 @@
         transform: none !important;
         width: 100% !important;
         height: auto !important;
-        min-height: 380px !important;
-        /* Increased for chart visibility */
+        min-height: auto !important;
         left: 0 !important;
         top: 0 !important;
+        margin-bottom: 0.5rem !important;
+        /* Add explicit gap */
     }
 
     /* Disable resize handles on mobile */
@@ -72,6 +73,7 @@
         display: flex !important;
         flex-direction: column !important;
         height: auto !important;
+        gap: 0.5rem !important;
     }
 
     .layout {
@@ -80,16 +82,14 @@
 
     .widget-wrapper {
         width: 100% !important;
-        min-height: 380px !important;
-        /* Increased for chart visibility */
+        min-height: auto !important;
         height: auto !important;
         position: relative !important;
     }
 
     .widget-content {
         height: auto !important;
-        min-height: 350px !important;
-        /* Increased for chart visibility */
+        min-height: auto !important;
     }
 
     /* =========================================

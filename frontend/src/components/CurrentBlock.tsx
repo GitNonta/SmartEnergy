@@ -121,14 +121,20 @@ const CurrentBlock: React.FC = () => {
 
         <style>{`
           .current-block-compact {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            /* justify-content: space-between; <-- Removed */
             background: #ffffff;
             border-radius: 12px;
             border: 1px solid #e2e8f0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            padding: 0.875rem;
+            padding: 0.75rem;
             font-family: 'Inter', sans-serif;
             transition: all 0.3s ease;
           }
+          /* ... dark, hover ... */
           html.dark .current-block-compact {
             background: linear-gradient(145deg, #1e293b, #0f172a);
             border: 1px solid rgba(255,255,255,0.05);
@@ -142,98 +148,34 @@ const CurrentBlock: React.FC = () => {
             border-color: rgba(255,255,255,0.1);
           }
 
-          /* Header */
+          /* ... header ... */
           .cb-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 0.75rem;
           }
-          .cb-title-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-          }
-          .cb-icon {
-            width: 28px;
-            height: 28px;
-            background: #eff6ff;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #3b82f6;
-          }
-          html.dark .cb-icon {
-            background: rgba(59, 130, 246, 0.1);
-            color: #60a5fa;
-          }
-          .cb-title-text {
-            display: flex;
-            flex-direction: column;
-          }
-          .cb-title {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #0f172a;
-            letter-spacing: 0.05em;
-            margin: 0;
-            line-height: 1.2;
-          }
-          html.dark .cb-title {
-            color: #f8fafc;
-          }
-          .cb-subtitle {
-            font-size: 0.55rem;
-            color: #64748b;
-          }
-          html.dark .cb-subtitle {
-            color: #94a3b8;
-          }
-
-          /* Status Badge */
-          .cb-status {
-            font-size: 0.5rem;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
-          .cb-status.online {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-          }
-          .cb-status.offline {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-          }
-          .cb-status-dot {
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            background: currentColor;
-            box-shadow: 0 0 6px currentColor;
-          }
+          /* ... */
 
           /* Phases Grid */
           .cb-phases {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            flex: 1; /* Grow locally */
+            justify-content: space-evenly; /* Spread out */
+            gap: 0.25rem;
+            margin: 0.5rem 0;
           }
           .cb-phase {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem;
+            gap: 0.75rem;
+            padding: 0.75rem; /* Larger padding */
             border-radius: 8px;
             background: #f8fafc;
             cursor: pointer;
             transition: all 0.2s;
+            min-height: 48px;
           }
           html.dark .cb-phase {
             background: rgba(255,255,255,0.03);
@@ -318,8 +260,8 @@ const CurrentBlock: React.FC = () => {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 0.625rem;
-            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+            padding-top: 0.375rem;
             border-top: 1px solid #e2e8f0;
           }
           html.dark .cb-footer {
@@ -351,7 +293,7 @@ const CurrentBlock: React.FC = () => {
             font-weight: 700;
             font-family: 'Roboto Mono', monospace;
             background: #f1f5f9;
-            padding: 2px 4px;
+            padding: 1px 4px;
             border-radius: 3px;
           }
           html.dark .cb-stat-value {
@@ -362,7 +304,7 @@ const CurrentBlock: React.FC = () => {
           /* Mobile Responsive */
           @media (max-width: 480px) {
             .current-block-compact {
-              padding: 0.75rem;
+              padding: 0.625rem;
             }
             .cb-icon {
               width: 24px;

@@ -24,3 +24,78 @@
         grid-template-columns: repeat(4, 1fr) !important;
     }
 }
+
+/* =========================================
+   WIDGET FIXES FOR DESKTOP
+   ========================================= */
+
+/* Energy Accumulated: Force 2x2 grid on Desktop to prevent yearly overflow */
+@media (min-width: 992px) {
+    .energy-accumulated-container-component {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.75rem !important;
+    }
+
+    .energy-accumulated-item-component {
+        padding: 0.75rem !important;
+        min-height: 80px;
+        /* Fixed height per block */
+    }
+
+    /* Make value text consistent */
+    .energy-accumulated-item-component .value-row {
+        font-size: 1.25rem !important;
+    }
+}
+
+/* Very Large Screens (xxl): Allow 4 columns if space permits (e.g. >1600px) */
+@media (min-width: 1600px) {
+    .energy-accumulated-container-component {
+        grid-template-columns: repeat(4, 1fr) !important;
+    }
+}
+
+/* Active Power: Fix bar spacing */
+@media (min-width: 992px) {
+    .active-power-modern .flex-col.gap-4 {
+        gap: 0.75rem !important;
+        /* Reduce gap between phases */
+    }
+
+    .active-power-modern {
+        padding: 1rem !important;
+        /* Consistent padding */
+    }
+}
+
+/* Power Factor: Ensure vertical stacking or proper spacing */
+@media (min-width: 992px) {
+    .pf-container {
+        gap: 0.5rem !important;
+        /* Tighter gap */
+        justify-content: space-between !important;
+    }
+
+    .pf-dial-wrapper {
+        width: 70px !important;
+        height: 70px !important;
+    }
+
+    .pf-value {
+        font-size: 0.9rem !important;
+    }
+}
+
+/* Voltage & Current: Compact lists */
+@media (min-width: 992px) {
+
+    .vb-phases,
+    .cb-phases {
+        gap: 0.5rem !important;
+    }
+
+    .vb-phase,
+    .cb-phase {
+        padding: 0.4rem 0.5rem !important;
+    }
+}

@@ -331,13 +331,13 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
 
             {/* Sub-header: Time Selector (Dashboard Only) */}
             {(currentPage === 'dashboard' || location.pathname === '/') && (
-              <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              <div className="w-full px-4 sm:px-6 lg:px-8 py-3">
                 <TimeSelectorBlock />
               </div>
             )}
 
             {/* Content Layout */}
-            <div className="w-full mx-auto flex items-start pt-6 px-4 sm:px-6 lg:px-8">
+            <div className="w-full flex items-start pt-6 px-4 sm:px-6 lg:px-8">
               <main className="flex-1 w-full min-w-0">
                 {children}
               </main>

@@ -62,29 +62,29 @@ const ActivePowerBlock: React.FC<ActivePowerBlockProps> = ({
 
   return (
     <>
-      <div className="active-power-modern w-full min-h-[200px] rounded-xl border border-slate-200 dark:border-emerald-500/20 bg-white dark:bg-gradient-to-b dark:from-slate-800 dark:to-emerald-950 p-5 transition-all duration-200 hover:border-emerald-500/30 relative overflow-hidden flex flex-col font-sans shadow-sm dark:shadow-none">
+      <div className="active-power-modern w-full h-full min-h-[180px] rounded-xl border border-slate-200 dark:border-emerald-500/20 bg-white dark:bg-gradient-to-b dark:from-slate-800 dark:to-emerald-950 p-4 transition-all duration-200 hover:border-emerald-500/30 relative overflow-hidden flex flex-col font-sans shadow-sm dark:shadow-none">
         {/* Decorative Top Line */}
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 z-10" />
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-500">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-[18px] h-[18px]">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <span className="text-[0.85rem] font-bold text-emerald-800 dark:text-emerald-200 tracking-wider font-sans">{t('power.title').toUpperCase()}</span>
+            <span className="text-[0.8rem] font-bold text-emerald-800 dark:text-emerald-200 tracking-wider font-sans">{t('power.title').toUpperCase()}</span>
           </div>
-          <div className={`px-2.5 py-1 rounded-full text-[0.65rem] font-bold flex items-center gap-1.5 backdrop-blur-sm border ${isConnected && !isStale ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-red-500/15 text-red-400 border-red-500/20'}`}>
+          <div className={`px-2 py-0.5 rounded-full text-[0.6rem] font-bold flex items-center gap-1 backdrop-blur-sm border ${isConnected && !isStale ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-red-500/15 text-red-400 border-red-500/20'}`}>
             <span className={`w-1.5 h-1.5 rounded-full bg-current`}></span>
-            {isConnected ? (isStale ? 'WAITING' : 'ONLINE') : 'OFFLINE'}
+            {isConnected ? (isStale ? 'WAIT' : 'ONLINE') : 'OFFLINE'}
           </div>
         </div>
 
         {/* Total Power Section (Clickable) */}
         <div
-          className="text-center mb-8 relative p-2.5 cursor-pointer rounded-lg transition-colors hover:bg-emerald-50 dark:hover:bg-white/5 active:bg-emerald-100 dark:active:bg-white/10 active:scale-[0.99]"
+          className="text-center mb-4 relative p-2 cursor-pointer rounded-lg transition-colors hover:bg-emerald-50 dark:hover:bg-white/5 active:bg-emerald-100 dark:active:bg-white/10 active:scale-[0.99]"
           onClick={() => setSelectedView('total')}
           title="Click to analyze Total Power Graph"
         >

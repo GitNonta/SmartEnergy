@@ -197,9 +197,12 @@
     box-shadow: none !important;
 }
 
-/* Dashboard container - clip all overflow */
+/* Dashboard container - layout boundaries */
 .dashboard-grid-container {
-    overflow-x: clip;
+    overflow-x: visible;
+    min-width: 100%;
+    /* Ensure no background color is creating a false boundary */
+    background-color: transparent;
 }
 
 /* End of DashboardPage.css */

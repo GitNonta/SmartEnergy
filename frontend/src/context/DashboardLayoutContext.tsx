@@ -23,6 +23,7 @@ interface DashboardLayoutContextType {
     updateLayouts: (newLayouts: Layouts) => void;
     saveLayoutToServer: () => Promise<boolean>;
     resetLayoutToDefault: () => Promise<boolean>;
+    setIsEditMode: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const DashboardLayoutContext = createContext<DashboardLayoutContextType | undefined>(undefined);
@@ -77,8 +78,8 @@ export const DashboardLayoutProvider: React.FC<DashboardLayoutProviderProps> = (
 
     // Migrate old widget IDs to new ones and validate layout compatibility
     const migrateLayouts = (layouts: Layouts): Layouts => {
-        // New column counts for validation
-        const NEW_COLS = { xxl: 12, xl: 10, lg: 8, md: 6, sm: 4, xs: 2 };
+        // New column counts for validation (Updated to 12 for all desktop)
+        const NEW_COLS = { xxl: 12, xl: 12, lg: 12, md: 6, sm: 4, xs: 2 };
 
         const migrateItems = (items: typeof layouts.lg, cols: number, defaultItems: typeof layouts.lg) => {
             if (!items || items.length === 0) {
@@ -156,8 +157,10 @@ export const DashboardLayoutProvider: React.FC<DashboardLayoutProviderProps> = (
 
             const response = await apiResetLayout('default');
 
-            if (response.success && response.data) {
-                setLayouts(response.data.layouts);
+            if (response.success) {
+                // Use local defaultLayouts to ensure we have the latest config (12-col)
+                // disregarding potential outdated server defaults
+                setLayouts(defaultLayouts);
                 setIsEditMode(false);
                 return true;
             } else {
@@ -184,6 +187,7 @@ export const DashboardLayoutProvider: React.FC<DashboardLayoutProviderProps> = (
         updateLayouts,
         saveLayoutToServer,
         resetLayoutToDefault,
+        setIsEditMode, // Expose setter
     };
 
     return (
