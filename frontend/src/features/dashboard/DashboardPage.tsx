@@ -9,7 +9,7 @@ import 'react-resizable/css/styles.css';
 // Use RGL directly with types ignored for simplicity
 const GridLayout: any = RGL;
 
-import FrequencyBlock from '../../components/FrequencyBlock';
+import VoltageBlock from '../../components/VoltageBlock';
 import CurrentBlock from '../../components/CurrentBlock';
 import PowerFactorBlock from '../../components/PowerFactorBlock';
 import EnergyAccumulatedBlock from '../../components/EnergyAccumulatedBlock';
@@ -31,16 +31,33 @@ const widgetComponents: Record<string, { component: React.FC; title: string }> =
   'energy-cost': { component: EnergyCostBlock, title: 'Energy Cost' },
   'active-power': { component: ActivePowerBlock, title: 'Active Power' },
   'energy-accumulated': { component: EnergyAccumulatedBlock, title: 'Energy Accumulated' },
-  'frequency': { component: FrequencyBlock, title: 'Voltage' },
+  'voltage': { component: VoltageBlock, title: 'Voltage' },
   'current': { component: CurrentBlock, title: 'Current' },
   'power-factor': { component: PowerFactorBlock, title: 'Power Factor' },
   'statistics': { component: StatisticsBlock, title: 'Statistics' },
 };
 
-// Grid configuration - Auto-expanding, no limits
-const GRID_COLS = 24; // More columns for finer horizontal positioning
-const ROW_HEIGHT = 60; // Smaller rows for finer vertical positioning
-const MARGIN: [number, number] = [8, 8]; // Smaller margins
+// Grid configuration - Responsive
+const BREAKPOINTS = {
+  xxl: 1400,
+  xl: 1200,
+  lg: 992,
+  md: 768,
+  sm: 576,
+  xs: 0
+};
+
+const COLS_BY_BREAKPOINT = {
+  xxl: 12,
+  xl: 10,
+  lg: 8,
+  md: 6,
+  sm: 4,
+  xs: 2
+};
+
+const ROW_HEIGHT = 80; // Consistent row height
+const MARGIN: [number, number] = [12, 12]; // Margins
 
 // Inner component that uses the layout context
 const DashboardContent: React.FC = () => {
@@ -71,8 +88,21 @@ const DashboardContent: React.FC = () => {
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
-  // Get current layout (use lg for all breakpoints for simplicity)
-  const currentLayout = layouts.lg || [];
+  // Determine current breakpoint based on container width
+  const getCurrentBreakpoint = (width: number): keyof typeof BREAKPOINTS => {
+    if (width >= BREAKPOINTS.xxl) return 'xxl';
+    if (width >= BREAKPOINTS.xl) return 'xl';
+    if (width >= BREAKPOINTS.lg) return 'lg';
+    if (width >= BREAKPOINTS.md) return 'md';
+    if (width >= BREAKPOINTS.sm) return 'sm';
+    return 'xs';
+  };
+
+  const currentBreakpoint = getCurrentBreakpoint(containerWidth);
+  const currentCols = COLS_BY_BREAKPOINT[currentBreakpoint];
+
+  // Get current layout based on breakpoint
+  const currentLayout = layouts[currentBreakpoint] || layouts.lg || [];
 
   // Get hidden widgets (not in current layout)
   const hiddenWidgets = Object.keys(widgetComponents).filter(
@@ -233,15 +263,14 @@ const DashboardContent: React.FC = () => {
         <GridLayout
           className="layout"
           layout={gridLayout}
-          cols={GRID_COLS}
+          cols={currentCols}
           rowHeight={ROW_HEIGHT}
           width={containerWidth}
           margin={MARGIN}
           isDraggable={canEdit}
           isResizable={canEdit}
-          compactType={null}
+          compactType="vertical"
           preventCollision={false}
-          allowOverlap={true}
           autoSize={true}
           isBounded={false}
           onLayoutChange={canEdit ? (handleLayoutChange as any) : undefined}

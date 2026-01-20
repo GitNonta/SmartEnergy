@@ -57,7 +57,9 @@ export const DashboardLayoutProvider: React.FC<DashboardLayoutProviderProps> = (
                 const response = await getLayout('default');
 
                 if (response.success && response.data) {
-                    setLayouts(response.data.layouts);
+                    // Migrate old 'frequency' key to 'voltage'
+                    const migratedLayouts = migrateLayouts(response.data.layouts);
+                    setLayouts(migratedLayouts);
                 } else {
                     // Use default layout if fetch fails
                     setLayouts(defaultLayouts);
@@ -72,6 +74,40 @@ export const DashboardLayoutProvider: React.FC<DashboardLayoutProviderProps> = (
 
         loadLayout();
     }, []);
+
+    // Migrate old widget IDs to new ones and validate layout compatibility
+    const migrateLayouts = (layouts: Layouts): Layouts => {
+        // New column counts for validation
+        const NEW_COLS = { xxl: 12, xl: 10, lg: 8, md: 6, sm: 4, xs: 2 };
+
+        const migrateItems = (items: typeof layouts.lg, cols: number, defaultItems: typeof layouts.lg) => {
+            if (!items || items.length === 0) {
+                return defaultItems;
+            }
+
+            // Check if any widget exceeds new column count - if so, use default
+            const hasIncompatible = items.some(item => item.x + item.w > cols);
+            if (hasIncompatible) {
+                console.log(`Layout incompatible with ${cols} columns, using default`);
+                return defaultItems;
+            }
+
+            return items.map(item => ({
+                ...item,
+                // Convert 'frequency' to 'voltage'
+                i: item.i === 'frequency' ? 'voltage' : item.i
+            }));
+        };
+
+        return {
+            xxl: migrateItems(layouts.xxl, NEW_COLS.xxl, defaultLayouts.xxl),
+            xl: migrateItems(layouts.xl, NEW_COLS.xl, defaultLayouts.xl),
+            lg: migrateItems(layouts.lg, NEW_COLS.lg, defaultLayouts.lg),
+            md: migrateItems(layouts.md, NEW_COLS.md, defaultLayouts.md),
+            sm: migrateItems(layouts.sm, NEW_COLS.sm, defaultLayouts.sm),
+            xs: migrateItems(layouts.xs, NEW_COLS.xs, defaultLayouts.xs),
+        };
+    };
 
     // Toggle edit mode (admin only)
     const toggleEditMode = useCallback(() => {
