@@ -4,7 +4,7 @@
 // รองรับการทำงานบนมือถือและ background sync
 
 // Increment or timestamp this to force full cache refresh on deploy
-const CACHE_VERSION = '1768291949967';
+const CACHE_VERSION = '1768986769788';
 const CACHE_NAME = 'smart-energy-' + CACHE_VERSION;
 // Minimal pre-cache; hashed bundles are cache-managed automatically by browser due to unique names
 const PRECACHE_URLS = [ '/', '/manifest.json' ];

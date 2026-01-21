@@ -1,0 +1,186 @@
+{
+  "meta": {
+    "project": "SmartEnergy",
+    "date": "2026-01-15",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "SmartEnergy is an advanced real-time energy monitoring and management platform designed to provide industrial and residential users with comprehensive insights into their electrical consumption and cost. It features a customizable dashboard displaying multi-phase electrical parameters such as voltage, current, power factor, and accumulated energy, supported by powerful visualization tools and real-time data streaming from ESP32-based devices.",
+  "core_goals": [
+    "Provide accurate real-time monitoring of electrical parameters across 3-phase power systems.",
+    "Enable users to customize their dashboard views for tailored insights and enhanced usability.",
+    "Support multi-language (English and Thai) and theme preferences to improve accessibility and user experience.",
+    "Facilitate efficient device and user management, including authentication and firmware updates.",
+    "Ensure data accuracy, security, and system performance with scalable backend infrastructure."
+  ],
+  "key_features": [
+    "Customizable real-time dashboard with drag-and-drop grid layouts and view modes (Default and Custom).",
+    "Comprehensive energy monitoring widgets including energy cost, active power, voltage, current, power factor, energy accumulation, and statistical analysis.",
+    "Real-time data visualization with WebSocket streaming and historical trend charts using Recharts and ApexCharts.",
+    "Device management capabilities such as ESP32 device registration, firmware OTA updates, and connection status monitoring.",
+    "User authentication with JWT-based login, role-based access control, and full CRUD for user management.",
+    "Internationalization supporting English and Thai languages with localized formats for date, time, and currency.",
+    "Light and Dark theme options with preferences saved for consistent experience.",
+    "Backend data ingestion service integrating ESP32 power meters via HTTP POST into InfluxDB for efficient time-series data management."
+  ],
+  "user_flow_summary": [
+    "User logs in via the JWT-secured authentication system; admin users access user and device management panels.",
+    "Users select or customize their dashboard layout to view relevant energy monitoring widgets in real-time.",
+    "ESP32 devices continuously send measurement data to the backend, which processes and stores it for display and historical analysis.",
+    "Users analyze energy consumption and cost data, switch between different devices or locations, and export reports as needed.",
+    "Administrators manage users and devices, perform firmware updates, and monitor device connection status.",
+    "Users switch languages between English and Thai and toggle theme preferences between Light and Dark modes, with preferences persisted across sessions."
+  ],
+  "validation_criteria": [
+    "Real-time dashboard loads within 2 seconds and updates charts under 100 milliseconds.",
+    "Data accuracy achieves a 99.9% match with physical meter readings.",
+    "System maintains 99.5% uptime availability with support for up to 100 concurrent ESP32 devices.",
+    "Security enforced with HTTPS, JWT token authentication, and password hashing.",
+    "User interface is responsive and functions correctly across the latest 2 versions of major browsers and mobile devices.",
+    "All user management features (login, CRUD operations) and device management (registration, firmware update) operate without errors.",
+    "Internationalization and theme preferences persist correctly and localizations are accurate for English and Thai.",
+    "Energy data ingestion and real-time data streaming via WebSocket work reliably with minimal latency."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "React 18",
+      "Vite",
+      "Node.js",
+      "Express.js",
+      "InfluxDB",
+      "PostgreSQL",
+      "WebSocket",
+      "TailwindCSS",
+      "react-grid-layout",
+      "Recharts",
+      "ApexCharts",
+      "i18n (EN/TH)"
+    ],
+    "features": [
+      {
+        "name": "Dashboard",
+        "description": "Real-time energy monitoring dashboard with customizable grid layout, supporting Default and Custom view modes",
+        "files": [
+          "frontend/src/features/dashboard/DashboardPage.tsx",
+          "frontend/src/config/defaultDashboardLayout.ts",
+          "frontend/src/context/DashboardLayoutContext.tsx"
+        ]
+      },
+      {
+        "name": "Energy Cost Monitoring",
+        "description": "Displays real-time and historical energy cost data with charts",
+        "files": [
+          "frontend/src/components/EnergyCostBlock.tsx",
+          "frontend/src/components/EnergyCostHistoryChart.tsx"
+        ]
+      },
+      {
+        "name": "Active Power Display",
+        "description": "Real-time active power monitoring with gauge visualization",
+        "files": [
+          "frontend/src/components/ActivePowerBlock.tsx",
+          "frontend/src/components/ActivePowerRealtimeChart.tsx"
+        ]
+      },
+      {
+        "name": "Voltage Monitoring",
+        "description": "3-phase voltage display with clickable phase analysis charts",
+        "files": [
+          "frontend/src/components/VoltageBlock.tsx",
+          "frontend/src/components/VoltageRealtimeChart.tsx"
+        ]
+      },
+      {
+        "name": "Current Monitoring",
+        "description": "3-phase current display with bar visualization and phase analysis",
+        "files": [
+          "frontend/src/components/CurrentBlock.tsx",
+          "frontend/src/components/CurrentRealtimeChart.tsx"
+        ]
+      },
+      {
+        "name": "Power Factor Display",
+        "description": "Circular gauge display for 3-phase power factor with color-coded efficiency",
+        "files": [
+          "frontend/src/components/PowerFactorBlock.tsx",
+          "frontend/src/styles/components/blocks/_power-factor.css"
+        ]
+      },
+      {
+        "name": "Energy Accumulation",
+        "description": "Cumulative energy usage tracking and display",
+        "files": [
+          "frontend/src/components/EnergyAccumulatedBlock.tsx",
+          "frontend/src/components/EnergyAccumulatedChart.tsx"
+        ]
+      },
+      {
+        "name": "Statistics Panel",
+        "description": "Statistical summary with comparison metrics and peak usage data",
+        "files": [
+          "frontend/src/components/StatisticsBlock.tsx",
+          "frontend/src/components/TimeRangeSummaryPanel.tsx"
+        ]
+      },
+      {
+        "name": "WebSocket Real-time Data",
+        "description": "Real-time data streaming from ESP32 devices via WebSocket",
+        "files": [
+          "frontend/src/context/WebSocketContext.tsx",
+          "backend/src/server.js"
+        ]
+      },
+      {
+        "name": "User Authentication",
+        "description": "JWT-based authentication with login, logout, and session management",
+        "files": [
+          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/features/auth/LoginPage.tsx",
+          "backend/src/routes/auth.js"
+        ]
+      },
+      {
+        "name": "User Management",
+        "description": "Admin panel for managing users with CRUD operations",
+        "files": [
+          "frontend/src/features/admin/UserManagement.tsx",
+          "backend/src/routes/users.js"
+        ]
+      },
+      {
+        "name": "Device Management",
+        "description": "ESP32 device registration and firmware update functionality",
+        "files": [
+          "frontend/src/components/DeviceFirmwareManager.tsx",
+          "frontend/src/components/DeviceSelector.tsx",
+          "backend/src/routes/devices.js"
+        ]
+      },
+      {
+        "name": "Internationalization",
+        "description": "Multi-language support (English and Thai)",
+        "files": [
+          "frontend/src/context/LanguageContext.tsx",
+          "frontend/src/translations/en.json",
+          "frontend/src/translations/th.json"
+        ]
+      },
+      {
+        "name": "Theme Support",
+        "description": "Light and Dark mode with persistent preference",
+        "files": [
+          "frontend/src/context/ThemeContext.tsx",
+          "frontend/src/styles/base/_theme.css"
+        ]
+      },
+      {
+        "name": "Data Ingestion",
+        "description": "Backend service for ingesting energy data from ESP32 to InfluxDB",
+        "files": [
+          "backend/src/ingestor.js",
+          "backend/src/services/influxService.js"
+        ]
+      }
+    ]
+  }
+}

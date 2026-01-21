@@ -254,7 +254,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
     const chartInstance = useRef<any>(null);
     const chartDivRef = useRef<HTMLDivElement>(null);
 
-    const locale = language === 'th' ? 'th-TH' : language === 'zh' ? 'zh-CN' : 'en-US';
+    const locale = language === 'th' ? 'th-TH' : 'en-US';
 
     // AI State
     const [analyzing, setAnalyzing] = useState(false);

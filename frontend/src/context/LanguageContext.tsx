@@ -3,22 +3,19 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 // Import translations
 import en from '../translations/en.json';
 import th from '../translations/th.json';
-import zh from '../translations/zh.json';
 
-export type Language = 'en' | 'th' | 'zh';
+export type Language = 'en' | 'th';
 
 type TranslationData = typeof en;
 
 const translations: Record<Language, TranslationData> = {
     en,
-    th,
-    zh
+    th
 };
 
 export const LANGUAGES: { code: Language; name: string; flag: string }[] = [
     { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'th', name: 'ไทย', flag: '🇹🇭' },
-    { code: 'zh', name: '中文', flag: '🇨🇳' }
+    { code: 'th', name: 'ไทย', flag: '🇹🇭' }
 ];
 
 interface LanguageContextType {

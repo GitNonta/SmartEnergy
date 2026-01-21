@@ -109,7 +109,6 @@ const StatisticsBlock: React.FC = () => {
     const getLocale = (lang: string) => {
         switch (lang) {
             case 'th': return 'th-TH';
-            case 'zh': return 'zh-CN';
             default: return 'en-US';
         }
     };

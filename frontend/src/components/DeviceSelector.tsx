@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { getApiBase } from '../config/api';
 
 interface DeviceSelectorProps {
     selectedDevice: string;
-    onDeviceChange: (deviceId: string) => void;
+    onDeviceChange?: (deviceId: string) => void;
+    onSelect?: Dispatch<SetStateAction<string>> | ((deviceId: string) => void);
 }
 
 const DeviceSelector: React.FC<DeviceSelectorProps> = ({
     selectedDevice,
-    onDeviceChange
+    onDeviceChange,
+    onSelect
 }) => {
+    const handleChange = onSelect || onDeviceChange || (() => { });
     const [devices, setDevices] = useState<string[]>(['AI205']);
     const [loading, setLoading] = useState(true);
 
@@ -41,7 +44,7 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
             <label>Device:</label>
             <select
                 value={selectedDevice}
-                onChange={(e) => onDeviceChange(e.target.value)}
+                onChange={(e) => handleChange(e.target.value)}
                 disabled={loading}
             >
                 {devices.map(device => (

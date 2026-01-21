@@ -134,7 +134,7 @@ export default function HourlyEnergyChart({
     const chartInstance = useRef<any>(null);
     const chartDivRef = useRef<HTMLDivElement>(null);
 
-    const locale = language === 'th' ? 'th-TH' : language === 'zh' ? 'zh-CN' : 'en-US';
+    const locale = language === 'th' ? 'th-TH' : 'en-US';
 
     // Load ApexCharts
     useEffect(() => {
