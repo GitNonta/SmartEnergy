@@ -16,175 +16,105 @@
 // 2. ไปที่ InfluxDB UI → Data → Tasks → Create Task
 // 3. Copy Flux Script ไปวาง
 
-// =========================================
-// TASK 1: Hourly Aggregation (ทุก 1 ชั่วโมง)
-// =========================================
-// Name: aggregate_hourly
-// Every: 1h
-// Offset: 5m (รอให้ข้อมูลครบก่อน)
-
+// Task 1: Hourly Aggregation
 /*
+import "timezone"
 option task = {name: "aggregate_hourly", every: 1h, offset: 5m}
+option location = timezone.location(name: "Asia/Bangkok")
 
 // Aggregate power metrics (mean)
 from(bucket: "AI205_raw")
   |> range(start: -1h)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "power_active" or r._field == "power_factor" or r._field == "frequency")
+  |> filter(fn: (r) => r._field == "power_active_kw" or r._field == "power_factor" or r._field == "frequency")
   |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
   |> to(bucket: "AI205_hourly", org: "Ennergy")
 
-// Aggregate energy (difference - nonNegative to handle meter reset)
+// Aggregate energy using Integral (Power -> Energy)
 from(bucket: "AI205_raw")
   |> range(start: -1h)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "energy_import" or r._field == "energy_total")
-  |> aggregateWindow(every: 1h, fn: last, createEmpty: false)
-  |> difference(nonNegative: true)
-  |> to(bucket: "AI205_hourly", org: "Ennergy")
-
-// Aggregate per-phase data
-from(bucket: "AI205_raw")
-  |> range(start: -1h)
-  |> filter(fn: (r) => r._measurement == "energy_per_phase")
-  |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+  |> filter(fn: (r) => r._field == "power_active_kw")
+  |> integral(unit: 1h)
+  |> map(fn: (r) => ({r with _field: "energy_total", _measurement: "energy_3phase"}))
   |> to(bucket: "AI205_hourly", org: "Ennergy")
 */
 
-
-// =========================================
-// TASK 2: Daily Aggregation (ทุกวัน)
-// =========================================
-// Name: aggregate_daily
-// Every: 1d
-// Offset: 10m
-
+// Task 2: Daily Aggregation
 /*
+import "timezone"
 option task = {name: "aggregate_daily", every: 1d, offset: 10m}
+option location = timezone.location(name: "Asia/Bangkok")
 
-// Aggregate power metrics from RAW (not from hourly!)
-from(bucket: "AI205_raw")
+from(bucket: "AI205_hourly")
   |> range(start: -1d)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "power_active" or r._field == "power_factor" or r._field == "frequency")
+  |> filter(fn: (r) => r._field == "power_active_kw")
   |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)
   |> to(bucket: "AI205_daily", org: "Ennergy")
 
-// Daily energy consumption (difference with nonNegative)
-from(bucket: "AI205_raw")
+from(bucket: "AI205_hourly")
   |> range(start: -1d)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "energy_import" or r._field == "energy_total")
-  |> aggregateWindow(every: 1d, fn: last, createEmpty: false)
-  |> difference(nonNegative: true)
-  |> to(bucket: "AI205_daily", org: "Ennergy")
-
-// Per-phase daily aggregation
-from(bucket: "AI205_raw")
-  |> range(start: -1d)
-  |> filter(fn: (r) => r._measurement == "energy_per_phase")
-  |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)
+  |> filter(fn: (r) => r._field == "energy_total")
+  |> sum()
   |> to(bucket: "AI205_daily", org: "Ennergy")
 */
 
-
-// =========================================
-// TASK 3: Weekly Aggregation (ทุกสัปดาห์)
-// =========================================
-// Name: aggregate_weekly
-// Every: 1w
-// Offset: 15m
-
+// Task 3: Weekly Aggregation
 /*
 option task = {name: "aggregate_weekly", every: 1w, offset: 15m}
 
-// Weekly power metrics from RAW
-from(bucket: "AI205_raw")
+from(bucket: "AI205_daily")
   |> range(start: -1w)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "power_active" or r._field == "power_factor" or r._field == "frequency")
+  |> filter(fn: (r) => r._field == "power_active_kw")
   |> aggregateWindow(every: 1w, fn: mean, createEmpty: false)
   |> to(bucket: "AI205_weekly", org: "Ennergy")
 
-// Weekly energy consumption
-from(bucket: "AI205_raw")
+from(bucket: "AI205_daily")
   |> range(start: -1w)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "energy_import" or r._field == "energy_total")
-  |> aggregateWindow(every: 1w, fn: last, createEmpty: false)
-  |> difference(nonNegative: true)
-  |> to(bucket: "AI205_weekly", org: "Ennergy")
-
-// Per-phase weekly aggregation
-from(bucket: "AI205_raw")
-  |> range(start: -1w)
-  |> filter(fn: (r) => r._measurement == "energy_per_phase")
-  |> aggregateWindow(every: 1w, fn: mean, createEmpty: false)
+  |> filter(fn: (r) => r._field == "energy_total")
+  |> sum()
   |> to(bucket: "AI205_weekly", org: "Ennergy")
 */
 
-
-// =========================================
-// TASK 4: Monthly Aggregation (ทุกเดือน)
-// =========================================
-// Name: aggregate_monthly
-// Every: 1mo
-// Offset: 30m
-
+// Task 4: Monthly Aggregation
 /*
 option task = {name: "aggregate_monthly", every: 1mo, offset: 30m}
 
-// Monthly power metrics from RAW
-from(bucket: "AI205_raw")
+from(bucket: "AI205_daily")
   |> range(start: -1mo)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "power_active" or r._field == "power_factor" or r._field == "frequency")
+  |> filter(fn: (r) => r._field == "power_active_kw")
   |> aggregateWindow(every: 1mo, fn: mean, createEmpty: false)
   |> to(bucket: "AI205_monthly", org: "Ennergy")
 
-// Monthly energy consumption
-from(bucket: "AI205_raw")
+from(bucket: "AI205_daily")
   |> range(start: -1mo)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "energy_import" or r._field == "energy_total")
-  |> aggregateWindow(every: 1mo, fn: last, createEmpty: false)
-  |> difference(nonNegative: true)
-  |> to(bucket: "AI205_monthly", org: "Ennergy")
-
-// Per-phase monthly aggregation
-from(bucket: "AI205_raw")
-  |> range(start: -1mo)
-  |> filter(fn: (r) => r._measurement == "energy_per_phase")
-  |> aggregateWindow(every: 1mo, fn: mean, createEmpty: false)
+  |> filter(fn: (r) => r._field == "energy_total")
+  |> sum()
   |> to(bucket: "AI205_monthly", org: "Ennergy")
 */
 
-
-// =========================================
-// TASK 5: Yearly/Billing Aggregation (ทุกปี)
-// =========================================
-// Name: aggregate_yearly
-// Every: 1y
-// Offset: 1h
-
+// Task 5: Yearly Aggregation
 /*
 option task = {name: "aggregate_yearly", every: 1y, offset: 1h}
 
-// Yearly power metrics from RAW
-from(bucket: "AI205_raw")
+from(bucket: "AI205_monthly")
   |> range(start: -1y)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "power_active" or r._field == "power_factor" or r._field == "frequency")
+  |> filter(fn: (r) => r._field == "power_active_kw")
   |> aggregateWindow(every: 1y, fn: mean, createEmpty: false)
   |> to(bucket: "AI205_yearly", org: "Ennergy")
 
-// Yearly energy consumption
-from(bucket: "AI205_raw")
+from(bucket: "AI205_monthly")
   |> range(start: -1y)
   |> filter(fn: (r) => r._measurement == "energy_3phase")
-  |> filter(fn: (r) => r._field == "energy_import" or r._field == "energy_total")
-  |> aggregateWindow(every: 1y, fn: last, createEmpty: false)
-  |> difference(nonNegative: true)
+  |> filter(fn: (r) => r._field == "energy_total")
+  |> sum()
   |> to(bucket: "AI205_yearly", org: "Ennergy")
 */
 

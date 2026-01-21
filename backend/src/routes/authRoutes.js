@@ -443,4 +443,80 @@ router.get('/users', authMiddleware('admin'), async (req, res) => {
   }
 });
 
+/**
+ * POST /api/auth/reset-rate-limit
+ * Reset rate limiting (admin only) - For testing purposes
+ */
+router.post('/reset-rate-limit', authMiddleware('admin'), async (req, res) => {
+  try {
+    const { ip } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    
+    if (ip) {
+      // Reset specific IP
+      const key = `login_fail:${ip}`;
+      failedAttempts.delete(key);
+      
+      await logActivity(req.user.userId, 'RATE_LIMIT_RESET', 'auth',
+        { targetIp: ip, action: 'reset_single' }, ipAddress);
+      
+      res.json({
+        success: true,
+        message: `Rate limit reset for IP: ${ip}`
+      });
+    } else {
+      // Reset all
+      const count = failedAttempts.size;
+      failedAttempts.clear();
+      
+      await logActivity(req.user.userId, 'RATE_LIMIT_RESET', 'auth',
+        { action: 'reset_all', clearedEntries: count }, ipAddress);
+      
+      res.json({
+        success: true,
+        message: `Rate limit reset for all ${count} entries`
+      });
+    }
+  } catch (error) {
+    console.error('Reset rate limit error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset rate limit'
+    });
+  }
+});
+
+/**
+ * GET /api/auth/rate-limit-status
+ * Get rate limit status (admin only)
+ */
+router.get('/rate-limit-status', authMiddleware('admin'), async (req, res) => {
+  try {
+    const entries = [];
+    for (const [key, data] of failedAttempts.entries()) {
+      entries.push({
+        key,
+        count: data.count,
+        lockUntil: data.lockUntil,
+        locked: data.lockUntil && data.lockUntil > Date.now(),
+        lastAttempt: data.lastAttempt
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        totalEntries: entries.length,
+        entries
+      }
+    });
+  } catch (error) {
+    console.error('Get rate limit status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get rate limit status'
+    });
+  }
+});
+
 module.exports = router;

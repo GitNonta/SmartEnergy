@@ -811,6 +811,12 @@ app.get('/api/data/downsampled', async (req, res) => {
   }
 });
 
+// ============================================
+// 🔧 FIX: Route moved to energyRoutes.js
+// The following was commented out to resolve Route Conflict
+// See: docs/FIX_IMPLEMENTATION.md - STEP 1
+// ============================================
+/*
 // ✅ Get daily consumption breakdown by hour (for 24H chart)
 // ใช้ Power × Time (power_avg × 1h) จาก raw bucket โดยตรง
 // ⚡ OPTIMIZED: Added caching for faster response
@@ -928,6 +934,7 @@ app.get('/api/energy/daily-consumption', async (req, res) => {
     });
   }
 });
+*/
 
 
 // Get statistics for a field

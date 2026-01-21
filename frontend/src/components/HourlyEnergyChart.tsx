@@ -57,7 +57,9 @@ async function fetchChartData(mode: ChartViewMode, deviceId: string, isDark: boo
         switch (mode) {
             case 'hourly':
                 endpoint = '/api/chart/hourly';
-                range = '-24h';
+                // ✅ FIX: Use 'today()' to match Daily Accumulated Block (Since Midnight)
+                // Instead of '-24h' (Rolling), which causes discrepancies
+                range = 'today()';
                 break;
             case 'daily':
                 endpoint = '/api/report/daily';

@@ -138,5 +138,30 @@ module.exports = function(lineMessagingService) {
     }
   });
 
+  // ============================================
+  // Alias Routes for Frontend/Test Compatibility
+  // ============================================
+  
+  // GET /api/notifications/settings - Alias for /line/status
+  router.get('/settings', (req, res) => {
+    try {
+      const status = lineMessagingService.getStatus();
+      res.json({ success: true, ...status });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // POST /api/notifications/settings - Alias for /line/config
+  router.post('/settings', (req, res) => {
+    try {
+      const { channelAccessToken, subscribers } = req.body;
+      lineMessagingService.updateConfig({ channelAccessToken, subscribers });
+      res.json({ success: true, message: 'Configuration updated (via alias)' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   return router;
 };

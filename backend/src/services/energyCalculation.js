@@ -91,6 +91,86 @@ function calculateAveragePowerFactor(data) {
   return (pf1 + pf2 + pf3) / count;
 }
 
+/**
+ * คำนวณค่าไฟตามอัตราก้าวหน้า (PEA Type 1.1.2)
+ * Progressive Rate Tariff - Same structure as server.js TARIFF_TIERS
+ * 
+ * @param {number} units - จำนวนหน่วยไฟฟ้า (kWh)
+ * @param {number} ft - ค่า Ft (บาท/หน่วย, default 0.3972)
+ * @returns {object} รายละเอียดค่าไฟ
+ */
+function calculateProgressiveCost(units, ft = 0.3972) {
+  if (units <= 0) return { 
+    energyCharge: 0, 
+    ftCharge: 0, 
+    serviceCharge: 0, 
+    subtotal: 0, 
+    vat: 0, 
+    total: 0,
+    units: 0 
+  };
+  
+  // โครงสร้างอัตราค่าไฟฟ้า PEA Type 1.1.2 (บาท/หน่วย)
+  const TARIFF_TIERS = [
+    { from: 0, to: 15, rate: 2.3488 },
+    { from: 15, to: 25, rate: 2.9882 },
+    { from: 25, to: 35, rate: 3.2405 },
+    { from: 35, to: 100, rate: 3.6237 },
+    { from: 100, to: 150, rate: 3.7171 },
+    { from: 150, to: 400, rate: 4.2218 },
+    { from: 400, to: Infinity, rate: 4.4217 }
+  ];
+  
+  const SERVICE_CHARGE = 8.19; // ค่าบริการรายเดือน (บาท)
+  const VAT_RATE = 0.07;       // ภาษีมูลค่าเพิ่ม 7%
+  
+  let remaining = units;
+  let energyCharge = 0;
+  
+  // คำนวณค่าพลังงานไฟฟ้าตามขั้นบันได
+  for (const tier of TARIFF_TIERS) {
+    if (remaining <= 0) break;
+    
+    const tierUnits = Math.min(remaining, tier.to - tier.from);
+    if (tierUnits > 0) {
+      energyCharge += tierUnits * tier.rate;
+      remaining -= tierUnits;
+    }
+  }
+  
+  // คำนวณค่า Ft (Fuel Adjustment)
+  const ftCharge = units * ft;
+  
+  // รวมยอดก่อน VAT
+  const subtotal = energyCharge + SERVICE_CHARGE + ftCharge;
+  
+  // คำนวณ VAT
+  const vat = subtotal * VAT_RATE;
+  
+  // รวมยอดสุทธิ
+  const total = subtotal + vat;
+  
+  return {
+    units: parseFloat(units.toFixed(2)),
+    energyCharge: parseFloat(energyCharge.toFixed(2)),
+    ftCharge: parseFloat(ftCharge.toFixed(2)),
+    serviceCharge: SERVICE_CHARGE,
+    subtotal: parseFloat(subtotal.toFixed(2)),
+    vat: parseFloat(vat.toFixed(2)),
+    total: parseFloat(total.toFixed(2))
+  };
+}
+
+/**
+ * คำนวณค่าไฟอย่างง่าย (ได้เฉพาะ total)
+ * @param {number} units - จำนวนหน่วยไฟฟ้า (kWh)
+ * @param {number} ft - ค่า Ft (บาท/หน่วย)
+ * @returns {number} ค่าไฟรวม VAT (บาท)
+ */
+function getProgressiveCostTotal(units, ft = 0.3972) {
+  return calculateProgressiveCost(units, ft).total;
+}
+
 module.exports = {
   ELECTRICITY_RATE,
   calculateCost,
@@ -99,5 +179,8 @@ module.exports = {
   calculateEnergyConsumption,
   formatEnergy,
   formatPower,
-  calculateAveragePowerFactor
+  calculateAveragePowerFactor,
+  calculateProgressiveCost,
+  getProgressiveCostTotal
 };
+

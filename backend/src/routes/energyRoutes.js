@@ -22,45 +22,27 @@ module.exports = function(influxService, energyState) {
     }
   });
 
-  // Get daily consumption from hourly bucket
+  // Get daily consumption from hourly bucket + real-time current hour (HYBRID)
+  // STEP 4 FIX: Combines historical data with realtime for current hour
   router.get('/daily-consumption', async (req, res) => {
     try {
       const { deviceId = 'AI205' } = req.query;
       
-      console.log(`📊 Fetching daily consumption from HOURLY bucket for ${deviceId}...`);
+      console.log(`📊 Fetching daily consumption (HYBRID) for ${deviceId}...`);
       
-      // ✅ Use hourly bucket (not raw!)
+      // PART A: ดึงข้อมูลประวัติ (Historical) จาก Hourly Bucket
       const hourlyResult = await influxService.queryFromBucket('hourly', '-24h', deviceId, ['energy_total']);
-      const hourlyData = hourlyResult.data || [];
+      let hourlyData = hourlyResult.data || [];
       
       console.log(`✅ Got ${hourlyData.length} hourly data points from AI205_hourly`);
 
-      if (!Array.isArray(hourlyData) || hourlyData.length === 0) {
-        const emptyHours = [];
-        for (let i = 0; i < 24; i++) {
-          emptyHours.push({
-            hour: String(i).padStart(2, '0') + ':00',
-            energy_total: 0,
-            quality: 'no_data'
-          });
-        }
-        return res.json({
-          success: true,
-          source: 'AI205_hourly',
-          deviceId,
-          hourlyData: emptyHours,
-          totalEnergy: 0,
-          dataPoints: 0,
-          note: '⚠️ No data in hourly bucket'
-        });
-      }
-
-      // Group by hour of day
+      // Initialize all 24 hours with base data
       const hourlyMap = new Map();
       for (let i = 0; i < 24; i++) {
         hourlyMap.set(i, { energy_total: 0, quality: 'no_data', count: 0 });
       }
 
+      // Process historical hourly data
       for (const point of hourlyData) {
         try {
           if (!point._time) continue;
@@ -80,32 +62,81 @@ module.exports = function(influxService, energyState) {
         }
       }
 
+      // PART B: ดึงข้อมูลชั่วโมงปัจจุบัน (Real-time) จาก Raw Bucket
+      const now = new Date();
+      const currentHour = now.getHours();
+      const startOfHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), currentHour, 0, 0);
+      
+      try {
+        // Query Raw Data for current hour only
+        const currentRawData = await influxService.queryData({
+          bucket: 'raw',
+          range: startOfHour.toISOString(),
+          deviceId
+        });
+
+        // Calculate energy for current hour
+        if (currentRawData && currentRawData.length > 0) {
+          const powers = currentRawData
+            .filter(d => d._field === 'power_active_kw')
+            .map(d => parseFloat(d._value) || 0)
+            .filter(v => v > 0);
+          
+          if (powers.length > 0) {
+            // Calculate average power and estimate energy
+            const avgPower = powers.reduce((a, b) => a + b, 0) / powers.length;
+            const minutesElapsed = (now.getTime() - startOfHour.getTime()) / 60000;
+            const hoursElapsed = minutesElapsed / 60;
+            
+            // Energy (kWh) = Power (kW) × Time (hours)
+            const currentEnergy = avgPower * hoursElapsed;
+            
+            // Update current hour with realtime data
+            const slot = hourlyMap.get(currentHour);
+            slot.energy_total = currentEnergy;
+            slot.quality = 'realtime_hybrid';
+            slot.avgPower = avgPower;
+            slot.minutesElapsed = Math.round(minutesElapsed);
+            
+            console.log(`⚡ Current hour ${currentHour}:00 - Avg Power: ${avgPower.toFixed(3)} kW, Energy: ${currentEnergy.toFixed(4)} kWh (${Math.round(minutesElapsed)} min)`);
+          }
+        }
+      } catch (rawError) {
+        console.warn(`⚠️ Could not fetch current hour raw data:`, rawError.message);
+        // Continue with hourly data only
+      }
+
+      // PART C: Convert to array format
       const result = [];
       let totalEnergy = 0;
       
       hourlyMap.forEach((values, hour) => {
         const hourLabel = String(hour).padStart(2, '0') + ':00';
-        const energy = values.energy_total || 0;
+        const energy = hour <= currentHour ? values.energy_total : 0;
         
         result.push({
           hour: hourLabel,
           energy_total: Number(energy.toFixed(3)),
-          quality: values.quality
+          quality: hour <= currentHour ? values.quality : 'future'
         });
         
-        totalEnergy += energy;
+        if (hour <= currentHour) {
+          totalEnergy += energy;
+        }
       });
 
       result.sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
 
       res.json({
         success: true,
-        source: 'AI205_hourly',
+        source: 'AI205_hourly + realtime',
+        calculationMethod: 'hybrid',
         deviceId,
         hourlyData: result,
         totalEnergy: Number(totalEnergy.toFixed(3)),
         dataPoints: hourlyData.length,
-        note: '✅ Data from hourly bucket (Flux is single source of truth)'
+        currentHour,
+        note: '✅ Hybrid: Historical + Realtime for current hour'
       });
     } catch (error) {
       console.error('❌ Error in /daily-consumption:', error);
@@ -118,11 +149,15 @@ module.exports = function(influxService, energyState) {
     try {
       const { range = '-24h', deviceId = 'AI205' } = req.query;
       
-      const result = await influxService.queryFromBucket('hourly', range, deviceId, ['energy_total']);
+      console.log(`📊 Fetching hourly chart data (Integral) for ${deviceId} over ${range}...`);
+      
+      // ✅ Use queryDailyConsumption (Realtime Raw Integral) for accuracy
+      // This matches the Summary Block's logic exactly
+      const result = await influxService.queryDailyConsumption(deviceId, range);
       
       res.json({
         success: true,
-        source: 'AI205_hourly',
+        source: 'AI205_raw (Integral)',
         range,
         deviceId,
         data: result.data || [],
