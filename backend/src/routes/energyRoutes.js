@@ -5,6 +5,8 @@
 
 const express = require('express');
 const router = express.Router();
+const energyCalc = require('../services/energyCalculation');
+const TIMEZONE = process.env.TIMEZONE || 'Asia/Bangkok';
 
 module.exports = function(influxService, energyState) {
   
@@ -69,37 +71,40 @@ module.exports = function(influxService, energyState) {
       
       try {
         // Query Raw Data for current hour only
-        const currentRawData = await influxService.queryData({
-          bucket: 'raw',
-          range: startOfHour.toISOString(),
-          deviceId
-        });
-
-        // Calculate energy for current hour
-        if (currentRawData && currentRawData.length > 0) {
-          const powers = currentRawData
-            .filter(d => d._field === 'power_active_kw')
-            .map(d => parseFloat(d._value) || 0)
-            .filter(v => v > 0);
+        // OPTIMIZED: Calculate mean power directly in InfluxDB to avoid fetching all raw rows
+        const currentHourQuery = `
+          import "timezone"
+          option location = timezone.location(name: "${TIMEZONE}")
           
-          if (powers.length > 0) {
-            // Calculate average power and estimate energy
-            const avgPower = powers.reduce((a, b) => a + b, 0) / powers.length;
-            const minutesElapsed = (now.getTime() - startOfHour.getTime()) / 60000;
-            const hoursElapsed = minutesElapsed / 60;
-            
-            // Energy (kWh) = Power (kW) × Time (hours)
-            const currentEnergy = avgPower * hoursElapsed;
-            
-            // Update current hour with realtime data
-            const slot = hourlyMap.get(currentHour);
-            slot.energy_total = currentEnergy;
-            slot.quality = 'realtime_hybrid';
-            slot.avgPower = avgPower;
-            slot.minutesElapsed = Math.round(minutesElapsed);
-            
-            console.log(`⚡ Current hour ${currentHour}:00 - Avg Power: ${avgPower.toFixed(3)} kW, Energy: ${currentEnergy.toFixed(4)} kWh (${Math.round(minutesElapsed)} min)`);
-          }
+          from(bucket: "${influxService.buckets.raw}")
+            |> range(start: ${startOfHour.toISOString()})
+            |> filter(fn: (r) => r.device_id == "${deviceId}")
+            |> filter(fn: (r) => r._measurement == "energy_3phase")
+            |> filter(fn: (r) => r._field == "power_active_kw")
+            |> mean()
+        `;
+
+        const rawRows = await influxService.queryApi.collectRows(currentHourQuery);
+        
+        if (rawRows.length > 0) {
+           const avgPower = rawRows[0]._value || 0;
+           
+           if (avgPower > 0) {
+             const minutesElapsed = (now.getTime() - startOfHour.getTime()) / 60000;
+             const hoursElapsed = minutesElapsed / 60;
+             
+             // Energy (kWh) = Power (kW) × Time (hours)
+             const currentEnergy = avgPower * hoursElapsed;
+             
+             // Update current hour with realtime data
+             const slot = hourlyMap.get(currentHour);
+             slot.energy_total = currentEnergy;
+             slot.quality = 'realtime_hybrid_optimized'; 
+             slot.avgPower = avgPower;
+             slot.minutesElapsed = Math.round(minutesElapsed);
+             
+             console.log(`⚡ Current hour ${currentHour}:00 - Avg Power: ${avgPower.toFixed(3)} kW, Energy: ${currentEnergy.toFixed(4)} kWh (${Math.round(minutesElapsed)} min)`);
+           }
         }
       } catch (rawError) {
         console.warn(`⚠️ Could not fetch current hour raw data:`, rawError.message);
@@ -268,6 +273,329 @@ module.exports = function(influxService, energyState) {
       });
     } catch (error) {
       console.error('❌ Error in /historical-chart:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ==========================================
+  // MIGRATED ROUTES FROM SERVER.JS
+  // ==========================================
+
+  // GET /api/energy/monthly-chart - Get daily breakdown for current month
+  router.get('/monthly-chart', async (req, res) => {
+    try {
+      const { deviceId = 'AI205' } = req.query;
+      
+      const now = new Date();
+      const currentDay = now.getDate();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      
+      // Start of month in local timezone
+      const monthStart = new Date(currentYear, currentMonth, 1, 0, 0, 0);
+      
+      // Query raw bucket for this month to calculate daily energy
+      const fluxQuery = `
+        import "timezone"
+        import "date"
+        option location = timezone.location(name: "${TIMEZONE}")
+        
+        from(bucket: "${influxService.buckets.raw}")
+          |> range(start: ${monthStart.toISOString()})
+          |> filter(fn: (r) => r.device_id == "${deviceId}")
+          |> filter(fn: (r) => r._measurement == "energy_3phase")
+          |> filter(fn: (r) => r._field == "power_active_kw")
+          |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+          |> map(fn: (r) => ({r with energy_kwh: r._value / 1.0}))
+      `;
+      
+      const rows = await influxService.queryApi.collectRows(fluxQuery);
+      
+      // Initialize daily map
+      const dailyMap = new Map();
+      for (let i = 1; i <= daysInMonth; i++) {
+        dailyMap.set(i, 0);
+      }
+      
+      // Aggregate hourly data into daily
+      rows.forEach(row => {
+        const timestamp = new Date(row._time);
+        if (timestamp.getMonth() === currentMonth && timestamp.getFullYear() === currentYear) {
+          const day = timestamp.getDate();
+          const energyKwh = (row._value || 0);
+          const existing = dailyMap.get(day) || 0;
+          dailyMap.set(day, existing + energyKwh);
+        }
+      });
+      
+      // Convert to chart format
+      const chartData = [];
+      for (let i = 1; i <= daysInMonth; i++) {
+        const value = i <= currentDay ? (dailyMap.get(i) || 0) : 0;
+        chartData.push({ x: `Day ${i}`, y: Number(value.toFixed(3)) });
+      }
+      
+      const totalEnergy = chartData.reduce((sum, d) => sum + d.y, 0);
+      
+      res.json({
+        success: true,
+        chartData,
+        total: Number(totalEnergy.toFixed(3)),
+        currentDay,
+        daysInMonth,
+        month: currentMonth + 1,
+        year: currentYear,
+        unit: 'kWh',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Error in /energy/monthly-chart:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        chartData: []
+      });
+    }
+  });
+
+  // GET /api/energy/yearly-chart - Get monthly breakdown for current year
+  router.get('/yearly-chart', async (req, res) => {
+    try {
+      const { deviceId = 'AI205' } = req.query;
+      
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      // Start of year
+      const yearStart = new Date(currentYear, 0, 1, 0, 0, 0);
+      
+      const fluxQuery = `
+        import "timezone"
+        option location = timezone.location(name: "${TIMEZONE}")
+        
+        from(bucket: "${influxService.buckets.raw}")
+          |> range(start: ${yearStart.toISOString()})
+          |> filter(fn: (r) => r.device_id == "${deviceId}")
+          |> filter(fn: (r) => r._measurement == "energy_3phase")
+          |> filter(fn: (r) => r._field == "power_active_kw")
+          |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+      `;
+      
+      const monthlyMap = new Map();
+      
+      // Initialize all months
+      for (let i = 0; i < 12; i++) {
+        monthlyMap.set(i, 0);
+      }
+      
+      const rows = await influxService.queryApi.collectRows(fluxQuery);
+      
+      // Aggregate hourly data into monthly
+      rows.forEach(row => {
+        const timestamp = new Date(row._time);
+        if (timestamp.getFullYear() === currentYear) {
+          const month = timestamp.getMonth();
+          const energyKwh = row._value || 0; // power_avg × 1h = kWh
+          const existing = monthlyMap.get(month) || 0;
+          monthlyMap.set(month, existing + energyKwh);
+        }
+      });
+      
+      // Convert to chart format
+      const chartData = [];
+      for (let i = 0; i < 12; i++) {
+        const value = i <= currentMonth ? (monthlyMap.get(i) || 0) : 0;
+        chartData.push({ x: months[i], y: Number(value.toFixed(2)) });
+      }
+      
+      const totalEnergy = chartData.reduce((sum, d) => sum + d.y, 0);
+      
+      console.log(`📊 Yearly chart: ${rows.length} hourly points, total ${totalEnergy.toFixed(2)} kWh`);
+      
+      res.json({
+        success: true,
+        chartData,
+        total: Number(totalEnergy.toFixed(2)),
+        currentMonth: currentMonth + 1,
+        year: currentYear,
+        unit: 'kWh',
+        calculationMethod: 'aggregateWindow(1h, mean) + sum (same as monthly)',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Error in /energy/yearly-chart:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        chartData: []
+      });
+    }
+  });
+
+  // GET /api/energy/cost-history - Get historical energy and cost data for chart
+  router.get('/cost-history', async (req, res) => {
+    try {
+      const { 
+        mode = 'monthly', // daily, monthly, yearly
+        deviceId = 'AI205',
+        ftRate = 0.1572 
+      } = req.query;
+      
+      const ft = parseFloat(ftRate);
+      const now = new Date();
+      
+      // Determine range and granularity
+      let range, granularity;
+      const chartData = [];
+      let totalEnergy = 0;
+      let totalCost = 0;
+      
+      if (mode === 'daily') {
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        
+        // Use daily-consumption logic (hourly breakdown)
+        const fluxQuery = `
+          import "timezone"
+          import "date"
+          option location = timezone.location(name: "${TIMEZONE}")
+          
+          todayStart = date.truncate(t: now(), unit: 1d)
+          
+          from(bucket: "${influxService.buckets.raw}")
+            |> range(start: todayStart)
+            |> filter(fn: (r) => r.device_id == "${deviceId}")
+            |> filter(fn: (r) => r._measurement == "energy_3phase")
+            |> filter(fn: (r) => r._field == "power_active_kw")
+            |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+        `;
+        
+        const rows = await influxService.queryApi.collectRows(fluxQuery);
+        
+        // Process hourly data
+        rows.forEach(row => {
+            const timestamp = new Date(row._time);
+            const hour = timestamp.getHours();
+            const hourLabel = String(hour).padStart(2, '0') + ':00';
+            const energy = (row._value || 0) * 1.0; // kW * 1h = kWh
+            
+            // Calculate cost using progressive rate
+            const costData = energyCalc.calculateProgressiveCost(energy, ft);
+            
+            chartData.push({
+                x: hourLabel,
+                energy: Number(energy.toFixed(3)),
+                cost: Number(costData.total.toFixed(2))
+            });
+            
+            totalEnergy += energy;
+            totalCost += costData.total;
+        });
+        
+        // Ensure all hours up to current are present (simplified for now)
+      } else if (mode === 'monthly') {
+        // Daily breakdown for current month
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const monthStart = new Date(currentYear, currentMonth, 1, 0, 0, 0);
+        
+        const fluxQuery = `
+          import "timezone"
+          option location = timezone.location(name: "${TIMEZONE}")
+          
+          from(bucket: "${influxService.buckets.raw}")
+            |> range(start: ${monthStart.toISOString()})
+            |> filter(fn: (r) => r.device_id == "${deviceId}")
+            |> filter(fn: (r) => r._measurement == "energy_3phase")
+            |> filter(fn: (r) => r._field == "power_active_kw")
+            |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+        `;
+        
+        const rows = await influxService.queryApi.collectRows(fluxQuery);
+        const dailyMap = new Map();
+        
+        rows.forEach(row => {
+            const timestamp = new Date(row._time);
+            if (timestamp.getMonth() === currentMonth) {
+                const day = timestamp.getDate();
+                const energy = row._value || 0;
+                const existing = dailyMap.get(day) || 0;
+                dailyMap.set(day, existing + energy);
+            }
+        });
+        
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const currentDay = now.getDate();
+        
+        for (let i = 1; i <= daysInMonth; i++) {
+            if (i > currentDay) break;
+            const energy = dailyMap.get(i) || 0;
+            const costData = energyCalc.calculateProgressiveCost(energy, ft);
+            chartData.push({
+                x: i.toString(),
+                energy: Number(energy.toFixed(3)),
+                cost: Number(costData.total.toFixed(2))
+            });
+            totalEnergy += energy;
+            totalCost += costData.total;
+        }
+      } else if (mode === 'yearly') {
+        // Monthly breakdown for current year
+        const currentYear = now.getFullYear();
+        const yearStart = new Date(currentYear, 0, 1, 0, 0, 0);
+        
+        const fluxQuery = `
+          import "timezone"
+          option location = timezone.location(name: "${TIMEZONE}")
+          
+          from(bucket: "${influxService.buckets.raw}")
+            |> range(start: ${yearStart.toISOString()})
+            |> filter(fn: (r) => r.device_id == "${deviceId}")
+            |> filter(fn: (r) => r._measurement == "energy_3phase")
+            |> filter(fn: (r) => r._field == "power_active_kw")
+            |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+        `;
+        
+        const rows = await influxService.queryApi.collectRows(fluxQuery);
+        const monthlyMap = new Map();
+        
+        rows.forEach(row => {
+            const timestamp = new Date(row._time);
+            if (timestamp.getFullYear() === currentYear) {
+                const month = timestamp.getMonth();
+                const energy = row._value || 0;
+                const existing = monthlyMap.get(month) || 0;
+                monthlyMap.set(month, existing + energy);
+            }
+        });
+        
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const currentMonth = now.getMonth();
+        
+        for (let i = 0; i <= currentMonth; i++) {
+            const energy = monthlyMap.get(i) || 0;
+            const costData = energyCalc.calculateProgressiveCost(energy, ft);
+            chartData.push({
+                x: months[i],
+                energy: Number(energy.toFixed(3)),
+                cost: Number(costData.total.toFixed(2))
+            });
+            totalEnergy += energy;
+            totalCost += costData.total;
+        }
+      }
+      
+      res.json({
+        success: true,
+        mode,
+        chartData,
+        totalEnergy: Number(totalEnergy.toFixed(3)),
+        totalCost: Number(totalCost.toFixed(2))
+      });
+    } catch (error) {
+      console.error('❌ Error in /energy/cost-history:', error);
       res.status(500).json({ success: false, error: error.message });
     }
   });

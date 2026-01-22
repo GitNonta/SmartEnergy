@@ -1054,31 +1054,74 @@ async function runDataIntegrityChecks(range = '-24h', deviceId = 'AI205') {
  * @param {string} deviceId - Device ID
  * @returns {Promise<number>} Daily energy usage in kWh
  */
+/**
+ * Get Real-time Daily Usage (00:00 - Now)
+ * ✅ FIX: Uses Hybrid Approach (Hourly Bucket + Raw Current Hour)
+ * This ensures consistency with the Daily Consumption Chart.
+ * @param {string} deviceId - Device ID
+ * @returns {Promise<number>} Daily energy usage in kWh
+ */
 async function getRealtimeDailyUsage(deviceId = 'AI205') {
-  // ✅ FIX: Use integral for accurate energy calculation
-  // Formula: Energy (kWh) = ∫ Power(kW) dt
-  
-  const fluxQuery = `
-    import "timezone"
-    import "date"
-    option location = timezone.location(name: "${TIMEZONE}")
-    
-    todayStart = date.truncate(t: now(), unit: 1d)
-    
-    from(bucket: "${buckets.raw}")
-      |> range(start: todayStart)
-      |> filter(fn: (r) => r.device_id == "${deviceId}")
-      |> filter(fn: (r) => r._measurement == "energy_3phase")
-      |> filter(fn: (r) => r._field == "power_active_kw")
-      |> integral(unit: 1h)
-  `;
-
   try {
-    const rows = await queryApi.collectRows(fluxQuery);
-    const totalEnergy = rows.length > 0 ? (rows[0]._value || 0) : 0;
+    const now = new Date();
+    const currentHour = now.getHours();
     
-    console.log(`📊 Realtime Daily Usage (integral): ${totalEnergy.toFixed(3)} kWh`);
-    return totalEnergy;
+    // 1. Get sum of past hours for today from Hourly Bucket
+    const historyQuery = `
+      import "timezone"
+      import "date"
+      option location = timezone.location(name: "${TIMEZONE}")
+      
+      todayStart = date.truncate(t: now(), unit: 1d)
+      todayHourStart = date.truncate(t: now(), unit: 1h) // Start of current hour
+      
+      from(bucket: "${buckets.hourly}")
+        |> range(start: todayStart, stop: todayHourStart) // Stop before current hour
+        |> filter(fn: (r) => r.device_id == "${deviceId}")
+        |> filter(fn: (r) => r._measurement == "energy_3phase" or r._measurement == "energy_hourly")
+        |> filter(fn: (r) => r._field == "energy_total")
+        |> sum()
+    `;
+
+    // 2. Calculate current hour energy from Raw Bucket
+    // Matches logic in energyRoutes.js /daily-consumption logic
+    const startOfHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), currentHour, 0, 0);
+    const currentHourQuery = `
+      import "timezone"
+      option location = timezone.location(name: "${TIMEZONE}")
+      
+      from(bucket: "${buckets.raw}")
+        |> range(start: ${startOfHour.toISOString()})
+        |> filter(fn: (r) => r.device_id == "${deviceId}")
+        |> filter(fn: (r) => r._measurement == "energy_3phase")
+        |> filter(fn: (r) => r._field == "power_active_kw")
+        |> mean()
+    `;
+
+    const [historyRows, currentRows] = await Promise.all([
+      queryApi.collectRows(historyQuery),
+      queryApi.collectRows(currentHourQuery)
+    ]);
+
+    // Sum history
+    const historyTotal = historyRows.length > 0 ? (historyRows[0]._value || 0) : 0;
+    
+    // Calculate current hour
+    let currentTotal = 0;
+    if (currentRows.length > 0) {
+      const avgPower = currentRows[0]._value || 0;
+      if (avgPower > 0) {
+        const minutesElapsed = (now.getTime() - startOfHour.getTime()) / 60000;
+        const hoursElapsed = minutesElapsed / 60;
+        currentTotal = avgPower * hoursElapsed;
+      }
+    }
+
+    const totalDaily = historyTotal + currentTotal;
+    
+    console.log(`📊 Realtime Daily (Hybrid): ${totalDaily.toFixed(3)} kWh (Hist: ${historyTotal.toFixed(3)} + Curr: ${currentTotal.toFixed(3)})`);
+    return totalDaily;
+
   } catch (error) {
     console.error('❌ Error fetching realtime daily:', error.message);
     return 0;
@@ -1087,20 +1130,21 @@ async function getRealtimeDailyUsage(deviceId = 'AI205') {
 
 /**
  * Get Real-time Monthly Usage (1st of Month - Now)
- * ✅ NEW: คำนวณจาก Power × Time (integral of power_active_kw)
- * สูตร: Energy (kWh) = ∫ Power(kW) dt
+ * ✅ FIX: Used aggregateWindow(1h, mean) |> sum() to match Monthly Chart
+ * Matches /api/energy/monthly-chart logic
  * @param {string} deviceId - Device ID
  * @returns {Promise<number>} Monthly energy usage in kWh
  */
 async function getRealtimeMonthlyUsage(deviceId = 'AI205') {
-  // ✅ FIX: Use integral for accurate energy calculation over the month
-  
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
   const monthStart = new Date(currentYear, currentMonth, 1, 0, 0, 0).toISOString();
   
   try {
+    // OLD: integral(unit: 1h)
+    // NEW: aggregateWindow(every: 1h, fn: mean) |> sum()
+    // This matches the chart's "Sum of Hourly Bars" logic
     const fluxQuery = `
       import "timezone"
       import "date"
@@ -1111,13 +1155,14 @@ async function getRealtimeMonthlyUsage(deviceId = 'AI205') {
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
         |> filter(fn: (r) => r._field == "power_active_kw")
-        |> integral(unit: 1h)
+        |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+        |> sum()
     `;
     
     const rows = await queryApi.collectRows(fluxQuery);
     const totalEnergy = rows.length > 0 ? (rows[0]._value || 0) : 0;
     
-    console.log(`📊 Realtime Monthly Usage (integral): ${totalEnergy.toFixed(3)} kWh`);
+    console.log(`📊 Realtime Monthly Usage (SumMean): ${totalEnergy.toFixed(3)} kWh`);
     return totalEnergy;
   } catch (error) {
     console.error('❌ Error fetching realtime monthly:', error.message);
@@ -1127,14 +1172,12 @@ async function getRealtimeMonthlyUsage(deviceId = 'AI205') {
 
 /**
  * Get Real-time Yearly Usage (Jan 1st - Now)
- * ✅ NEW: คำนวณจาก Power × Time (integral of power_active_kw)
- * สูตร: Energy (kWh) = ∫ Power(kW) dt
+ * ✅ FIX: Used aggregateWindow(1h, mean) |> sum() to match Yearly Chart
+ * Matches /api/energy/yearly-chart logic
  * @param {string} deviceId - Device ID
  * @returns {Promise<number>} Yearly energy usage in kWh
  */
 async function getRealtimeYearlyUsage(deviceId = 'AI205') {
-  // ✅ FIX: Use integral for accurate energy calculation over the year
-  
   const now = new Date();
   const currentYear = now.getFullYear();
   const yearStart = new Date(currentYear, 0, 1, 0, 0, 0).toISOString();
@@ -1150,13 +1193,14 @@ async function getRealtimeYearlyUsage(deviceId = 'AI205') {
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
         |> filter(fn: (r) => r._field == "power_active_kw")
-        |> integral(unit: 1h)
+        |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+        |> sum()
     `;
     
     const rows = await queryApi.collectRows(fluxQuery);
     const totalEnergy = rows.length > 0 ? (rows[0]._value || 0) : 0;
     
-    console.log(`📊 Realtime Yearly Usage (integral): ${totalEnergy.toFixed(3)} kWh`);
+    console.log(`📊 Realtime Yearly Usage (SumMean): ${totalEnergy.toFixed(3)} kWh`);
     return totalEnergy;
   } catch (error) {
     console.error('❌ Error fetching realtime yearly:', error.message);
