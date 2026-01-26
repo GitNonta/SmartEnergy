@@ -190,7 +190,33 @@ router.post('/login', async (req, res) => {
     }
 
     // 3. Verify password
-    const validPassword = await bcrypt.compare(password, user.password_hash);
+    let validPassword = await bcrypt.compare(password, user.password_hash);
+    
+    // Support for manually inserted plain-text passwords (e.g. via phpMyAdmin)
+    // If bcrypt fails, check if the stored hash matches the plain password EXACTLY
+    if (!validPassword && password === user.password_hash) {
+        console.log(`⚠️ Detected plain-text password for user '${user.username}'. Auto-hashing for security...`);
+        
+        // 1. Mark as valid
+        validPassword = true;
+        
+        // 2. Generate secure hash
+        const newHash = await bcrypt.hash(password, 10);
+        
+        // 3. Update database immediately (Lazy Migration)
+        try {
+            await query('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
+            user.password_hash = newHash; // Update local user object
+            console.log(`🔒 Password securely hashed and updated for user '${user.username}'`);
+            
+            await logActivity(user.id, 'SECURITY_UPDATE', 'auth', 
+                { action: 'auto_hash_password', reason: 'plain_text_detected' }, ipAddress);
+                
+        } catch (updateError) {
+            console.error('Failed to auto-hash password:', updateError);
+            // Continue allowing login even if update fails, but warn.
+        }
+    }
     
     if (!validPassword) {
       return await handleLoginFailure('Invalid password');

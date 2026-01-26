@@ -1,0 +1,27 @@
+apiVersion: 1
+
+datasources:
+  # InfluxDB v2 Data Source (Flux) - For Energy Data
+  - name: InfluxDB_Raw
+    uid: influxdb_raw
+    type: influxdb
+    access: proxy
+    url: http://localhost:8086
+    jsonData:
+      version: Flux
+      organization: Ennergy
+      defaultBucket: AI205_raw
+      tlsSkipVerify: true
+    secureJsonData:
+      token: rft_M6WkVq5f48jzITJTVjDLR1wdvSUiThfVP4PH4LIZi6PgiZjUtfiVo7_KItFRYe4yzpwssxuO9VXUzhUFuQ==
+    isDefault: true
+
+  # MySQL Data Source - For User & Audit Logs
+  - name: SmartEnergy_MySQL
+    uid: mysql_main
+    type: mysql
+    url: 202.29.50.41:3306
+    database: s6710886217
+    user: s6710886217
+    secureJsonData:
+      password: nkey5632

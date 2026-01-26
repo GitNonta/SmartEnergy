@@ -190,7 +190,7 @@ async function initDatabase() {
         display_name VARCHAR(100),
         full_name VARCHAR(100),
         phone_number VARCHAR(20),
-        role ENUM('admin', 'user', 'viewer') DEFAULT 'user',
+        role ENUM('admin', 'user', 'viewer', 'Administrator', 'Superadmin') DEFAULT 'user',
         is_active BOOLEAN DEFAULT TRUE,
         is_verified BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -220,6 +220,17 @@ async function initDatabase() {
       await connection.execute(`ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE AFTER is_active`);
       console.log('  ➕ Added is_verified column');
     } catch (e) { /* Column exists */ }
+
+    // Update role ENUM to include 'Administrator', 'superadmin', 'Superadmin'
+    try {
+      await connection.execute(`
+        ALTER TABLE users 
+        MODIFY COLUMN role ENUM('admin', 'user', 'viewer', 'Administrator', 'Superadmin') DEFAULT 'user'
+      `);
+      console.log('  ➕ Updated role ENUM values');
+    } catch (e) { 
+      console.warn('  ⚠️ Could not update role ENUM:', e.message);
+    }
     
     console.log('✅ Users table ready');
 
