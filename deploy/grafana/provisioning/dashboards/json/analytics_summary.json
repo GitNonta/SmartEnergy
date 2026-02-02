@@ -1,0 +1,930 @@
+{
+    "annotations": {
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": {
+                    "type": "grafana",
+                    "uid": "-- Grafana --"
+                },
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": null,
+    "links": [
+        {
+            "asDropdown": true,
+            "icon": "external link",
+            "includeVars": true,
+            "keepTime": true,
+            "tags": [
+                "smartenergy"
+            ],
+            "targetBlank": false,
+            "title": "SmartEnergy Dashboards",
+            "type": "dashboards"
+        }
+    ],
+    "liveNow": false,
+    "panels": [
+        {
+            "gridPos": {
+                "h": 2,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "id": 1,
+            "type": "text",
+            "title": "",
+            "options": {
+                "mode": "markdown",
+                "content": "# 💰 Analytics & Summary\nCost analysis, comparisons, and system audit"
+            }
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "description": "Today's energy cost at 4.00 THB/kWh",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 100
+                            },
+                            {
+                                "color": "orange",
+                                "value": 500
+                            },
+                            {
+                                "color": "red",
+                                "value": 1000
+                            }
+                        ]
+                    },
+                    "unit": "currencyTHB"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 5,
+                "w": 6,
+                "x": 0,
+                "y": 2
+            },
+            "id": 2,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\ntodayStart = date.truncate(t: now(), unit: 1d)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: todayStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> integral(unit: 1h)\n  |> map(fn: (r) => ({ r with _value: r._value * 4.00 }))",
+                    "refId": "A"
+                }
+            ],
+            "title": "📅 Today's Cost",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "description": "This month's energy cost at 4.00 THB/kWh",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 1000
+                            },
+                            {
+                                "color": "orange",
+                                "value": 5000
+                            },
+                            {
+                                "color": "red",
+                                "value": 10000
+                            }
+                        ]
+                    },
+                    "unit": "currencyTHB"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 5,
+                "w": 6,
+                "x": 6,
+                "y": 2
+            },
+            "id": 3,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nmonthStart = date.truncate(t: now(), unit: 1mo)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: monthStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> integral(unit: 1h)\n  |> map(fn: (r) => ({ r with _value: r._value * 4.00 }))",
+                    "refId": "A"
+                }
+            ],
+            "title": "📆 Monthly Cost",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "description": "This year's energy cost at 4.00 THB/kWh",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 10000
+                            },
+                            {
+                                "color": "orange",
+                                "value": 50000
+                            },
+                            {
+                                "color": "red",
+                                "value": 100000
+                            }
+                        ]
+                    },
+                    "unit": "currencyTHB"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 5,
+                "w": 6,
+                "x": 12,
+                "y": 2
+            },
+            "id": 4,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nyearStart = date.truncate(t: now(), unit: 1y)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: yearStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> integral(unit: 1h)\n  |> map(fn: (r) => ({ r with _value: r._value * 4.00 }))",
+                    "refId": "A"
+                }
+            ],
+            "title": "📊 Yearly Cost",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "description": "Average power factor this month",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 3,
+                    "max": 1,
+                    "min": 0,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.85
+                            },
+                            {
+                                "color": "green",
+                                "value": 0.95
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 5,
+                "w": 6,
+                "x": 18,
+                "y": 2
+            },
+            "id": 5,
+            "options": {
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "showThresholdLabels": true,
+                "showThresholdMarkers": true
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nmonthStart = date.truncate(t: now(), unit: 1mo)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: monthStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_factor\")",
+                    "refId": "A"
+                }
+            ],
+            "title": "⚙️ Avg Power Factor",
+            "type": "gauge"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "blue",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "kwatth"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 7
+            },
+            "id": 6,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)\n  |> mean()",
+                    "refId": "A"
+                }
+            ],
+            "title": "📈 Avg Daily",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "orange",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "kwatth"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 7
+            },
+            "id": 7,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "max"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)\n  |> max()",
+                    "refId": "A"
+                }
+            ],
+            "title": "📈 Max Daily",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "kwatth"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 8,
+                "y": 7
+            },
+            "id": 8,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "min"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)\n  |> min()",
+                    "refId": "A"
+                }
+            ],
+            "title": "📈 Min Daily",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "kwatt"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 7
+            },
+            "id": 9,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "max"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\ntodayStart = date.truncate(t: now(), unit: 1d)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: todayStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> max()",
+                    "refId": "A"
+                }
+            ],
+            "title": "⚡ Today's Peak",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "mysql",
+                "uid": "mysql_main"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "blue",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 7
+            },
+            "id": 10,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "mysql",
+                        "uid": "mysql_main"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawSql": "SELECT COUNT(*) as count FROM users WHERE is_active = 1",
+                    "refId": "A"
+                }
+            ],
+            "title": "👥 Active Users",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "mysql",
+                "uid": "mysql_main"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "custom": {
+                        "align": "auto",
+                        "displayMode": "auto",
+                        "inspect": false
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "created_at"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Time"
+                            },
+                            {
+                                "id": "custom.width",
+                                "value": 180
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "action"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Action"
+                            },
+                            {
+                                "id": "custom.width",
+                                "value": 200
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "user_id"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "User ID"
+                            },
+                            {
+                                "id": "custom.width",
+                                "value": 80
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "ip_address"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "IP Address"
+                            },
+                            {
+                                "id": "custom.width",
+                                "value": 130
+                            }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 0,
+                "y": 11
+            },
+            "id": 11,
+            "options": {
+                "footer": {
+                    "enablePagination": true,
+                    "fields": "",
+                    "reducer": [
+                        "sum"
+                    ],
+                    "show": false
+                },
+                "showHeader": true,
+                "sortBy": [
+                    {
+                        "desc": true,
+                        "displayName": "Time"
+                    }
+                ]
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "mysql",
+                        "uid": "mysql_main"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawSql": "SELECT created_at, action, user_id, ip_address, user_agent \nFROM audit_logs \nORDER BY created_at DESC \nLIMIT 50",
+                    "refId": "A"
+                }
+            ],
+            "title": "🔒 Security Audit Logs",
+            "type": "table"
+        },
+        {
+            "datasource": {
+                "type": "mysql",
+                "uid": "mysql_main"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "custom": {
+                        "align": "auto",
+                        "displayMode": "auto",
+                        "inspect": false
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "username"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Username"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "role"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Role"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "last_login"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Last Login"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "is_active"
+                        },
+                        "properties": [
+                            {
+                                "id": "displayName",
+                                "value": "Active"
+                            },
+                            {
+                                "id": "custom.displayMode",
+                                "value": "color-background-solid"
+                            },
+                            {
+                                "id": "thresholds",
+                                "value": {
+                                    "mode": "absolute",
+                                    "steps": [
+                                        {
+                                            "color": "red",
+                                            "value": null
+                                        },
+                                        {
+                                            "color": "green",
+                                            "value": 1
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "id": "mappings",
+                                "value": [
+                                    {
+                                        "options": {
+                                            "0": {
+                                                "text": "❌"
+                                            },
+                                            "1": {
+                                                "text": "✅"
+                                            }
+                                        },
+                                        "type": "value"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 12,
+                "y": 11
+            },
+            "id": 12,
+            "options": {
+                "footer": {
+                    "enablePagination": true,
+                    "fields": "",
+                    "reducer": [
+                        "sum"
+                    ],
+                    "show": false
+                },
+                "showHeader": true
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "mysql",
+                        "uid": "mysql_main"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawSql": "SELECT username, display_name, role, last_login, is_active, created_at \nFROM users \nORDER BY last_login DESC",
+                    "refId": "A"
+                }
+            ],
+            "title": "👤 User Management",
+            "type": "table"
+        }
+    ],
+    "refresh": "1m",
+    "schemaVersion": 38,
+    "style": "dark",
+    "tags": [
+        "smartenergy",
+        "analytics"
+    ],
+    "templating": {
+        "list": []
+    },
+    "time": {
+        "from": "now-30d",
+        "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "Asia/Bangkok",
+    "title": "Analytics & Summary",
+    "uid": "analytics_summary",
+    "version": 1,
+    "weekStart": ""
+}
