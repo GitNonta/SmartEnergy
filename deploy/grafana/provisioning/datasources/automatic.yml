@@ -16,12 +16,12 @@ datasources:
       token: rft_M6WkVq5f48jzITJTVjDLR1wdvSUiThfVP4PH4LIZi6PgiZjUtfiVo7_KItFRYe4yzpwssxuO9VXUzhUFuQ==
     isDefault: true
 
-  # MySQL Data Source - For User & Audit Logs
+  # MySQL Data Source - For User & Audit Logs (Backup Database)
   - name: SmartEnergy_MySQL
     uid: mysql_main
     type: mysql
-    url: 202.29.50.41:3306
-    database: s6710886217
-    user: s6710886217
+    url: 127.0.0.1:3306
+    database: AI205
+    user: root
     secureJsonData:
-      password: nkey5632
+      password: Nontawat01

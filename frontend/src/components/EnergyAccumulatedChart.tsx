@@ -67,7 +67,8 @@ const generateFallbackData = (mode: TimeViewMode, locale: string) => {
 };
 
 // --- Real Data Fetchers from InfluxDB (Historical Data) ---
-const fetchRealData = async (mode: TimeViewMode, locale: string) => {
+// Returns { chartData: array, totalEnergy: number }
+const fetchRealData = async (mode: TimeViewMode, locale: string): Promise<{ chartData: { x: string, y: number }[], totalEnergy: number }> => {
     try {
         console.log(`📊 Fetching ${mode} energy data from InfluxDB...`);
 
@@ -80,7 +81,7 @@ const fetchRealData = async (mode: TimeViewMode, locale: string) => {
         }
     } catch (error) {
         console.error('❌ Error fetching energy data:', error);
-        return generateFallbackData(mode, locale);
+        return { chartData: generateFallbackData(mode, locale), totalEnergy: 0 };
     }
 };
 
@@ -95,14 +96,14 @@ const fetchDailyData = async (locale: string) => {
 
         if (!response.ok) {
             console.warn(`⚠️ Daily consumption API returned ${response.status}`);
-            return generateFallbackData('daily', locale);
+            return { chartData: generateFallbackData('daily', locale), totalEnergy: 0 };
         }
 
         const data = await response.json();
 
         if (!data.success || !Array.isArray(data.hourlyData)) {
             console.warn('⚠️ Invalid daily consumption data');
-            return generateFallbackData('daily', locale);
+            return { chartData: generateFallbackData('daily', locale), totalEnergy: 0 };
         }
 
         const currentHour = new Date().getHours();
@@ -121,13 +122,14 @@ const fetchDailyData = async (locale: string) => {
         // Sort by hour
         chartData.sort((a, b) => parseInt(a.x) - parseInt(b.x));
 
-        const totalEnergy = chartData.reduce((sum, d) => sum + d.y, 0);
-        console.log(`✅ Daily chart: ${chartData.length} hours, total ${totalEnergy.toFixed(4)} kWh (up to hour ${currentHour})`);
+        // ✅ Use API's totalEnergy (from integral) for accurate total
+        const totalEnergy = data.totalEnergy || chartData.reduce((sum, d) => sum + d.y, 0);
+        console.log(`✅ Daily chart: ${chartData.length} hours, total ${totalEnergy.toFixed(4)} kWh (from integral)`);
 
-        return chartData.length > 0 ? chartData : generateFallbackData('daily', locale);
+        return { chartData, totalEnergy };
     } catch (error) {
         console.error('❌ Error fetching daily data:', error);
-        return generateFallbackData('daily', locale);
+        return { chartData: generateFallbackData('daily', locale), totalEnergy: 0 };
     }
 };
 
@@ -141,21 +143,21 @@ const fetchMonthlyData = async (locale: string) => {
 
         if (!response.ok) {
             console.warn(`⚠️ Monthly chart API returned ${response.status}`);
-            return generateFallbackData('monthly', locale);
+            return { chartData: generateFallbackData('monthly', locale), totalEnergy: 0 };
         }
 
         const data = await response.json();
 
         if (!data.success || !Array.isArray(data.chartData)) {
             console.warn('⚠️ Invalid monthly chart data');
-            return generateFallbackData('monthly', locale);
+            return { chartData: generateFallbackData('monthly', locale), totalEnergy: 0 };
         }
 
         console.log(`✅ Monthly chart: ${data.chartData.length} days, total ${data.total} kWh`);
-        return data.chartData;
+        return { chartData: data.chartData, totalEnergy: data.total || 0 };
     } catch (error) {
         console.error('❌ Error fetching monthly data:', error);
-        return generateFallbackData('monthly', locale);
+        return { chartData: generateFallbackData('monthly', locale), totalEnergy: 0 };
     }
 };
 
@@ -169,23 +171,21 @@ const fetchYearlyData = async (locale: string) => {
 
         if (!response.ok) {
             console.warn(`⚠️ Yearly chart API returned ${response.status}`);
-            return generateFallbackData('yearly', locale);
+            return { chartData: generateFallbackData('yearly', locale), totalEnergy: 0 };
         }
 
         const data = await response.json();
 
         if (!data.success || !Array.isArray(data.chartData)) {
             console.warn('⚠️ Invalid yearly chart data');
-            return generateFallbackData('yearly', locale);
+            return { chartData: generateFallbackData('yearly', locale), totalEnergy: 0 };
         }
 
         console.log(`✅ Yearly chart: ${data.chartData.length} months, total ${data.total} kWh`);
-        // If backend returns English months, we might want to map them here or just assume they are valid for now
-        // Ideally backend should return month numbers or ISO dates
-        return data.chartData;
+        return { chartData: data.chartData, totalEnergy: data.total || 0 };
     } catch (error) {
         console.error('❌ Error fetching yearly data:', error);
-        return generateFallbackData('yearly', locale);
+        return { chartData: generateFallbackData('yearly', locale), totalEnergy: 0 };
     }
 };
 
@@ -262,6 +262,7 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
 
     // Load Data
     const [chartData, setChartData] = useState<{ x: string, y: number }[]>([]);
+    const [apiTotalEnergy, setApiTotalEnergy] = useState<number | null>(null);
 
     useEffect(() => {
         setViewMode(initialViewMode);
@@ -270,8 +271,9 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
     useEffect(() => {
         const loadData = async () => {
             console.log(`📊 Loading ${viewMode} chart data...`);
-            const data = await fetchRealData(viewMode, locale);
-            setChartData(data);
+            const result = await fetchRealData(viewMode, locale);
+            setChartData(result.chartData);
+            setApiTotalEnergy(result.totalEnergy);
         };
 
         // Initial load
@@ -408,7 +410,13 @@ export default function EnergyAccumulatedChart({ initialViewMode = 'daily', onCl
         setAnalyzing(false);
     };
 
-    const getTotal = () => chartData.reduce((acc, cur) => acc + cur.y, 0).toFixed(2);
+    // Use API's totalEnergy (accurate integral) if available, otherwise sum from bars
+    const getTotal = () => {
+        if (apiTotalEnergy !== null && apiTotalEnergy > 0) {
+            return apiTotalEnergy.toFixed(2);
+        }
+        return chartData.reduce((acc, cur) => acc + cur.y, 0).toFixed(2);
+    };
 
     const getTitle = () => {
         if (viewMode === 'daily') return t('history.dailyConsumption');

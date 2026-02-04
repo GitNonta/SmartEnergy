@@ -24,125 +24,105 @@ module.exports = function(influxService, energyState) {
     }
   });
 
-  // Get daily consumption from hourly bucket + real-time current hour (HYBRID)
-  // STEP 4 FIX: Combines historical data with realtime for current hour
+  // Get daily consumption using spread function on energy_total
+  // METHOD: Spread = Max - Min of cumulative energy_total for each hour
+
   router.get('/daily-consumption', async (req, res) => {
     try {
       const { deviceId = 'AI205' } = req.query;
+      const bucket = influxService.buckets.raw;
       
-      console.log(`📊 Fetching daily consumption (HYBRID) for ${deviceId}...`);
+      console.log(`📊 Fetching daily consumption (Integral Method) for ${deviceId}...`);
+
+      // Query 1: Mean Power per Hour (for Bar Chart visualization)
+      const hourlyQuery = `
+        import "timezone"
+        option location = timezone.location(name: "${TIMEZONE}")
+
+        from(bucket: "${bucket}")
+          |> range(start: today())
+          |> filter(fn: (r) => r["_measurement"] == "energy_3phase")
+          |> filter(fn: (r) => r["device_id"] == "${deviceId}")
+          |> filter(fn: (r) => r["_field"] == "power_active_kw")
+          |> aggregateWindow(every: 1h, fn: mean, createEmpty: true)
+      `;
+
+      // Query 2: Integral for Total Energy (Σ Power × Δt)
+      // This is the mathematically accurate formula: ∫P(t)dt
+      const integralQuery = `
+        import "timezone"
+        option location = timezone.location(name: "${TIMEZONE}")
+
+        from(bucket: "${bucket}")
+          |> range(start: today())
+          |> filter(fn: (r) => r["_measurement"] == "energy_3phase")
+          |> filter(fn: (r) => r["device_id"] == "${deviceId}")
+          |> filter(fn: (r) => r["_field"] == "power_active_kw")
+          |> integral(unit: 1h)
+      `;
+
+      // Execute both queries in parallel
+      const [hourlyRows, integralRows] = await Promise.all([
+        influxService.queryApi.collectRows(hourlyQuery),
+        influxService.queryApi.collectRows(integralQuery)
+      ]);
       
-      // PART A: ดึงข้อมูลประวัติ (Historical) จาก Hourly Bucket
-      const hourlyResult = await influxService.queryFromBucket('hourly', '-24h', deviceId, ['energy_total']);
-      let hourlyData = hourlyResult.data || [];
-      
-      console.log(`✅ Got ${hourlyData.length} hourly data points from AI205_hourly`);
+      console.log(`✅ Got ${hourlyRows.length} hourly rows, integral query returned ${integralRows.length} rows`);
 
-      // Initialize all 24 hours with base data
-      const hourlyMap = new Map();
-      for (let i = 0; i < 24; i++) {
-        hourlyMap.set(i, { energy_total: 0, quality: 'no_data', count: 0 });
-      }
-
-      // Process historical hourly data
-      for (const point of hourlyData) {
-        try {
-          if (!point._time) continue;
-          const timestamp = new Date(point._time);
-          if (isNaN(timestamp.getTime())) continue;
-          
-          const hour = timestamp.getHours();
-          
-          if (hourlyMap.has(hour)) {
-            const slot = hourlyMap.get(hour);
-            slot.energy_total += Number(point._value) || 0;
-            slot.quality = point.quality || 'measured';
-            slot.count++;
-          }
-        } catch (e) {
-          console.warn(`⚠️ Skipping bad hourly point:`, e.message);
-        }
-      }
-
-      // PART B: ดึงข้อมูลชั่วโมงปัจจุบัน (Real-time) จาก Raw Bucket
+      // Initialize 24-hour array (00:00 - 23:00)
+      const hourlyData = [];
       const now = new Date();
       const currentHour = now.getHours();
-      const startOfHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), currentHour, 0, 0);
-      
-      try {
-        // Query Raw Data for current hour only
-        // OPTIMIZED: Calculate mean power directly in InfluxDB to avoid fetching all raw rows
-        const currentHourQuery = `
-          import "timezone"
-          option location = timezone.location(name: "${TIMEZONE}")
-          
-          from(bucket: "${influxService.buckets.raw}")
-            |> range(start: ${startOfHour.toISOString()})
-            |> filter(fn: (r) => r.device_id == "${deviceId}")
-            |> filter(fn: (r) => r._measurement == "energy_3phase")
-            |> filter(fn: (r) => r._field == "power_active_kw")
-            |> mean()
-        `;
 
-        const rawRows = await influxService.queryApi.collectRows(currentHourQuery);
-        
-        if (rawRows.length > 0) {
-           const avgPower = rawRows[0]._value || 0;
-           
-           if (avgPower > 0) {
-             const minutesElapsed = (now.getTime() - startOfHour.getTime()) / 60000;
-             const hoursElapsed = minutesElapsed / 60;
-             
-             // Energy (kWh) = Power (kW) × Time (hours)
-             const currentEnergy = avgPower * hoursElapsed;
-             
-             // Update current hour with realtime data
-             const slot = hourlyMap.get(currentHour);
-             slot.energy_total = currentEnergy;
-             slot.quality = 'realtime_hybrid_optimized'; 
-             slot.avgPower = avgPower;
-             slot.minutesElapsed = Math.round(minutesElapsed);
-             
-             console.log(`⚡ Current hour ${currentHour}:00 - Avg Power: ${avgPower.toFixed(3)} kW, Energy: ${currentEnergy.toFixed(4)} kWh (${Math.round(minutesElapsed)} min)`);
-           }
-        }
-      } catch (rawError) {
-        console.warn(`⚠️ Could not fetch current hour raw data:`, rawError.message);
-        // Continue with hourly data only
+      for (let i = 0; i < 24; i++) {
+        hourlyData.push({
+          hour: String(i).padStart(2, '0') + ':00',
+          energy_total: 0,
+          quality: i > currentHour ? 'future' : 'no_data'
+        });
       }
 
-      // PART C: Convert to array format
-      const result = [];
-      let totalEnergy = 0;
+      // Map Flux results to hourly slots
+      let sumOfBars = 0;
       
-      hourlyMap.forEach((values, hour) => {
-        const hourLabel = String(hour).padStart(2, '0') + ':00';
-        const energy = hour <= currentHour ? values.energy_total : 0;
+      hourlyRows.forEach(row => {
+        if (!row._time) return;
+        const timestamp = new Date(row._time);
+        let hour = timestamp.getHours();
         
-        result.push({
-          hour: hourLabel,
-          energy_total: Number(energy.toFixed(3)),
-          quality: hour <= currentHour ? values.quality : 'future'
-        });
-        
-        if (hour <= currentHour) {
-          totalEnergy += energy;
+        // aggregateWindow(1h) returns timestamp at END of window
+        // 00:00-01:00 -> 01:00. Map to index 0.
+        let index = hour - 1; 
+        if (hour === 0) index = 23;
+
+        if (index >= 0 && index < 24) {
+             const val = row._value || 0;
+             hourlyData[index].energy_total = Number(val.toFixed(3));
+             hourlyData[index].quality = 'measured';
+             sumOfBars += val;
         }
       });
 
-      result.sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
+      // Get Total Energy from Integral (more accurate: Σ Power × Δt)
+      const integralTotal = integralRows.length > 0 ? (integralRows[0]._value || 0) : 0;
+      // Use integral as primary, fallback to sumOfBars if integral returns 0 (e.g., no data yet)
+      const totalEnergy = integralTotal > 0 ? integralTotal : sumOfBars;
 
       res.json({
         success: true,
-        source: 'AI205_hourly + realtime',
-        calculationMethod: 'hybrid',
+        source: 'AI205_raw (Integral)',
+        calculationMethod: 'integral(power × dt)',
+        formula: 'Energy = Σ(Power × Δt) = ∫P(t)dt',
         deviceId,
-        hourlyData: result,
+        hourlyData,
         totalEnergy: Number(totalEnergy.toFixed(3)),
-        dataPoints: hourlyData.length,
         currentHour,
-        note: '✅ Hybrid: Historical + Realtime for current hour'
+        debug: {
+            sumOfBars: Number(sumOfBars.toFixed(3)),
+            integralTotal: Number(integralTotal.toFixed(3))
+        }
       });
+
     } catch (error) {
       console.error('❌ Error in /daily-consumption:', error);
       res.status(500).json({ success: false, error: error.message });
@@ -282,6 +262,7 @@ module.exports = function(influxService, energyState) {
   // ==========================================
 
   // GET /api/energy/monthly-chart - Get daily breakdown for current month
+  // ✅ Uses window(1d) + integral for accurate daily energy
   router.get('/monthly-chart', async (req, res) => {
     try {
       const { deviceId = 'AI205' } = req.query;
@@ -295,8 +276,11 @@ module.exports = function(influxService, energyState) {
       // Start of month in local timezone
       const monthStart = new Date(currentYear, currentMonth, 1, 0, 0, 0);
       
-      // Query raw bucket for this month to calculate daily energy
-      const fluxQuery = `
+      console.log(`📊 Fetching monthly chart for ${deviceId}, month ${currentMonth + 1}/${currentYear}...`);
+      
+      // Query: Daily Integral using window() + integral()
+      // This correctly calculates integral within each day window
+      const dailyIntegralQuery = `
         import "timezone"
         import "date"
         option location = timezone.location(name: "${TIMEZONE}")
@@ -306,11 +290,15 @@ module.exports = function(influxService, energyState) {
           |> filter(fn: (r) => r.device_id == "${deviceId}")
           |> filter(fn: (r) => r._measurement == "energy_3phase")
           |> filter(fn: (r) => r._field == "power_active_kw")
-          |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
-          |> map(fn: (r) => ({r with energy_kwh: r._value / 1.0}))
+          |> window(every: 1d)
+          |> integral(unit: 1h)
+          |> duplicate(column: "_stop", as: "_time")
+          |> window(every: inf)
       `;
       
-      const rows = await influxService.queryApi.collectRows(fluxQuery);
+      const rows = await influxService.queryApi.collectRows(dailyIntegralQuery);
+      
+      console.log(`✅ Got ${rows.length} daily integral values`);
       
       // Initialize daily map
       const dailyMap = new Map();
@@ -318,14 +306,14 @@ module.exports = function(influxService, energyState) {
         dailyMap.set(i, 0);
       }
       
-      // Aggregate hourly data into daily
+      // Map results to daily slots
       rows.forEach(row => {
+        if (!row._time) return;
         const timestamp = new Date(row._time);
         if (timestamp.getMonth() === currentMonth && timestamp.getFullYear() === currentYear) {
           const day = timestamp.getDate();
-          const energyKwh = (row._value || 0);
-          const existing = dailyMap.get(day) || 0;
-          dailyMap.set(day, existing + energyKwh);
+          const energyKwh = row._value || 0;
+          dailyMap.set(day, energyKwh);
         }
       });
       
@@ -336,10 +324,16 @@ module.exports = function(influxService, energyState) {
         chartData.push({ x: `Day ${i}`, y: Number(value.toFixed(3)) });
       }
       
+      // Sum of bars = Total
       const totalEnergy = chartData.reduce((sum, d) => sum + d.y, 0);
+      
+      console.log(`📊 Monthly chart: Total ${totalEnergy.toFixed(3)} kWh (sum of ${rows.length} daily integrals)`);
       
       res.json({
         success: true,
+        source: 'AI205_raw (Daily Integral)',
+        calculationMethod: 'window(1d) + integral(unit: 1h)',
+        formula: 'Bar = ∫P(t)dt per day, Total = Σ Bars',
         chartData,
         total: Number(totalEnergy.toFixed(3)),
         currentDay,
@@ -360,6 +354,7 @@ module.exports = function(influxService, energyState) {
   });
 
   // GET /api/energy/yearly-chart - Get monthly breakdown for current year
+  // ✅ Uses window(1mo) + integral for accurate monthly energy
   router.get('/yearly-chart', async (req, res) => {
     try {
       const { deviceId = 'AI205' } = req.query;
@@ -372,7 +367,10 @@ module.exports = function(influxService, energyState) {
       // Start of year
       const yearStart = new Date(currentYear, 0, 1, 0, 0, 0);
       
-      const fluxQuery = `
+      console.log(`📊 Fetching yearly chart for ${deviceId}, year ${currentYear}...`);
+      
+      // Query: Monthly Integral using window() + integral()
+      const monthlyIntegralQuery = `
         import "timezone"
         option location = timezone.location(name: "${TIMEZONE}")
         
@@ -381,8 +379,15 @@ module.exports = function(influxService, energyState) {
           |> filter(fn: (r) => r.device_id == "${deviceId}")
           |> filter(fn: (r) => r._measurement == "energy_3phase")
           |> filter(fn: (r) => r._field == "power_active_kw")
-          |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+          |> window(every: 1mo)
+          |> integral(unit: 1h)
+          |> duplicate(column: "_stop", as: "_time")
+          |> window(every: inf)
       `;
+      
+      const rows = await influxService.queryApi.collectRows(monthlyIntegralQuery);
+      
+      console.log(`✅ Got ${rows.length} monthly integral values`);
       
       const monthlyMap = new Map();
       
@@ -391,16 +396,14 @@ module.exports = function(influxService, energyState) {
         monthlyMap.set(i, 0);
       }
       
-      const rows = await influxService.queryApi.collectRows(fluxQuery);
-      
-      // Aggregate hourly data into monthly
+      // Map results to monthly slots
       rows.forEach(row => {
+        if (!row._time) return;
         const timestamp = new Date(row._time);
         if (timestamp.getFullYear() === currentYear) {
           const month = timestamp.getMonth();
-          const energyKwh = row._value || 0; // power_avg × 1h = kWh
-          const existing = monthlyMap.get(month) || 0;
-          monthlyMap.set(month, existing + energyKwh);
+          const energyKwh = row._value || 0;
+          monthlyMap.set(month, energyKwh);
         }
       });
       
@@ -411,18 +414,21 @@ module.exports = function(influxService, energyState) {
         chartData.push({ x: months[i], y: Number(value.toFixed(2)) });
       }
       
+      // Sum of bars = Total
       const totalEnergy = chartData.reduce((sum, d) => sum + d.y, 0);
       
-      console.log(`📊 Yearly chart: ${rows.length} hourly points, total ${totalEnergy.toFixed(2)} kWh`);
+      console.log(`📊 Yearly chart: Total ${totalEnergy.toFixed(2)} kWh (sum of ${rows.length} monthly integrals)`);
       
       res.json({
         success: true,
+        source: 'AI205_raw (Monthly Integral)',
+        calculationMethod: 'window(1mo) + integral(unit: 1h)',
+        formula: 'Bar = ∫P(t)dt per month, Total = Σ Bars',
         chartData,
         total: Number(totalEnergy.toFixed(2)),
         currentMonth: currentMonth + 1,
         year: currentYear,
         unit: 'kWh',
-        calculationMethod: 'aggregateWindow(1h, mean) + sum (same as monthly)',
         timestamp: new Date().toISOString()
       });
     } catch (error) {

@@ -47,8 +47,20 @@
             "title": "",
             "options": {
                 "mode": "markdown",
-                "content": "# 📊 Historical Analysis\nEnergy consumption trends and patterns over time"
+                "content": "# 📊 Historical Analysis - Energy Consumption\n🔋 พลังงานที่ใช้ไป (kWh) แยกตามช่วงเวลา: รายชั่วโมง, รายวัน, รายเดือน"
             }
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 2
+            },
+            "id": 100,
+            "title": "⏰ DAILY CONSUMPTION (รายชั่วโมง - วันนี้)",
+            "type": "row"
         },
         {
             "datasource": {
@@ -58,7 +70,8 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "palette-classic"
+                        "mode": "fixed",
+                        "fixedColor": "#22d3ee"
                     },
                     "custom": {
                         "axisCenteredZero": false,
@@ -80,25 +93,26 @@
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "green",
+                                "color": "cyan",
                                 "value": null
                             }
                         ]
                     },
-                    "unit": "kwatth"
+                    "unit": "kwatth",
+                    "decimals": 3
                 },
                 "overrides": []
             },
             "gridPos": {
-                "h": 8,
-                "w": 24,
+                "h": 9,
+                "w": 18,
                 "x": 0,
-                "y": 2
+                "y": 3
             },
             "id": 2,
             "options": {
                 "barRadius": 0.2,
-                "barWidth": 0.8,
+                "barWidth": 0.7,
                 "groupWidth": 0.7,
                 "legend": {
                     "calcs": [
@@ -115,8 +129,8 @@
                     "mode": "single",
                     "sort": "none"
                 },
-                "xTickLabelRotation": 0,
-                "xTickLabelSpacing": 100
+                "xTickLabelRotation": -45,
+                "xTickLabelSpacing": 50
             },
             "targets": [
                 {
@@ -128,7 +142,7 @@
                     "refId": "A"
                 }
             ],
-            "title": "📅 Today's Hourly Consumption",
+            "title": "📅 Today's Hourly Consumption (รายชั่วโมง)",
             "type": "barchart"
         },
         {
@@ -139,7 +153,158 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "palette-classic"
+                        "mode": "thresholds"
+                    },
+                    "decimals": 3,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "cyan",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 10
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 50
+                            },
+                            {
+                                "color": "orange",
+                                "value": 100
+                            }
+                        ]
+                    },
+                    "unit": "kwatth"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 3
+            },
+            "id": 21,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "sum"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\ntodayStart = date.truncate(t: now(), unit: 1d)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: todayStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> integral(unit: 1h)",
+                    "refId": "A"
+                }
+            ],
+            "title": "📊 Today Total",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 5
+                            },
+                            {
+                                "color": "red",
+                                "value": 10
+                            }
+                        ]
+                    },
+                    "unit": "kwatth"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 5,
+                "w": 6,
+                "x": 18,
+                "y": 7
+            },
+            "id": 22,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\ntodayStart = date.truncate(t: now(), unit: 1d)\nqueryStart = date.sub(from: todayStart, d: 2h)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: queryStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> filter(fn: (r) => r._time >= todayStart)\n  |> aggregateWindow(every: 1h, fn: sum, createEmpty: false)",
+                    "refId": "A"
+                }
+            ],
+            "title": "⏱️ Avg/Hour",
+            "type": "stat"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 12
+            },
+            "id": 101,
+            "title": "📆 MONTHLY CONSUMPTION (รายวัน - เดือนนี้)",
+            "type": "row"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "#3b82f6"
                     },
                     "custom": {
                         "axisCenteredZero": false,
@@ -161,25 +326,26 @@
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "green",
+                                "color": "blue",
                                 "value": null
                             }
                         ]
                     },
-                    "unit": "kwatth"
+                    "unit": "kwatth",
+                    "decimals": 2
                 },
                 "overrides": []
             },
             "gridPos": {
-                "h": 8,
-                "w": 12,
+                "h": 9,
+                "w": 18,
                 "x": 0,
-                "y": 10
+                "y": 13
             },
             "id": 3,
             "options": {
                 "barRadius": 0.2,
-                "barWidth": 0.8,
+                "barWidth": 0.7,
                 "groupWidth": 0.7,
                 "legend": {
                     "calcs": [
@@ -187,7 +353,7 @@
                         "mean"
                     ],
                     "displayMode": "table",
-                    "placement": "bottom",
+                    "placement": "right",
                     "showLegend": true
                 },
                 "orientation": "auto",
@@ -198,7 +364,7 @@
                     "sort": "none"
                 },
                 "xTickLabelRotation": 0,
-                "xTickLabelSpacing": 100
+                "xTickLabelSpacing": 50
             },
             "targets": [
                 {
@@ -206,11 +372,11 @@
                         "type": "influxdb",
                         "uid": "influxdb_raw"
                     },
-                    "query": "import \"timezone\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: -7d)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)",
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nmonthStart = date.truncate(t: now(), unit: 1mo)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: monthStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)",
                     "refId": "A"
                 }
             ],
-            "title": "📆 Last 7 Days Consumption",
+            "title": "📆 This Month Daily Consumption (รายวัน)",
             "type": "barchart"
         },
         {
@@ -221,32 +387,28 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "palette-classic"
+                        "mode": "thresholds"
                     },
-                    "custom": {
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "Energy (kWh)",
-                        "axisPlacement": "auto",
-                        "fillOpacity": 20,
-                        "gradientMode": "opacity",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "lineInterpolation": "smooth",
-                        "lineWidth": 2,
-                        "showPoints": "auto",
-                        "spanNulls": true
-                    },
+                    "decimals": 2,
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "green",
+                                "color": "blue",
                                 "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 100
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 500
+                            },
+                            {
+                                "color": "orange",
+                                "value": 1000
                             }
                         ]
                     },
@@ -255,27 +417,25 @@
                 "overrides": []
             },
             "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 12,
-                "y": 10
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 13
             },
-            "id": 4,
+            "id": 31,
             "options": {
-                "legend": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
                     "calcs": [
-                        "sum",
-                        "mean",
-                        "max"
+                        "sum"
                     ],
-                    "displayMode": "table",
-                    "placement": "bottom",
-                    "showLegend": true
+                    "fields": "",
+                    "values": false
                 },
-                "tooltip": {
-                    "mode": "single",
-                    "sort": "none"
-                }
+                "textMode": "value_and_name"
             },
             "targets": [
                 {
@@ -283,12 +443,322 @@
                         "type": "influxdb",
                         "uid": "influxdb_raw"
                     },
-                    "query": "import \"timezone\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)",
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nmonthStart = date.truncate(t: now(), unit: 1mo)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: monthStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> integral(unit: 1h)",
                     "refId": "A"
                 }
             ],
-            "title": "📈 Monthly Trend (30 Days)",
-            "type": "timeseries"
+            "title": "📊 Month Total",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 30
+                            },
+                            {
+                                "color": "red",
+                                "value": 50
+                            }
+                        ]
+                    },
+                    "unit": "kwatth"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 5,
+                "w": 6,
+                "x": 18,
+                "y": 17
+            },
+            "id": 32,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nmonthStart = date.truncate(t: now(), unit: 1mo)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: monthStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)",
+                    "refId": "A"
+                }
+            ],
+            "title": "📈 Avg/Day",
+            "type": "stat"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 22
+            },
+            "id": 102,
+            "title": "📈 YEARLY CONSUMPTION (รายเดือน - ปีนี้)",
+            "type": "row"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "#a855f7"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "Energy (kWh)",
+                        "axisPlacement": "auto",
+                        "fillOpacity": 70,
+                        "gradientMode": "opacity",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineWidth": 1,
+                        "showPoints": "never"
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "purple",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "kwatth",
+                    "decimals": 1
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 9,
+                "w": 18,
+                "x": 0,
+                "y": 23
+            },
+            "id": 4,
+            "options": {
+                "barRadius": 0.3,
+                "barWidth": 0.5,
+                "groupWidth": 0.7,
+                "legend": {
+                    "calcs": [
+                        "sum",
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "right",
+                    "showLegend": true
+                },
+                "orientation": "auto",
+                "showValue": "auto",
+                "stacking": "none",
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                },
+                "xTickLabelRotation": 0,
+                "xTickLabelSpacing": 50
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nyearStart = date.truncate(t: now(), unit: 1y)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: yearStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> aggregateWindow(every: 1mo, fn: sum, createEmpty: false)",
+                    "refId": "A"
+                }
+            ],
+            "title": "📈 This Year Monthly Consumption (รายเดือน)",
+            "type": "barchart"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 1,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "purple",
+                                "value": null
+                            },
+                            {
+                                "color": "blue",
+                                "value": 1000
+                            },
+                            {
+                                "color": "green",
+                                "value": 5000
+                            }
+                        ]
+                    },
+                    "unit": "kwatth"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 23
+            },
+            "id": 41,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "sum"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nyearStart = date.truncate(t: now(), unit: 1y)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: yearStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> integral(unit: 1h)",
+                    "refId": "A"
+                }
+            ],
+            "title": "📊 Year Total",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "influxdb",
+                "uid": "influxdb_raw"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 1,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 500
+                            },
+                            {
+                                "color": "red",
+                                "value": 1000
+                            }
+                        ]
+                    },
+                    "unit": "kwatth"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 5,
+                "w": 6,
+                "x": 18,
+                "y": 27
+            },
+            "id": 42,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "value_and_name"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "influxdb",
+                        "uid": "influxdb_raw"
+                    },
+                    "query": "import \"timezone\"\nimport \"date\"\noption location = timezone.location(name: \"Asia/Bangkok\")\n\nyearStart = date.truncate(t: now(), unit: 1y)\n\nfrom(bucket: \"AI205_raw\")\n  |> range(start: yearStart)\n  |> filter(fn: (r) => r._measurement == \"energy_3phase\")\n  |> filter(fn: (r) => r._field == \"power_active_kw\")\n  |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)\n  |> fill(usePrevious: true)\n  |> map(fn: (r) => ({ r with _value: r._value / 60.0 }))\n  |> aggregateWindow(every: 1mo, fn: sum, createEmpty: false)",
+                    "refId": "A"
+                }
+            ],
+            "title": "📈 Avg/Month",
+            "type": "stat"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 32
+            },
+            "id": 103,
+            "title": "🔥 ANALYSIS - Heatmap & Peak Hours",
+            "type": "row"
         },
         {
             "datasource": {
@@ -339,7 +809,7 @@
                 "h": 10,
                 "w": 16,
                 "x": 0,
-                "y": 18
+                "y": 33
             },
             "id": 5,
             "options": {
@@ -473,7 +943,7 @@
                 "h": 10,
                 "w": 8,
                 "x": 16,
-                "y": 18
+                "y": 33
             },
             "id": 6,
             "options": {
@@ -512,7 +982,8 @@
     "style": "dark",
     "tags": [
         "smartenergy",
-        "historical"
+        "historical",
+        "consumption"
     ],
     "templating": {
         "list": []
@@ -525,6 +996,6 @@
     "timezone": "Asia/Bangkok",
     "title": "Historical Analysis",
     "uid": "historical_analysis",
-    "version": 1,
+    "version": 2,
     "weekStart": ""
 }
