@@ -18,7 +18,6 @@
     "clean": "rimraf backend/node_modules frontend/node_modules node_modules"
   },
   "devDependencies": {
-    "@testsprite/testsprite-mcp": "^0.0.19",
     "concurrently": "^8.2.2",
     "rimraf": "^5.0.5"
   },
