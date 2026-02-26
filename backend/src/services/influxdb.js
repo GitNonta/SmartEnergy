@@ -1150,25 +1150,27 @@ async function getRealtimeYearlyUsage(deviceId = 'AI205') {
   const now = new Date();
   const currentYear = now.getFullYear();
   const yearStart = new Date(currentYear, 0, 1, 0, 0, 0).toISOString();
-  
+
   try {
+    // Use hourly bucket (pre-aggregated) instead of raw to avoid timeout
+    // raw bucket has 1.5M+ rows per year; integral() on that times out in >15s
     const fluxQuery = `
       import "timezone"
       import "date"
       option location = timezone.location(name: "${TIMEZONE}")
-      
-      from(bucket: "${buckets.raw}")
+
+      from(bucket: "${buckets.hourly}")
         |> range(start: ${yearStart})
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
         |> filter(fn: (r) => r._field == "power_active_kw")
         |> integral(unit: 1h)
     `;
-    
+
     const rows = await queryApi.collectRows(fluxQuery);
     const totalEnergy = rows.length > 0 ? (rows[0]._value || 0) : 0;
-    
-    console.log(`📊 Realtime Yearly (Integral): ${totalEnergy.toFixed(3)} kWh`);
+
+    console.log(`📊 Realtime Yearly (hourly bucket integral): ${totalEnergy.toFixed(3)} kWh`);
     return totalEnergy;
   } catch (error) {
     console.error('❌ Error fetching realtime yearly:', error.message);

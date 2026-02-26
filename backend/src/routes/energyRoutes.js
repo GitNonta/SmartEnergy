@@ -391,12 +391,13 @@ module.exports = function(influxService, energyState) {
       
       console.log(`📊 Fetching yearly chart for ${deviceId}, year ${currentYear}...`);
       
-      // Query: Monthly Integral using window() + integral()
+      // Query: Monthly sum using HOURLY bucket (pre-aggregated, ~800 rows vs 1.5M in raw)
+      // raw bucket window(1mo)+integral times out; hourly bucket is orders of magnitude faster
       const monthlyIntegralQuery = `
         import "timezone"
         option location = timezone.location(name: "${TIMEZONE}")
-        
-        from(bucket: "${influxService.buckets.raw}")
+
+        from(bucket: "${influxService.buckets.hourly}")
           |> range(start: ${yearStart.toISOString()})
           |> filter(fn: (r) => r.device_id == "${deviceId}")
           |> filter(fn: (r) => r._measurement == "energy_3phase")
@@ -590,13 +591,14 @@ module.exports = function(influxService, energyState) {
         // Monthly breakdown for current year
         const currentYear = now.getFullYear();
         const yearStart = new Date(currentYear, 0, 1, 0, 0, 0);
-        
-        // Bug #8 fix: use integral per month window — correct kWh, not mean kW sum
+
+        // Use hourly bucket (pre-aggregated) — raw bucket has 1.5M+ rows/yr → timeout
+        // and may produce inflated values due to high-frequency sampling
         const fluxQuery = `
           import "timezone"
           option location = timezone.location(name: "${TIMEZONE}")
 
-          from(bucket: "${influxService.buckets.raw}")
+          from(bucket: "${influxService.buckets.hourly}")
             |> range(start: ${yearStart.toISOString()})
             |> filter(fn: (r) => r.device_id == "${deviceId}")
             |> filter(fn: (r) => r._measurement == "energy_3phase")

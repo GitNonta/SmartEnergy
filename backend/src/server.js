@@ -1308,10 +1308,14 @@ app.get('/api/data/export/fields', async (req, res) => {
 // Get energy summary for a time range
 app.get('/api/energy/summary', async (req, res) => {
   try {
-    const { timeRange = '1H', deviceId = 'AI205' } = req.query;
-    
-    const summary = await energyCalc.getEnergySummary(timeRange, deviceId);
-    
+    const VALID_TR = ['1d', '1w', '1M', 'MN'];
+    const VALID_DEV = /^[a-zA-Z0-9_-]{1,64}$/;
+    const timeRange = VALID_TR.includes(req.query.timeRange) ? req.query.timeRange : '1d';
+    const deviceId  = VALID_DEV.test(String(req.query.deviceId || '')) ? req.query.deviceId : 'AI205';
+
+    // energyCalc has no getEnergySummary — use influxService.queryEnergySummary instead
+    const summary = await influxService.queryEnergySummary(timeRange, deviceId);
+
     res.json({
       success: true,
       ...summary
