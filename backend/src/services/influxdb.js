@@ -683,17 +683,21 @@ async function queryMonthlyRealtime(deviceId = 'AI205') {
     
     // Calculate monthly consumption (difference between last and first reading)
     const monthly = Math.max(0, lastValue - firstValue);
-    
-    // Get month info for display
+
+    // Derive display metadata from current date (Bangkok TZ)
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                         'July', 'August', 'September', 'October', 'November', 'December'];
-    
+    const nowBkk = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
+    const month  = nowBkk.getMonth();       // 0-indexed
+    const year   = nowBkk.getFullYear();
+    const monthStartISO = new Date(year, month, 1).toISOString();
+
     console.log(`📊 Monthly energy: ${monthly.toFixed(2)} kWh (${fieldUsed}: ${firstValue} → ${lastValue})`);
-    
-    return { 
-      success: true, 
-      monthly, 
-      firstValue, 
+
+    return {
+      success: true,
+      monthly,
+      firstValue,
       lastValue,
       firstTime,
       lastTime,
