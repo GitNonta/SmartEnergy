@@ -91,6 +91,10 @@ const writeOptions = {
 const writeApi = influxDB.getWriteApi(org, buckets.raw, 'ns', writeOptions);
 writeApi.useDefaultTags({ source: 'mqtt_backend' });
 
+// Time-skew log throttle: log once per 300 messages to avoid spam
+let _skewLogCount = 0;
+const SKEW_LOG_EVERY = 300;
+
 // Query API for reading from any bucket
 const queryApi = influxDB.getQueryApi(org);
 
@@ -193,7 +197,10 @@ async function writeRawData(data, deviceId = 'AI205') {
         // If skew > 60 seconds, override with server time
         const MAX_SKEW_SECONDS = 60;
         if (skewSeconds > MAX_SKEW_SECONDS) {
-          console.warn(`⚠️ Time skew detected: ${skewSeconds.toFixed(1)}s - using server time`);
+          _skewLogCount++;
+          if (_skewLogCount % SKEW_LOG_EVERY === 1) {
+            console.warn(`⚠️ Time skew detected: ${skewSeconds.toFixed(1)}s - using server time (msg #${_skewLogCount}, logged every ${SKEW_LOG_EVERY})`);
+          }
           timestamp = serverTime;
           timeSkewed = true;
         } else {
@@ -726,22 +733,68 @@ async function queryEnergySummary(timeRange = '1d', deviceId = 'AI205') {
       '1M': '-30d',
       'MN': '-365d'
     };
-    
+
+    // Preferred aggregated buckets; fall back to raw when they are empty
     const bucketMap = {
       '1d': 'daily',
       '1w': 'weekly',
       '1M': 'monthly',
       'MN': 'yearly'
     };
-    
+
     const range = rangeMap[timeRange] || '-1d';
     const bucketKey = bucketMap[timeRange] || 'daily';
-    const bucketName = buckets[bucketKey] || buckets.raw;
+    // Use aggregated bucket if it has data, otherwise fall back to raw
+    const preferredBucket = buckets[bucketKey] || buckets.raw;
+
+    // Quick existence check on preferred bucket
+    const existsCheck = `
+      from(bucket: "${preferredBucket}")
+        |> range(start: ${range})
+        |> filter(fn: (r) => r.device_id == "${deviceId}")
+        |> filter(fn: (r) => r._measurement == "energy_3phase")
+        |> filter(fn: (r) => r._field == "energy_total")
+        |> limit(n: 1)
+    `;
+    let bucketHasData = false;
+    for await (const _ of queryApi.iterateRows(existsCheck)) {
+      bucketHasData = true;
+      break;
+    }
+    // Fall back to raw integral when preferred bucket is empty or IS the raw bucket
+    const useFallbackIntegral = !bucketHasData || preferredBucket === buckets.raw;
+
+    // When falling back to raw, use integral approach (faster than last()-first() on cumulative)
+    if (useFallbackIntegral || preferredBucket === buckets.raw) {
+      const integralQuery = `
+        import "timezone"
+        option location = timezone.location(name: "${TIMEZONE}")
+        from(bucket: "${buckets.raw}")
+          |> range(start: ${range})
+          |> filter(fn: (r) => r.device_id == "${deviceId}")
+          |> filter(fn: (r) => r._measurement == "energy_3phase")
+          |> filter(fn: (r) => r._field == "power_active_kw")
+          |> integral(unit: 1h)
+      `;
+      const irows = await queryApi.collectRows(integralQuery);
+      const total = irows.length > 0 ? Math.max(0, irows[0]._value || 0) : 0;
+      console.log(`📊 Energy Summary (${timeRange}): ${total.toFixed(3)} kWh via raw integral`);
+      return {
+        success: true,
+        perPhase: { total },
+        combined: { fromPower: total },
+        timeRange,
+        bucket: buckets.raw,
+        method: 'raw_integral'
+      };
+    }
+
+    // aggregated bucket has data — use last()-first() on energy_total
+    const bucketName_final = preferredBucket;
     
     // energy_total is a CUMULATIVE meter reading — consumption = last() - first()
-    // Using sum() on a cumulative field yields a meaningless inflated number.
     const queryFirst = `
-      from(bucket: "${bucketName}")
+      from(bucket: "${bucketName_final}")
         |> range(start: ${range})
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
@@ -749,7 +802,7 @@ async function queryEnergySummary(timeRange = '1d', deviceId = 'AI205') {
         |> first()
     `;
     const queryLast = `
-      from(bucket: "${bucketName}")
+      from(bucket: "${bucketName_final}")
         |> range(start: ${range})
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
@@ -770,13 +823,15 @@ async function queryEnergySummary(timeRange = '1d', deviceId = 'AI205') {
     }
 
     const total = Math.max(0, lastVal - firstVal);
+    console.log(`📊 Energy Summary (${timeRange}): ${total.toFixed(3)} kWh via ${bucketName_final} last-first`);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       perPhase: { total },
-      combined: { fromPower: 0 },
+      combined: { fromPower: total },
       timeRange,
-      bucket: bucketName
+      bucket: bucketName_final,
+      method: 'aggregated_last_first'
     };
   } catch (error) {
     console.error('❌ Error querying energy summary:', error);
