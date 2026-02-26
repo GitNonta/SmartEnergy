@@ -159,10 +159,36 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     out.pf3 = out.pf3 ?? out.PF3 ?? out.powerFactor?.pf3 ?? out.powerFactor?.PF3;
 
     // Power (convert kW to W)
-    out.total = out.total ?? (out.kWsum != null ? out.kWsum * 1000 : out.power?.total ?? 0);
-    out.phase1 = out.phase1 ?? (out.kW1 != null ? out.kW1 * 1000 : out.power?.phase1 ?? 0);
-    out.phase2 = out.phase2 ?? (out.kW2 != null ? out.kW2 * 1000 : out.power?.phase2 ?? 0);
-    out.phase3 = out.phase3 ?? (out.kW3 != null ? out.kW3 * 1000 : out.power?.phase3 ?? 0);
+    // Bug #5 fix: power.total/phase* from backend is in kW — must always multiply by 1000.
+    // The old ?? fallback silently used kW as W when kWsum was absent (off-by-1000x).
+    if (out.kWsum != null) {
+      out.total  = out.kWsum  * 1000;
+    } else if (out.power?.total != null) {
+      out.total  = out.power.total  * 1000; // kW → W
+    } else {
+      out.total  = out.total ?? 0;
+    }
+    if (out.kW1 != null) {
+      out.phase1 = out.kW1 * 1000;
+    } else if (out.power?.phase1 != null) {
+      out.phase1 = out.power.phase1 * 1000;
+    } else {
+      out.phase1 = out.phase1 ?? 0;
+    }
+    if (out.kW2 != null) {
+      out.phase2 = out.kW2 * 1000;
+    } else if (out.power?.phase2 != null) {
+      out.phase2 = out.power.phase2 * 1000;
+    } else {
+      out.phase2 = out.phase2 ?? 0;
+    }
+    if (out.kW3 != null) {
+      out.phase3 = out.kW3 * 1000;
+    } else if (out.power?.phase3 != null) {
+      out.phase3 = out.power.phase3 * 1000;
+    } else {
+      out.phase3 = out.phase3 ?? 0;
+    }
 
     // Energy
     if (out.energyAccumulated == null) {

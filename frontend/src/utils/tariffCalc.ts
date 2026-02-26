@@ -126,11 +126,11 @@ export function calculateBill(
     // 4. Ft charge
     const ftCharge = units * ftRate;
 
-    // 5. Pre-VAT total
-    const preVat = baseTariff + ftCharge;
-
-    // 6. VAT
-    const vat = preVat * TARIFF_CONFIG.vatRate;
+    // 5. VAT base = energyCharge + serviceCharge only (PEA standard)
+    // Ft is a separate line item excluded from the VAT base
+    // Ref: PEA bill — VAT = (energyCharge + serviceCharge) × 7%
+    const preVat = baseTariff + ftCharge; // total before VAT (for display)
+    const vat = baseTariff * TARIFF_CONFIG.vatRate; // VAT on base only, not Ft
 
     // 7. Total
     const total = preVat + vat;

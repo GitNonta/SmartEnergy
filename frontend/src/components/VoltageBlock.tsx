@@ -25,14 +25,32 @@ const VoltageBlock: React.FC = () => {
     const dataAge = lastUpdate ? (Date.now() - lastUpdate.getTime()) / 1000 : 999;
     const isStale = dataAge > 15;
 
-    // Reference Voltage
+    // Reference Voltage — MEA/PEA single-phase nominal = 220V, tolerance ±10% = 198–242V
     const nominalVoltage = 220;
+    const V_LOW  = nominalVoltage * 0.90;  // 198 V
+    const V_HIGH = nominalVoltage * 1.10;  // 242 V
     const avgVoltage = (displayData.v1 + displayData.v2 + displayData.v3) / 3;
+
+    const getVoltageStatus = (v: number): 'normal' | 'warning' | 'critical' => {
+        if (v <= 0) return 'normal';          // not connected / no data
+        if (v < V_LOW * 0.95 || v > V_HIGH * 1.05) return 'critical'; // >±15%
+        if (v < V_LOW || v > V_HIGH) return 'warning';                 // ±10–15%
+        return 'normal';
+    };
+
+    const anyAbnormal = [displayData.v1, displayData.v2, displayData.v3]
+        .some(v => v > 0 && getVoltageStatus(v) !== 'normal');
 
     // Calculate percentage deviation from nominal (for bar display)
     const getBarWidth = (voltage: number) => {
-        // Show voltage as percentage of 250V scale
         return Math.min((voltage / 250) * 100, 100);
+    };
+
+    const statusColor = (v: number) => {
+        const s = getVoltageStatus(v);
+        if (s === 'critical') return '#ef4444';
+        if (s === 'warning')  return '#f59e0b';
+        return undefined; // use default phase color
     };
 
     return (
@@ -49,9 +67,18 @@ const VoltageBlock: React.FC = () => {
                             <span className="vb-subtitle">3-Phase Monitor</span>
                         </div>
                     </div>
-                    <div className={`vb-status ${isConnected && !isStale ? 'online' : 'offline'}`}>
-                        <span className="vb-status-dot" />
-                        {isConnected ? (isStale ? 'WAIT' : 'LIVE') : 'OFF'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {anyAbnormal && (
+                            <span style={{
+                                fontSize: '0.5rem', padding: '2px 5px', borderRadius: '8px',
+                                fontWeight: 700, background: 'rgba(245,158,11,0.15)',
+                                color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)'
+                            }}>⚠ VOLT</span>
+                        )}
+                        <div className={`vb-status ${isConnected && !isStale ? 'online' : 'offline'}`}>
+                            <span className="vb-status-dot" />
+                            {isConnected ? (isStale ? 'WAIT' : 'LIVE') : 'OFF'}
+                        </div>
                     </div>
                 </div>
 
@@ -63,14 +90,15 @@ const VoltageBlock: React.FC = () => {
                         title="Click to analyze L1"
                     >
                         <span className="vb-phase-label">L1</span>
-                        <span className={`vb-phase-value ${isStale ? 'stale' : ''}`}>
+                        <span className={`vb-phase-value ${isStale ? 'stale' : ''}`}
+                            style={statusColor(displayData.v1) ? { color: statusColor(displayData.v1) } : undefined}>
                             {displayData.v1.toFixed(1)}
                         </span>
                         <span className="vb-phase-unit">V</span>
                         <div className="vb-phase-bar">
                             <div
                                 className="vb-phase-fill fill-l1"
-                                style={{ width: `${getBarWidth(displayData.v1)}%` }}
+                                style={{ width: `${getBarWidth(displayData.v1)}%`, ...(statusColor(displayData.v1) ? { background: statusColor(displayData.v1), boxShadow: `0 0 6px ${statusColor(displayData.v1)}` } : {}) }}
                             />
                         </div>
                     </div>
@@ -81,14 +109,15 @@ const VoltageBlock: React.FC = () => {
                         title="Click to analyze L2"
                     >
                         <span className="vb-phase-label">L2</span>
-                        <span className={`vb-phase-value ${isStale ? 'stale' : ''}`}>
+                        <span className={`vb-phase-value ${isStale ? 'stale' : ''}`}
+                            style={statusColor(displayData.v2) ? { color: statusColor(displayData.v2) } : undefined}>
                             {displayData.v2.toFixed(1)}
                         </span>
                         <span className="vb-phase-unit">V</span>
                         <div className="vb-phase-bar">
                             <div
                                 className="vb-phase-fill fill-l2"
-                                style={{ width: `${getBarWidth(displayData.v2)}%` }}
+                                style={{ width: `${getBarWidth(displayData.v2)}%`, ...(statusColor(displayData.v2) ? { background: statusColor(displayData.v2), boxShadow: `0 0 6px ${statusColor(displayData.v2)}` } : {}) }}
                             />
                         </div>
                     </div>
@@ -99,14 +128,15 @@ const VoltageBlock: React.FC = () => {
                         title="Click to analyze L3"
                     >
                         <span className="vb-phase-label">L3</span>
-                        <span className={`vb-phase-value ${isStale ? 'stale' : ''}`}>
+                        <span className={`vb-phase-value ${isStale ? 'stale' : ''}`}
+                            style={statusColor(displayData.v3) ? { color: statusColor(displayData.v3) } : undefined}>
                             {displayData.v3.toFixed(1)}
                         </span>
                         <span className="vb-phase-unit">V</span>
                         <div className="vb-phase-bar">
                             <div
                                 className="vb-phase-fill fill-l3"
-                                style={{ width: `${getBarWidth(displayData.v3)}%` }}
+                                style={{ width: `${getBarWidth(displayData.v3)}%`, ...(statusColor(displayData.v3) ? { background: statusColor(displayData.v3), boxShadow: `0 0 6px ${statusColor(displayData.v3)}` } : {}) }}
                             />
                         </div>
                     </div>

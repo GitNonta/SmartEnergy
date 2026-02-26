@@ -76,18 +76,50 @@ function formatPower(value) {
 }
 
 /**
- * Calculate average power factor from 3-phase readings
- * @param {object} data - Object containing pf1, pf2, pf3
- * @returns {number} Average power factor
+ * Calculate system power factor from 3-phase readings
+ * IEC 61000 standard: PF_sys = ΣP / ΣS = ΣP / Σ(V×I)
+ * Uses apparent power (V×I) as weight — arithmetic mean is incorrect.
+ * Falls back to kW-weighted average when V/I not available.
+ * @param {object} data - Object containing pf1/pf2/pf3 and optionally kW1/kW2/kW3, V1-V3, I1-I3
+ * @returns {number} System power factor (0–1)
  */
 function calculateAveragePowerFactor(data) {
   const pf1 = parseFloat(data.pf1 || data.PF1) || 0;
   const pf2 = parseFloat(data.pf2 || data.PF2) || 0;
   const pf3 = parseFloat(data.pf3 || data.PF3) || 0;
-  
+
+  // Preferred: weight by apparent power S = V × I (IEC 61000)
+  const v1 = parseFloat(data.V1 || data.voltage_L1) || 0;
+  const v2 = parseFloat(data.V2 || data.voltage_L2) || 0;
+  const v3 = parseFloat(data.V3 || data.voltage_L3) || 0;
+  const i1 = parseFloat(data.I1 || data.current_L1) || 0;
+  const i2 = parseFloat(data.I2 || data.current_L2) || 0;
+  const i3 = parseFloat(data.I3 || data.current_L3) || 0;
+
+  const s1 = v1 * i1;
+  const s2 = v2 * i2;
+  const s3 = v3 * i3;
+  const totalS = s1 + s2 + s3;
+
+  if (totalS > 0) {
+    // PF_sys = ΣP / ΣS  where P = PF × S
+    const totalP = pf1 * s1 + pf2 * s2 + pf3 * s3;
+    return totalP / totalS;
+  }
+
+  // Fallback: weight by active power kW when V/I not available
+  const kw1 = parseFloat(data.kW1) || 0;
+  const kw2 = parseFloat(data.kW2) || 0;
+  const kw3 = parseFloat(data.kW3) || 0;
+  const totalKw = kw1 + kw2 + kw3;
+
+  if (totalKw > 0) {
+    return (pf1 * kw1 + pf2 * kw2 + pf3 * kw3) / totalKw;
+  }
+
+  // Last resort: simple average of available phases
   const count = (pf1 > 0 ? 1 : 0) + (pf2 > 0 ? 1 : 0) + (pf3 > 0 ? 1 : 0);
   if (count === 0) return 0;
-  
   return (pf1 + pf2 + pf3) / count;
 }
 
@@ -99,7 +131,7 @@ function calculateAveragePowerFactor(data) {
  * @param {number} ft - ค่า Ft (บาท/หน่วย, default 0.3972)
  * @returns {object} รายละเอียดค่าไฟ
  */
-function calculateProgressiveCost(units, ft = 0.3972) {
+function calculateProgressiveCost(units, ft = 0.1572) {
   if (units <= 0) return { 
     energyCharge: 0, 
     ftCharge: 0, 
@@ -140,13 +172,16 @@ function calculateProgressiveCost(units, ft = 0.3972) {
   
   // คำนวณค่า Ft (Fuel Adjustment)
   const ftCharge = units * ft;
-  
-  // รวมยอดก่อน VAT
-  const subtotal = energyCharge + SERVICE_CHARGE + ftCharge;
-  
-  // คำนวณ VAT
-  const vat = subtotal * VAT_RATE;
-  
+
+  // ✅ PEA standard: VAT คำนวณจาก (ค่าพลังงาน + ค่าบริการ) เท่านั้น
+  // Ft เป็นรายการแยกต่างหากที่ไม่รวมในฐาน VAT
+  // Ref: ใบแจ้งหนี้ กฟภ. — VAT = (energyCharge + serviceCharge) × 7%
+  const vatBase = energyCharge + SERVICE_CHARGE;
+  const vat = vatBase * VAT_RATE;
+
+  // รวมยอดก่อน VAT (สำหรับ display)
+  const subtotal = vatBase + ftCharge;
+
   // รวมยอดสุทธิ
   const total = subtotal + vat;
   
@@ -167,7 +202,7 @@ function calculateProgressiveCost(units, ft = 0.3972) {
  * @param {number} ft - ค่า Ft (บาท/หน่วย)
  * @returns {number} ค่าไฟรวม VAT (บาท)
  */
-function getProgressiveCostTotal(units, ft = 0.3972) {
+function getProgressiveCostTotal(units, ft = 0.1572) {
   return calculateProgressiveCost(units, ft).total;
 }
 

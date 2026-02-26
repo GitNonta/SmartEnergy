@@ -8,8 +8,24 @@ const router = express.Router();
 const energyCalc = require('../services/energyCalculation');
 const TIMEZONE = process.env.TIMEZONE || 'Asia/Bangkok';
 
+// =========================================
+// INPUT SANITIZATION — Bug #9 (Flux Injection)
+// Whitelist valid values before interpolating into Flux queries
+// =========================================
+const VALID_RANGE_RE   = /^(-\d+[smhdwMy]|now\(\)|[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.Z+-]+)$/;
+const VALID_DEVICE_RE  = /^[a-zA-Z0-9_-]{1,64}$/;
+
+function sanitizeRange(val, fallback = '-24h') {
+  const s = String(val || '').trim();
+  return VALID_RANGE_RE.test(s) ? s : fallback;
+}
+function sanitizeDeviceId(val, fallback = 'AI205') {
+  const s = String(val || '').trim();
+  return VALID_DEVICE_RE.test(s) ? s : fallback;
+}
+
 module.exports = function(influxService, energyState) {
-  
+
   // Get current energy state (RAM - realtime)
   router.get('/state', (req, res) => {
     try {
@@ -29,7 +45,7 @@ module.exports = function(influxService, energyState) {
 
   router.get('/daily-consumption', async (req, res) => {
     try {
-      const { deviceId = 'AI205' } = req.query;
+      const deviceId = sanitizeDeviceId(req.query.deviceId);
       const bucket = influxService.buckets.raw;
       
       console.log(`📊 Fetching daily consumption (Integral Method) for ${deviceId}...`);
@@ -132,7 +148,8 @@ module.exports = function(influxService, energyState) {
   // Get hourly chart data
   router.get('/chart/hourly', async (req, res) => {
     try {
-      const { range = '-24h', deviceId = 'AI205' } = req.query;
+      const range    = sanitizeRange(req.query.range, '-24h');
+      const deviceId = sanitizeDeviceId(req.query.deviceId);
       
       console.log(`📊 Fetching hourly chart data (Integral) for ${deviceId} over ${range}...`);
       
@@ -157,7 +174,8 @@ module.exports = function(influxService, energyState) {
   // Get daily report data
   router.get('/report/daily', async (req, res) => {
     try {
-      const { range = '-30d', deviceId = 'AI205' } = req.query;
+      const range    = sanitizeRange(req.query.range, '-30d');
+      const deviceId = sanitizeDeviceId(req.query.deviceId);
       
       const result = await influxService.queryFromBucket('daily', range, deviceId, ['energy_total']);
       
@@ -178,7 +196,8 @@ module.exports = function(influxService, energyState) {
   // Get monthly billing data
   router.get('/billing/monthly', async (req, res) => {
     try {
-      const { range = '-365d', deviceId = 'AI205' } = req.query;
+      const range    = sanitizeRange(req.query.range, '-365d');
+      const deviceId = sanitizeDeviceId(req.query.deviceId);
       
       const result = await influxService.queryFromBucket('monthly', range, deviceId, ['energy_total']);
       
@@ -199,13 +218,11 @@ module.exports = function(influxService, energyState) {
   // Get range summary with chart data
   router.get('/range-summary', async (req, res) => {
     try {
-      const { 
-        startDate = '-7d', 
-        endDate = 'now()', 
-        granularity = 'day',
-        deviceId = 'AI205',
-        costPerUnit = '4.0'
-      } = req.query;
+      const startDate   = sanitizeRange(req.query.startDate, '-7d');
+      const endDate     = sanitizeRange(req.query.endDate,   'now()');
+      const granularity = ['hour','day','week','month'].includes(req.query.granularity) ? req.query.granularity : 'day';
+      const deviceId    = sanitizeDeviceId(req.query.deviceId);
+      const costPerUnit = req.query.costPerUnit;
       
       console.log(`📊 Fetching range summary: ${startDate} to ${endDate}, granularity=${granularity}`);
       
@@ -227,11 +244,9 @@ module.exports = function(influxService, energyState) {
   // Get historical chart data for custom date range
   router.get('/historical-chart', async (req, res) => {
     try {
-      const { 
-        range = '-7d',
-        granularity = 'day',
-        deviceId = 'AI205'
-      } = req.query;
+      const range       = sanitizeRange(req.query.range, '-7d');
+      const granularity = ['hour','day','week','month'].includes(req.query.granularity) ? req.query.granularity : 'day';
+      const deviceId    = sanitizeDeviceId(req.query.deviceId);
       
       console.log(`📊 Fetching historical chart: range=${range}, granularity=${granularity}`);
       
@@ -265,7 +280,7 @@ module.exports = function(influxService, energyState) {
   // ✅ Uses window(1d) + integral for accurate daily energy
   router.get('/monthly-chart', async (req, res) => {
     try {
-      const { deviceId = 'AI205' } = req.query;
+      const deviceId = sanitizeDeviceId(req.query.deviceId);
       
       const now = new Date();
       const currentDay = now.getDate();
@@ -307,13 +322,20 @@ module.exports = function(influxService, energyState) {
       }
       
       // Map results to daily slots
+      // Bug #16 fix: use Intl to extract date parts in Asia/Bangkok TZ, not server local TZ
+      const bangkokFmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone: TIMEZONE,
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      });
       rows.forEach(row => {
         if (!row._time) return;
-        const timestamp = new Date(row._time);
-        if (timestamp.getMonth() === currentMonth && timestamp.getFullYear() === currentYear) {
-          const day = timestamp.getDate();
+        const parts = bangkokFmt.formatToParts(new Date(row._time));
+        const rowYear  = parseInt(parts.find(p => p.type === 'year').value);
+        const rowMonth = parseInt(parts.find(p => p.type === 'month').value) - 1; // 0-indexed
+        const rowDay   = parseInt(parts.find(p => p.type === 'day').value);
+        if (rowMonth === currentMonth && rowYear === currentYear) {
           const energyKwh = row._value || 0;
-          dailyMap.set(day, energyKwh);
+          dailyMap.set(rowDay, energyKwh);
         }
       });
       
@@ -357,7 +379,7 @@ module.exports = function(influxService, energyState) {
   // ✅ Uses window(1mo) + integral for accurate monthly energy
   router.get('/yearly-chart', async (req, res) => {
     try {
-      const { deviceId = 'AI205' } = req.query;
+      const deviceId = sanitizeDeviceId(req.query.deviceId);
       
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -397,13 +419,19 @@ module.exports = function(influxService, energyState) {
       }
       
       // Map results to monthly slots
+      // Bug #16 fix: extract year/month in Asia/Bangkok TZ
+      const bangkokFmtYear = new Intl.DateTimeFormat('en-CA', {
+        timeZone: TIMEZONE,
+        year: 'numeric', month: '2-digit'
+      });
       rows.forEach(row => {
         if (!row._time) return;
-        const timestamp = new Date(row._time);
-        if (timestamp.getFullYear() === currentYear) {
-          const month = timestamp.getMonth();
+        const parts = bangkokFmtYear.formatToParts(new Date(row._time));
+        const rowYear  = parseInt(parts.find(p => p.type === 'year').value);
+        const rowMonth = parseInt(parts.find(p => p.type === 'month').value) - 1; // 0-indexed
+        if (rowYear === currentYear) {
           const energyKwh = row._value || 0;
-          monthlyMap.set(month, energyKwh);
+          monthlyMap.set(rowMonth, energyKwh);
         }
       });
       
@@ -444,11 +472,9 @@ module.exports = function(influxService, energyState) {
   // GET /api/energy/cost-history - Get historical energy and cost data for chart
   router.get('/cost-history', async (req, res) => {
     try {
-      const { 
-        mode = 'monthly', // daily, monthly, yearly
-        deviceId = 'AI205',
-        ftRate = 0.1572 
-      } = req.query;
+      const mode     = ['daily','monthly','yearly'].includes(req.query.mode) ? req.query.mode : 'monthly';
+      const deviceId = sanitizeDeviceId(req.query.deviceId);
+      const ftRate   = req.query.ftRate;
       
       const ft = parseFloat(ftRate);
       const now = new Date();
@@ -463,43 +489,49 @@ module.exports = function(influxService, energyState) {
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
         
         // Use daily-consumption logic (hourly breakdown)
+        // Bug #2 fix: use integral(unit:1h) per hour window — correct kWh calculation
+        // mean(kW) * 1.0 was wrong because it assumed exactly 1h of data per window
         const fluxQuery = `
           import "timezone"
           import "date"
           option location = timezone.location(name: "${TIMEZONE}")
-          
+
           todayStart = date.truncate(t: now(), unit: 1d)
-          
+
           from(bucket: "${influxService.buckets.raw}")
             |> range(start: todayStart)
             |> filter(fn: (r) => r.device_id == "${deviceId}")
             |> filter(fn: (r) => r._measurement == "energy_3phase")
             |> filter(fn: (r) => r._field == "power_active_kw")
-            |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+            |> window(every: 1h)
+            |> integral(unit: 1h)
+            |> duplicate(column: "_stop", as: "_time")
+            |> window(every: inf)
         `;
-        
+
         const rows = await influxService.queryApi.collectRows(fluxQuery);
-        
-        // Process hourly data
+
+        // Process hourly data — integral already gives correct kWh per window
         rows.forEach(row => {
-            const timestamp = new Date(row._time);
-            const hour = timestamp.getHours();
+            const bangkokFmt2 = new Intl.DateTimeFormat('en-CA', {
+              timeZone: TIMEZONE, hour: '2-digit', hour12: false
+            });
+            const hour = parseInt(bangkokFmt2.format(new Date(row._time)));
             const hourLabel = String(hour).padStart(2, '0') + ':00';
-            const energy = (row._value || 0) * 1.0; // kW * 1h = kWh
-            
-            // Calculate cost using progressive rate
+            const energy = row._value || 0; // already kWh from integral(unit:1h)
+
             const costData = energyCalc.calculateProgressiveCost(energy, ft);
-            
+
             chartData.push({
                 x: hourLabel,
                 energy: Number(energy.toFixed(3)),
                 cost: Number(costData.total.toFixed(2))
             });
-            
+
             totalEnergy += energy;
             totalCost += costData.total;
         });
-        
+
         // Ensure all hours up to current are present (simplified for now)
       } else if (mode === 'monthly') {
         // Daily breakdown for current month
@@ -507,28 +539,34 @@ module.exports = function(influxService, energyState) {
         const currentYear = now.getFullYear();
         const monthStart = new Date(currentYear, currentMonth, 1, 0, 0, 0);
         
+        // Bug #8 fix: use integral per day window — correct kWh, not mean kW sum
         const fluxQuery = `
           import "timezone"
           option location = timezone.location(name: "${TIMEZONE}")
-          
+
           from(bucket: "${influxService.buckets.raw}")
             |> range(start: ${monthStart.toISOString()})
             |> filter(fn: (r) => r.device_id == "${deviceId}")
             |> filter(fn: (r) => r._measurement == "energy_3phase")
             |> filter(fn: (r) => r._field == "power_active_kw")
-            |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+            |> window(every: 1d)
+            |> integral(unit: 1h)
+            |> duplicate(column: "_stop", as: "_time")
+            |> window(every: inf)
         `;
-        
+
         const rows = await influxService.queryApi.collectRows(fluxQuery);
         const dailyMap = new Map();
-        
+        const bangkokFmtDay = new Intl.DateTimeFormat('en-CA', {
+          timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit'
+        });
+
         rows.forEach(row => {
-            const timestamp = new Date(row._time);
-            if (timestamp.getMonth() === currentMonth) {
-                const day = timestamp.getDate();
-                const energy = row._value || 0;
-                const existing = dailyMap.get(day) || 0;
-                dailyMap.set(day, existing + energy);
+            const parts = bangkokFmtDay.formatToParts(new Date(row._time));
+            const rowMonth = parseInt(parts.find(p => p.type === 'month').value) - 1;
+            if (rowMonth === currentMonth) {
+                const day = parseInt(parts.find(p => p.type === 'day').value);
+                dailyMap.set(day, row._value || 0);
             }
         });
         
@@ -552,28 +590,34 @@ module.exports = function(influxService, energyState) {
         const currentYear = now.getFullYear();
         const yearStart = new Date(currentYear, 0, 1, 0, 0, 0);
         
+        // Bug #8 fix: use integral per month window — correct kWh, not mean kW sum
         const fluxQuery = `
           import "timezone"
           option location = timezone.location(name: "${TIMEZONE}")
-          
+
           from(bucket: "${influxService.buckets.raw}")
             |> range(start: ${yearStart.toISOString()})
             |> filter(fn: (r) => r.device_id == "${deviceId}")
             |> filter(fn: (r) => r._measurement == "energy_3phase")
             |> filter(fn: (r) => r._field == "power_active_kw")
-            |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+            |> window(every: 1mo)
+            |> integral(unit: 1h)
+            |> duplicate(column: "_stop", as: "_time")
+            |> window(every: inf)
         `;
-        
+
         const rows = await influxService.queryApi.collectRows(fluxQuery);
         const monthlyMap = new Map();
-        
+        const bangkokFmtMo = new Intl.DateTimeFormat('en-CA', {
+          timeZone: TIMEZONE, year: 'numeric', month: '2-digit'
+        });
+
         rows.forEach(row => {
-            const timestamp = new Date(row._time);
-            if (timestamp.getFullYear() === currentYear) {
-                const month = timestamp.getMonth();
-                const energy = row._value || 0;
-                const existing = monthlyMap.get(month) || 0;
-                monthlyMap.set(month, existing + energy);
+            const parts = bangkokFmtMo.formatToParts(new Date(row._time));
+            const rowYear  = parseInt(parts.find(p => p.type === 'year').value);
+            const rowMonth = parseInt(parts.find(p => p.type === 'month').value) - 1;
+            if (rowYear === currentYear) {
+                monthlyMap.set(rowMonth, row._value || 0);
             }
         });
         

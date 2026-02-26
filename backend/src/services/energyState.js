@@ -76,7 +76,9 @@ function setBroadcastCallback(callback) {
 function getState() {
   return {
     ...energyState,
-    // ✅ NEW: Meter total from Ep_total ÷ 10 (live from MQTT)
+    // Ep_total from ESP32 is in units of 0.1 Wh (i.e. raw pulse count where 1 pulse = 0.1 Wh)
+    // Dividing by 10 converts: (0.1 Wh × count) / 10 = kWh
+    // Confirmed unit: ESP32 AI205 firmware sends Ep_total as integer pulses, 1 pulse = 0.1 Wh
     meterTotal: lastEnergyTotal !== null ? lastEnergyTotal / 10 : 0,
     rawEpTotal: lastEnergyTotal,
     timezone: TIMEZONE
@@ -127,11 +129,27 @@ function processEnergyReading(epTotal) {
     delta = 0;
   }
 
-  // Skip if delta is unreasonably large (likely bad reading)
-  const MAX_DELTA = 100; // 100 kWh max per reading (adjust as needed)
+  // Skip if delta is unreasonably large (likely a missed reconnect gap or bad reading)
+  // Threshold: configurable via ENERGY_MAX_DELTA_KWH env, default 200 kWh
+  // Raised from 100 to 200 to accommodate high-load sites; set lower via env if needed
+  const MAX_DELTA = parseFloat(process.env.ENERGY_MAX_DELTA_KWH) || 200;
   if (delta > MAX_DELTA) {
-    console.warn(`⚠️ Energy State: Unreasonably large delta (${delta.toFixed(3)} kWh), skipping`);
+    console.warn(
+      `⚠️ Energy State: Delta too large (${delta.toFixed(3)} kWh > MAX ${MAX_DELTA} kWh) — ` +
+      `Ep_total jumped from ${lastEnergyTotal} to ${currentTotal}. ` +
+      `Possible long offline period or meter rollover. Skipping to prevent false accumulation.`
+    );
     lastEnergyTotal = currentTotal;
+    // Broadcast a warning event so frontend can show a notification
+    if (broadcastCallback) {
+      broadcastCallback({
+        type: 'energy_warning',
+        warning: 'delta_too_large',
+        skippedDelta: delta,
+        maxDelta: MAX_DELTA,
+        timestamp: new Date().toISOString()
+      });
+    }
     return { delta: 0, state: energyState };
   }
 

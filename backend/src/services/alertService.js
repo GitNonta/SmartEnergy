@@ -63,8 +63,8 @@ function checkAlerts(data, deviceId) {
   const alerts = [];
   const now = Date.now();
 
-  // Check Power Factor
-  const pf = data.PF || data.power_factor || data.PFsum;
+  // Check Power Factor — ESP32 sends PFsys; also accept PF, PFsum, power_factor
+  const pf = data.PFsys ?? data.PF ?? data.power_factor ?? data.PFsum;
   if (pf !== undefined && pf !== null) {
     if (pf < thresholds.pf.critical) {
       addAlert(alerts, deviceId, 'pf_critical', 'critical', 

@@ -251,8 +251,9 @@ async function writeRawData(data, deviceId = 'AI205') {
       if (rebootState.lastEpTotal !== null) {
         // Check if Ep_total decreased (indicates meter reset/reboot)
         const decrease = rebootState.lastEpTotal - eTot;
-        // If decreased by more than 1 kWh, consider it a reboot
-        if (decrease > 1) {
+        // Reboot threshold: 5% of last reading (min 1 kWh) — avoids false positives on low-value meters
+        const rebootThreshold = Math.max(1, rebootState.lastEpTotal * 0.05);
+        if (decrease > rebootThreshold) {
           rebootState.rebootDetected = true;
           rebootState.rebootDetectedTime = new Date().toISOString();
           rebootState.pointsAfterReboot = 0;
@@ -501,7 +502,7 @@ async function queryDailyConsumption(deviceId = 'AI205', timeRange = 'today()') 
           |> filter(fn: (r) => r._measurement == "energy_3phase")
           |> filter(fn: (r) => r._field == "power_active_kw")
           |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)
-          |> fill(usePrevious: true)
+          |> fill(value: 0.0) // fill gaps with 0 — avoids bleeding prior-day power into first window
           |> map(fn: (r) => ({ r with _value: r._value / 60.0 })) // kW -> kWh/min
           |> filter(fn: (r) => r._time >= targetStart) // Crop
       `;
@@ -514,7 +515,7 @@ async function queryDailyConsumption(deviceId = 'AI205', timeRange = 'today()') 
           |> filter(fn: (r) => r._measurement == "energy_3phase")
           |> filter(fn: (r) => r._field == "power_active_kw")
           |> aggregateWindow(every: 1m, fn: mean, createEmpty: true)
-          |> fill(usePrevious: true)
+          |> fill(value: 0.0) // fill gaps with 0 — avoids bleeding prior power into range start
           |> map(fn: (r) => ({ r with _value: r._value / 60.0 })) // kW -> kWh/min
       `;
     }
@@ -624,30 +625,33 @@ async function queryDailyRealtime(deviceId = 'AI205') {
  */
 async function queryMonthlyRealtime(deviceId = 'AI205') {
   try {
-    // Calculate start of current month in local timezone
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0-indexed
-    
-    // Create date for 1st of current month at 00:00:00 local time
-    const monthStart = new Date(year, month, 1, 0, 0, 0, 0);
-    const monthStartISO = monthStart.toISOString();
-    
-    // Query first value of the month - prioritize energy_total
-    // ESP32 sends energy_total with actual values
+    // ✅ Use Flux timezone (same pattern as queryDailyRealtime) to correctly
+    // truncate to start-of-month in Asia/Bangkok — avoids JS Date UTC offset bug
+    // where new Date(year, month, 1).toISOString() gives UTC midnight, not Bangkok midnight
     const queryFirst = `
+      import "timezone"
+      import "date"
+      option location = timezone.location(name: "${TIMEZONE}")
+
+      monthStart = date.truncate(t: now(), unit: 1mo)
+
       from(bucket: "${buckets.raw}")
-        |> range(start: ${monthStartISO})
+        |> range(start: monthStart)
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
         |> filter(fn: (r) => r._field == "energy_total")
         |> first()
     `;
-    
-    // Query last (most recent) value
+
     const queryLast = `
+      import "timezone"
+      import "date"
+      option location = timezone.location(name: "${TIMEZONE}")
+
+      monthStart = date.truncate(t: now(), unit: 1mo)
+
       from(bucket: "${buckets.raw}")
-        |> range(start: ${monthStartISO})
+        |> range(start: monthStart)
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
         |> filter(fn: (r) => r._field == "energy_total")
@@ -730,33 +734,43 @@ async function queryEnergySummary(timeRange = '1d', deviceId = 'AI205') {
     const bucketKey = bucketMap[timeRange] || 'daily';
     const bucketName = buckets[bucketKey] || buckets.raw;
     
-    const query = `
+    // energy_total is a CUMULATIVE meter reading — consumption = last() - first()
+    // Using sum() on a cumulative field yields a meaningless inflated number.
+    const queryFirst = `
       from(bucket: "${bucketName}")
         |> range(start: ${range})
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
-        |> filter(fn: (r) => r._field == "energy_import" or r._field == "energy_total" or r._field == "power_active")
-        |> sum()
+        |> filter(fn: (r) => r._field == "energy_total")
+        |> first()
     `;
-    
-    let total = 0;
-    let fromPower = 0;
-    
-    for await (const { values, tableMeta } of queryApi.iterateRows(query)) {
-      const row = tableMeta.toObject(values);
-      if (row._field === 'energy_import' || row._field === 'energy_total') {
-        total += row._value || 0;
-      }
-      if (row._field === 'power_active') {
-        // Convert Wh to kWh (assuming hourly samples)
-        fromPower += (row._value || 0) / 1000;
-      }
+    const queryLast = `
+      from(bucket: "${bucketName}")
+        |> range(start: ${range})
+        |> filter(fn: (r) => r.device_id == "${deviceId}")
+        |> filter(fn: (r) => r._measurement == "energy_3phase")
+        |> filter(fn: (r) => r._field == "energy_total")
+        |> last()
+    `;
+
+    let firstVal = 0;
+    let lastVal = 0;
+
+    for await (const { values, tableMeta } of queryApi.iterateRows(queryFirst)) {
+      firstVal = tableMeta.toObject(values)._value || 0;
+      break;
     }
-    
+    for await (const { values, tableMeta } of queryApi.iterateRows(queryLast)) {
+      lastVal = tableMeta.toObject(values)._value || 0;
+      break;
+    }
+
+    const total = Math.max(0, lastVal - firstVal);
+
     return { 
       success: true, 
       perPhase: { total },
-      combined: { fromPower },
+      combined: { fromPower: 0 },
       timeRange,
       bucket: bucketName
     };
