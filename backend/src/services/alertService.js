@@ -235,18 +235,21 @@ async function checkHistoricalAnomaly(influxService, deviceId, currentHourlyEner
   try {
     // Query last 7 days of hourly data for same hour
     const now = new Date();
-    const currentHour = now.getHours();
-    
+    const TIMEZONE = process.env.TIMEZONE || 'Asia/Bangkok';
+    // Use Bangkok TZ for hour extraction — server TZ may differ
+    const bkkHourFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, hour: '2-digit', hour12: false });
+    const currentHour = parseInt(bkkHourFmt.format(now));
+
     // Get hourly data from last 7 days
     const result = await influxService.queryFromBucket('hourly', '-7d', deviceId, ['energy_total']);
-    
+
     if (!result.success || !result.data || result.data.length === 0) {
       return alerts;
     }
-    
-    // Filter to same hour of day and calculate average
+
+    // Filter to same hour of day and calculate average (Bangkok TZ)
     const sameHourData = result.data.filter(point => {
-      const pointHour = new Date(point._time).getHours();
+      const pointHour = parseInt(bkkHourFmt.format(new Date(point._time)));
       return pointHour === currentHour && point._value > 0;
     });
     

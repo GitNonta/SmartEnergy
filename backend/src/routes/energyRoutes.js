@@ -475,8 +475,9 @@ module.exports = function(influxService, energyState) {
       const mode     = ['daily','monthly','yearly'].includes(req.query.mode) ? req.query.mode : 'monthly';
       const deviceId = sanitizeDeviceId(req.query.deviceId);
       const ftRate   = req.query.ftRate;
-      
-      const ft = parseFloat(ftRate);
+
+      // Guard: default to 0.1572 if ftRate is absent or non-numeric
+      const ft = isFinite(parseFloat(ftRate)) ? parseFloat(ftRate) : 0.1572;
       const now = new Date();
       
       // Determine range and granularity
