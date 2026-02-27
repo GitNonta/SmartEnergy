@@ -391,8 +391,9 @@ module.exports = function(influxService, energyState) {
       
       console.log(`📊 Fetching yearly chart for ${deviceId}, year ${currentYear}...`);
       
-      // Query: Monthly sum using HOURLY bucket (pre-aggregated, ~800 rows vs 1.5M in raw)
-      // raw bucket window(1mo)+integral times out; hourly bucket is orders of magnitude faster
+      // Query: Monthly sum using HOURLY bucket energy_consumed field
+      // hourly bucket stores energy_consumed = integral(power_active_kw, 1h) per hour
+      // sum() per month gives correct kWh without double-integrating mean power
       const monthlyIntegralQuery = `
         import "timezone"
         option location = timezone.location(name: "${TIMEZONE}")
@@ -401,9 +402,9 @@ module.exports = function(influxService, energyState) {
           |> range(start: ${yearStart.toISOString()})
           |> filter(fn: (r) => r.device_id == "${deviceId}")
           |> filter(fn: (r) => r._measurement == "energy_3phase")
-          |> filter(fn: (r) => r._field == "power_active_kw")
+          |> filter(fn: (r) => r._field == "energy_consumed")
           |> window(every: 1mo)
-          |> integral(unit: 1h)
+          |> sum()
           |> duplicate(column: "_stop", as: "_time")
           |> window(every: inf)
       `;
@@ -592,8 +593,9 @@ module.exports = function(influxService, energyState) {
         const currentYear = now.getFullYear();
         const yearStart = new Date(currentYear, 0, 1, 0, 0, 0);
 
-        // Use hourly bucket (pre-aggregated) — raw bucket has 1.5M+ rows/yr → timeout
-        // and may produce inflated values due to high-frequency sampling
+        // Use hourly bucket energy_consumed field (sum per month)
+        // energy_consumed = integral(power_active_kw, 1h) computed by downsample task
+        // sum() avoids double-integrating mean power which inflates yearly totals
         const fluxQuery = `
           import "timezone"
           option location = timezone.location(name: "${TIMEZONE}")
@@ -602,9 +604,9 @@ module.exports = function(influxService, energyState) {
             |> range(start: ${yearStart.toISOString()})
             |> filter(fn: (r) => r.device_id == "${deviceId}")
             |> filter(fn: (r) => r._measurement == "energy_3phase")
-            |> filter(fn: (r) => r._field == "power_active_kw")
+            |> filter(fn: (r) => r._field == "energy_consumed")
             |> window(every: 1mo)
-            |> integral(unit: 1h)
+            |> sum()
             |> duplicate(column: "_stop", as: "_time")
             |> window(every: inf)
         `;

@@ -733,105 +733,60 @@ async function queryEnergySummary(timeRange = '1d', deviceId = 'AI205') {
       '1M': '-30d',
       'MN': '-365d'
     };
-
-    // Preferred aggregated buckets; fall back to raw when they are empty
-    const bucketMap = {
-      '1d': 'daily',
-      '1w': 'weekly',
-      '1M': 'monthly',
-      'MN': 'yearly'
-    };
-
     const range = rangeMap[timeRange] || '-1d';
-    const bucketKey = bucketMap[timeRange] || 'daily';
-    // Use aggregated bucket if it has data, otherwise fall back to raw
-    const preferredBucket = buckets[bucketKey] || buckets.raw;
 
-    // Quick existence check on preferred bucket
-    const existsCheck = `
-      from(bucket: "${preferredBucket}")
+    // Primary: sum(energy_consumed) from hourly bucket.
+    // energy_consumed = integral(power_active_kw, 1h) stored by downsample task.
+    // This avoids double-integrating mean power and avoids last()-first() on a
+    // cumulative meter that resets or stays constant between periods.
+    const hourlyQuery = `
+      import "timezone"
+      option location = timezone.location(name: "${TIMEZONE}")
+      from(bucket: "${buckets.hourly}")
         |> range(start: ${range})
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
-        |> filter(fn: (r) => r._field == "energy_total")
-        |> limit(n: 1)
+        |> filter(fn: (r) => r._field == "energy_consumed")
+        |> sum()
     `;
-    let bucketHasData = false;
-    for await (const _ of queryApi.iterateRows(existsCheck)) {
-      bucketHasData = true;
-      break;
-    }
-    // Fall back to raw integral when preferred bucket is empty or IS the raw bucket
-    const useFallbackIntegral = !bucketHasData || preferredBucket === buckets.raw;
+    const hrows = await queryApi.collectRows(hourlyQuery);
+    const hourlyTotal = hrows.length > 0 ? Math.max(0, hrows[0]._value || 0) : 0;
 
-    // When falling back to raw, use integral approach (faster than last()-first() on cumulative)
-    if (useFallbackIntegral || preferredBucket === buckets.raw) {
-      const integralQuery = `
-        import "timezone"
-        option location = timezone.location(name: "${TIMEZONE}")
-        from(bucket: "${buckets.raw}")
-          |> range(start: ${range})
-          |> filter(fn: (r) => r.device_id == "${deviceId}")
-          |> filter(fn: (r) => r._measurement == "energy_3phase")
-          |> filter(fn: (r) => r._field == "power_active_kw")
-          |> integral(unit: 1h)
-      `;
-      const irows = await queryApi.collectRows(integralQuery);
-      const total = irows.length > 0 ? Math.max(0, irows[0]._value || 0) : 0;
-      console.log(`📊 Energy Summary (${timeRange}): ${total.toFixed(3)} kWh via raw integral`);
+    if (hourlyTotal > 0) {
+      console.log(`📊 Energy Summary (${timeRange}): ${hourlyTotal.toFixed(3)} kWh via hourly sum(energy_consumed)`);
       return {
         success: true,
-        perPhase: { total },
-        combined: { fromPower: total },
+        perPhase: { total: hourlyTotal },
+        combined: { fromPower: hourlyTotal },
         timeRange,
-        bucket: buckets.raw,
-        method: 'raw_integral'
+        bucket: buckets.hourly,
+        method: 'hourly_sum'
       };
     }
 
-    // aggregated bucket has data — use last()-first() on energy_total
-    const bucketName_final = preferredBucket;
-    
-    // energy_total is a CUMULATIVE meter reading — consumption = last() - first()
-    const queryFirst = `
-      from(bucket: "${bucketName_final}")
+    // Fallback: raw integral — used when hourly bucket has no data for this range
+    // (e.g., backfill not yet run, or very recent data not yet aggregated)
+    const rawQuery = `
+      import "timezone"
+      option location = timezone.location(name: "${TIMEZONE}")
+      from(bucket: "${buckets.raw}")
         |> range(start: ${range})
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
-        |> filter(fn: (r) => r._field == "energy_total")
-        |> first()
+        |> filter(fn: (r) => r._field == "power_active_kw")
+        |> integral(unit: 1h)
     `;
-    const queryLast = `
-      from(bucket: "${bucketName_final}")
-        |> range(start: ${range})
-        |> filter(fn: (r) => r.device_id == "${deviceId}")
-        |> filter(fn: (r) => r._measurement == "energy_3phase")
-        |> filter(fn: (r) => r._field == "energy_total")
-        |> last()
-    `;
-
-    let firstVal = 0;
-    let lastVal = 0;
-
-    for await (const { values, tableMeta } of queryApi.iterateRows(queryFirst)) {
-      firstVal = tableMeta.toObject(values)._value || 0;
-      break;
-    }
-    for await (const { values, tableMeta } of queryApi.iterateRows(queryLast)) {
-      lastVal = tableMeta.toObject(values)._value || 0;
-      break;
-    }
-
-    const total = Math.max(0, lastVal - firstVal);
-    console.log(`📊 Energy Summary (${timeRange}): ${total.toFixed(3)} kWh via ${bucketName_final} last-first`);
+    const rrows = await queryApi.collectRows(rawQuery);
+    const rawTotal = rrows.length > 0 ? Math.max(0, rrows[0]._value || 0) : 0;
+    console.log(`📊 Energy Summary (${timeRange}): ${rawTotal.toFixed(3)} kWh via raw integral (hourly empty)`);
 
     return {
       success: true,
-      perPhase: { total },
-      combined: { fromPower: total },
+      perPhase: { total: rawTotal },
+      combined: { fromPower: rawTotal },
       timeRange,
-      bucket: bucketName_final,
-      method: 'aggregated_last_first'
+      bucket: buckets.raw,
+      method: 'raw_integral'
     };
   } catch (error) {
     console.error('❌ Error querying energy summary:', error);
@@ -1207,8 +1162,9 @@ async function getRealtimeYearlyUsage(deviceId = 'AI205') {
   const yearStart = new Date(currentYear, 0, 1, 0, 0, 0).toISOString();
 
   try {
-    // Use hourly bucket (pre-aggregated) instead of raw to avoid timeout
-    // raw bucket has 1.5M+ rows per year; integral() on that times out in >15s
+    // Use hourly bucket energy_consumed field (sum) — avoids double-integrating
+    // mean power_active_kw which inflates yearly totals.
+    // energy_consumed = integral(power_active_kw, 1h) per hour, stored by downsample task.
     const fluxQuery = `
       import "timezone"
       import "date"
@@ -1218,8 +1174,8 @@ async function getRealtimeYearlyUsage(deviceId = 'AI205') {
         |> range(start: ${yearStart})
         |> filter(fn: (r) => r.device_id == "${deviceId}")
         |> filter(fn: (r) => r._measurement == "energy_3phase")
-        |> filter(fn: (r) => r._field == "power_active_kw")
-        |> integral(unit: 1h)
+        |> filter(fn: (r) => r._field == "energy_consumed")
+        |> sum()
     `;
 
     const rows = await queryApi.collectRows(fluxQuery);
