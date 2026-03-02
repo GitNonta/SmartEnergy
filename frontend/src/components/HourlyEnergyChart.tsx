@@ -185,13 +185,35 @@ export default function HourlyEnergyChart({
         // Determine chart type based on mode
         const chartType = viewMode === 'hourly' ? 'bar' : 'area';
 
+        const axisColor  = darkMode ? '#475569' : '#cbd5e1';
+        const labelColor = darkMode ? '#94a3b8' : '#64748b';
+        const gridColor  = darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+
+        // Peak value for annotation line
+        const maxVal = chartData.reduce((m, d) => Math.max(m, Number(d.y)), 0);
+
         const options = {
             chart: {
                 type: chartType,
-                height: '100%',  // Use parent container height
+                height: '100%',
                 background: 'transparent',
                 toolbar: { show: false },
-                animations: { enabled: true, easing: 'easeinout', speed: 300 }
+                zoom: { enabled: false },
+                animations: {
+                    enabled: true,
+                    easing: 'easeinout',
+                    speed: 500,
+                    animateGradually: { enabled: true, delay: 80 },
+                    dynamicAnimation: { enabled: true, speed: 300 }
+                },
+                dropShadow: chartType === 'bar' ? {
+                    enabled: true,
+                    top: 4,
+                    left: 0,
+                    blur: 6,
+                    color: palette.measured,
+                    opacity: darkMode ? 0.15 : 0.08
+                } : { enabled: false }
             },
             theme: { mode: darkMode ? 'dark' : 'light' },
             series: [{
@@ -200,69 +222,151 @@ export default function HourlyEnergyChart({
             }],
             plotOptions: {
                 bar: {
-                    borderRadius: 4,
-                    columnWidth: '60%',
-                    distributed: true, // Enable individual bar colors
+                    borderRadius: viewMode === 'hourly' ? 6 : 5,
+                    borderRadiusApplication: 'end' as const,
+                    columnWidth: viewMode === 'hourly' ? '55%' : '50%',
+                    distributed: true,
+                },
+                area: {
+                    fillTo: 'origin' as const,
                 }
             },
             colors: chartData.map(d => d.fillColor),
             stroke: chartType === 'area' ? {
-                curve: 'smooth',
-                width: 2,
-                dashArray: chartData.map(d => d.quality === 'estimated' ? 5 : 0) // Dashed for estimated
-            } : undefined,
+                curve: 'smooth' as const,
+                width: 2.5,
+                dashArray: chartData.map(d => d.quality === 'estimated' ? 6 : 0)
+            } : { show: false },
             fill: chartType === 'area' ? {
                 type: 'gradient',
                 gradient: {
-                    shadeIntensity: 1,
-                    opacityFrom: 0.6,
-                    opacityTo: 0.1,
-                    stops: [0, 90, 100]
+                    type: 'vertical',
+                    shadeIntensity: 0.5,
+                    gradientToColors: [palette.measured + '00'],
+                    opacityFrom: 0.5,
+                    opacityTo: 0.02,
+                    stops: [0, 85, 100]
                 }
             } : {
                 type: 'gradient',
                 gradient: {
                     type: 'vertical',
+                    gradientToColors: chartData.map(d =>
+                        d.fillColor + (darkMode ? '88' : 'aa')
+                    ),
                     opacityFrom: 1,
-                    opacityTo: 0.6,
+                    opacityTo: 0.75,
+                    stops: [0, 100]
                 }
             },
             dataLabels: { enabled: false },
             xaxis: {
                 categories: chartData.map(d => d.x),
                 labels: {
-                    style: { colors: darkMode ? '#94a3b8' : '#64748b', fontSize: '10px' },
-                    rotate: viewMode === 'hourly' ? -45 : 0
+                    style: {
+                        colors: Array(chartData.length).fill(labelColor),
+                        fontSize: '10px',
+                        fontFamily: 'Inter, sans-serif',
+                        fontWeight: 500,
+                    },
+                    rotate: viewMode === 'hourly' ? -45 : 0,
+                    rotateAlways: viewMode === 'hourly',
+                    hideOverlappingLabels: true,
+                    trim: false,
                 },
                 axisBorder: { show: false },
-                axisTicks: { show: false }
+                axisTicks: { show: false },
+                crosshairs: {
+                    show: true,
+                    stroke: { color: palette.measured, width: 1, dashArray: 4 }
+                }
             },
             yaxis: {
-                labels: { style: { colors: darkMode ? '#94a3b8' : '#64748b' } },
-                title: { text: 'kWh', style: { color: darkMode ? '#94a3b8' : '#64748b' } }
+                labels: {
+                    style: { colors: [labelColor], fontSize: '10px', fontFamily: 'Inter, sans-serif' },
+                    formatter: (v: number) => v >= 1 ? v.toFixed(2) : v.toFixed(3)
+                },
+                title: {
+                    text: 'kWh',
+                    style: { color: labelColor, fontSize: '10px', fontWeight: 600 }
+                },
+                min: 0,
             },
             grid: {
-                borderColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                strokeDashArray: 3,
+                borderColor: gridColor,
+                strokeDashArray: 4,
+                xaxis: { lines: { show: false } },
+                yaxis: { lines: { show: true } },
+                padding: { top: 8, right: 8, bottom: 0, left: 0 }
             },
+            annotations: maxVal > 0 ? {
+                yaxis: [{
+                    y: maxVal,
+                    borderColor: palette.measured,
+                    borderWidth: 1,
+                    strokeDashArray: 4,
+                    label: {
+                        text: `Peak: ${maxVal.toFixed(3)} kWh`,
+                        position: 'right',
+                        offsetX: -8,
+                        style: {
+                            background: darkMode ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.9)',
+                            color: palette.measured,
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            padding: { top: 2, bottom: 2, left: 6, right: 6 },
+                            borderRadius: 4,
+                        }
+                    }
+                }]
+            } : {},
             tooltip: {
                 theme: darkMode ? 'dark' : 'light',
                 custom: ({ dataPointIndex }: any) => {
                     const point = chartData[dataPointIndex];
-                    const qualityLabel = point.quality === 'estimated' ? `⚠️ ${t('history.estimated')}`
-                        : point.quality === 'invalid' ? `❌ ${t('history.invalid')}`
-                            : `✅ ${t('history.measured')}`;
-                    const bg = darkMode ? '#1e293b' : '#ffffff';
-                    const text = darkMode ? '#ffffff' : '#0f172a';
-                    const border = darkMode ? 'rgba(255,255,255,0.1)' : '#e2e8f0';
+                    if (!point) return '';
+                    const qualityIcon  = point.quality === 'estimated' ? '⚠️'
+                        : point.quality === 'invalid' ? '❌' : '✅';
+                    const qualityText  = point.quality === 'estimated' ? t('history.estimated')
+                        : point.quality === 'invalid'  ? t('history.invalid') : t('history.measured');
+                    const bg     = darkMode ? '#0f172a' : '#ffffff';
+                    const text   = darkMode ? '#f1f5f9' : '#0f172a';
+                    const sub    = darkMode ? '#94a3b8'  : '#64748b';
+                    const border = darkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0';
+                    const pct    = maxVal > 0 ? ((Number(point.y) / maxVal) * 100).toFixed(0) : '0';
                     return `
-            <div style="padding: 8px 12px; background: ${bg}; border-radius: 4px; color: ${text}; border: 1px solid ${border}; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-              <div style="font-weight: 600;">${point.x}</div>
-              <div style="color: ${point.fillColor}; font-size: 1.2em;">${point.y} kWh</div>
-              <div style="font-size: 0.8em; opacity: 0.8;">${qualityLabel}</div>
-            </div>
-          `;
+<div style="
+  padding:10px 14px;
+  background:${bg};
+  border-radius:10px;
+  color:${text};
+  border:1px solid ${border};
+  box-shadow:0 8px 24px rgba(0,0,0,${darkMode ? '0.4' : '0.12'});
+  min-width:140px;
+  font-family:Inter,sans-serif;
+">
+  <div style="font-size:0.7rem;color:${sub};margin-bottom:4px;font-weight:500;">${point.x}</div>
+  <div style="font-size:1.3rem;font-weight:800;color:${point.fillColor};line-height:1.2;">${point.y}
+    <span style="font-size:0.7rem;font-weight:500;color:${sub};">kWh</span>
+  </div>
+  <div style="
+    display:flex;justify-content:space-between;align-items:center;
+    margin-top:6px;padding-top:6px;
+    border-top:1px solid ${border};
+    font-size:0.67rem;
+  ">
+    <span style="color:${sub};">${qualityIcon} ${qualityText}</span>
+    <span style="
+      background:${point.fillColor}22;color:${point.fillColor};
+      padding:1px 6px;border-radius:10px;font-weight:700;
+    ">${pct}%</span>
+  </div>
+</div>`;
                 }
+            },
+            states: {
+                hover: { filter: { type: 'lighten', value: 0.08 } },
+                active: { filter: { type: 'darken', value: 0.15 } }
             },
             legend: { show: false }
         };
@@ -276,22 +380,26 @@ export default function HourlyEnergyChart({
         };
     }, [isScriptLoaded, chartData, viewMode, darkMode]);
 
-    const getTotal = () => chartData.reduce((sum, d) => sum + Number(d.y), 0).toFixed(2);
-
+    const getTotal   = () => chartData.reduce((sum, d) => sum + Number(d.y), 0).toFixed(3);
+    const getPeak    = () => chartData.reduce((m, d) => Math.max(m, Number(d.y)), 0).toFixed(3);
+    const getAvg     = () => chartData.length > 0
+        ? (chartData.reduce((s, d) => s + Number(d.y), 0) / chartData.length).toFixed(3)
+        : '0.000';
     const getEstimatedCount = () => chartData.filter(d => d.quality === 'estimated').length;
 
     const getTitle = () => {
         switch (viewMode) {
-            case 'hourly': return t('history.hourlyConsumption');
-            case 'daily': return t('history.dailyConsumption');
+            case 'hourly':  return t('history.hourlyConsumption');
+            case 'daily':   return t('history.dailyConsumption');
             case 'monthly': return t('history.monthlyConsumption');
         }
     };
 
+    const accentColor = darkMode ? '#22d3ee' : '#0891b2';
 
     return (
         <div className="energy-chart-quality" style={{ minHeight: '400px' }}>
-            {/* Header */}
+            {/* ── Header ── */}
             <div className="chart-header">
                 <div className="title-section">
                     <div className="icon-box">
@@ -300,10 +408,10 @@ export default function HourlyEnergyChart({
                     <div>
                         <h2 className="chart-title">{getTitle()}</h2>
                         <span className="chart-subtitle">
-                            {t('history.total')}: <span className="highlight">{getTotal()}</span> kWh
+                            {t('history.total')}: <span className="highlight">{getTotal()} kWh</span>
                             {getEstimatedCount() > 0 && (
                                 <span className="estimated-warning">
-                                    <AlertTriangle size={12} /> {getEstimatedCount()} {t('history.estimated')}
+                                    <AlertTriangle size={11} /> {getEstimatedCount()} {t('history.estimated')}
                                 </span>
                             )}
                         </span>
@@ -312,51 +420,72 @@ export default function HourlyEnergyChart({
 
                 <div className="controls">
                     <div className="tabs">
-                        <button
-                            onClick={() => setViewMode('hourly')}
-                            className={`tab ${viewMode === 'hourly' ? 'active hourly' : ''}`}
-                        >
-                            {t('export.buckets.hourly')}
-                        </button>
-                        <button
-                            onClick={() => setViewMode('daily')}
-                            className={`tab ${viewMode === 'daily' ? 'active daily' : ''}`}
-                        >
-                            {t('export.buckets.daily')}
-                        </button>
-                        <button
-                            onClick={() => setViewMode('monthly')}
-                            className={`tab ${viewMode === 'monthly' ? 'active monthly' : ''}`}
-                        >
-                            {t('export.buckets.monthly')}
-                        </button>
+                        <button onClick={() => setViewMode('hourly')}  className={`tab ${viewMode === 'hourly'  ? 'active hourly'  : ''}`}>{t('export.buckets.hourly')}</button>
+                        <button onClick={() => setViewMode('daily')}   className={`tab ${viewMode === 'daily'   ? 'active daily'   : ''}`}>{t('export.buckets.daily')}</button>
+                        <button onClick={() => setViewMode('monthly')} className={`tab ${viewMode === 'monthly' ? 'active monthly' : ''}`}>{t('export.buckets.monthly')}</button>
                     </div>
-                    <button onClick={loadData} className="refresh-btn" disabled={loading}>
-                        <RefreshCw size={16} className={loading ? 'spin' : ''} />
+                    <button onClick={loadData} className="refresh-btn" disabled={loading} title="Refresh">
+                        <RefreshCw size={15} className={loading ? 'spin' : ''} />
                     </button>
                 </div>
             </div>
 
-            {/* Legend */}
+            {/* ── Mini stat cards ── */}
+            {chartData.length > 0 && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '8px',
+                    marginBottom: '12px',
+                }}>
+                    {[
+                        { label: t('history.total'), value: getTotal(), unit: 'kWh', color: accentColor },
+                        { label: 'Peak', value: getPeak(),  unit: 'kWh', color: darkMode ? '#f59e0b' : '#d97706' },
+                        { label: 'Avg',  value: getAvg(),   unit: 'kWh', color: darkMode ? '#a78bfa' : '#7c3aed' },
+                    ].map(s => (
+                        <div key={s.label} style={{
+                            background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc',
+                            border: `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : '#e2e8f0'}`,
+                            borderRadius: '10px',
+                            padding: '8px 10px',
+                            textAlign: 'center',
+                        }}>
+                            <div style={{ fontSize: '0.62rem', color: darkMode ? '#64748b' : '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>
+                                {s.label}
+                            </div>
+                            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: s.color, lineHeight: 1.2 }}>
+                                {s.value}
+                                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: darkMode ? '#475569' : '#94a3b8', marginLeft: '3px' }}>{s.unit}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* ── Quality Legend ── */}
             <div className="quality-legend">
-                <span className="legend-item"><span className="dot measured"></span> {t('history.measured')}</span>
-                <span className="legend-item"><span className="dot estimated"></span> {t('history.estimated')}</span>
-                <span className="legend-item"><span className="dot invalid"></span> {t('history.invalid')}</span>
+                <span className="legend-item"><span className="dot measured"></span>{t('history.measured')}</span>
+                <span className="legend-item"><span className="dot estimated"></span>{t('history.estimated')}</span>
+                <span className="legend-item"><span className="dot invalid"></span>{t('history.invalid')}</span>
             </div>
 
-            {/* Chart */}
-            <div className="chart-container" style={{ position: 'relative', width: '100%', height: '280px' }}>
+            {/* ── Chart ── */}
+            <div className="chart-container" style={{ width: '100%', height: '260px' }}>
                 {loading && chartData.length === 0 ? (
-                    <div className="loading">{t('history.loading')}</div>
+                    <div className="loading" data-text={t('history.loading')} />
                 ) : (
-                    <div ref={chartDivRef} style={{ minHeight: '280px', width: '100%' }} />
+                    <div ref={chartDivRef} style={{ width: '100%', height: '100%' }} />
                 )}
             </div>
 
-            {/* Footer */}
-            {/* Footer */}
+            {/* ── Footer ── */}
             <div className="chart-footer">
-                <span className="source-badge">📊 {t('history.source')}: AI205_{viewMode}</span>
+                <span className="source-badge">
+                    📊 {t('history.source')}: AI205_{viewMode}
+                    {lastUpdate && (
+                        <span style={{ marginLeft: 6, opacity: 0.7 }}>· {lastUpdate}</span>
+                    )}
+                </span>
             </div>
         </div>
     );
