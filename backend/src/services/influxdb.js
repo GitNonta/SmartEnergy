@@ -750,7 +750,10 @@ async function queryEnergySummary(timeRange = '1d', deviceId = 'AI205') {
         |> sum()
     `;
     const hrows = await queryApi.collectRows(hourlyQuery);
-    const hourlyTotal = hrows.length > 0 ? Math.max(0, hrows[0]._value || 0) : 0;
+    // sum() may return multiple rows per tag set — sum them all
+    const hourlyTotal = hrows.length > 0
+      ? Math.max(0, hrows.reduce((acc, r) => acc + (r._value || 0), 0))
+      : 0;
 
     if (hourlyTotal > 0) {
       console.log(`📊 Energy Summary (${timeRange}): ${hourlyTotal.toFixed(3)} kWh via hourly sum(energy_consumed)`);
@@ -777,7 +780,11 @@ async function queryEnergySummary(timeRange = '1d', deviceId = 'AI205') {
         |> integral(unit: 1h)
     `;
     const rrows = await queryApi.collectRows(rawQuery);
-    const rawTotal = rrows.length > 0 ? Math.max(0, rrows[0]._value || 0) : 0;
+    // integral() may return multiple rows (one per table/tag combination)
+    // sum all rows to get total energy across all tag sets
+    const rawTotal = rrows.length > 0
+      ? Math.max(0, rrows.reduce((acc, r) => acc + (r._value || 0), 0))
+      : 0;
     console.log(`📊 Energy Summary (${timeRange}): ${rawTotal.toFixed(3)} kWh via raw integral (hourly empty)`);
 
     return {
