@@ -79,8 +79,8 @@ function getState() {
     // Ep_total from ESP32 is in units of 0.1 Wh (i.e. raw pulse count where 1 pulse = 0.1 Wh)
     // Dividing by 10 converts: (0.1 Wh × count) / 10 = kWh
     // Confirmed unit: ESP32 AI205 firmware sends Ep_total as integer pulses, 1 pulse = 0.1 Wh
-    meterTotal: lastEnergyTotal !== null ? lastEnergyTotal / 10 : 0,
-    rawEpTotal: lastEnergyTotal,
+    meterTotal: lastEnergyTotal !== null ? lastEnergyTotal : 0,
+    rawEpTotal: lastEnergyTotal !== null ? lastEnergyTotal * 10 : null,
     timezone: TIMEZONE
   };
 }
@@ -379,10 +379,26 @@ function getLastEnergyTotal() {
   return lastEnergyTotal;
 }
 
+/**
+ * Process MQTT message and update energy state
+ * Called by server.js on every AI205/data message
+ * @param {Object} message - Parsed MQTT payload
+ * @param {string} deviceId - Device ID (unused, for future multi-device)
+ */
+function updateFromMqtt(message, deviceId) {
+  // Ep_total from ESP32 is raw pulse count where 1 pulse = 0.1 Wh
+  // Divide by 10 → kWh before passing to processEnergyReading
+  const rawEpTotal = message.Ep_total ?? message.ep_total ?? message.energy_total;
+  if (rawEpTotal === null || rawEpTotal === undefined) return;
+  const kWh = parseFloat(rawEpTotal) / 10;
+  processEnergyReading(kWh);
+}
+
 module.exports = {
   initialize,
   getState,
   processEnergyReading,
+  updateFromMqtt,
   setBroadcastCallback,
   resetDaily,
   resetMonthly,

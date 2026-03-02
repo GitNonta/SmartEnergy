@@ -1107,7 +1107,7 @@ async function getRealtimeDailyUsage(deviceId = 'AI205') {
     `;
 
     const rows = await queryApi.collectRows(query);
-    const totalDaily = rows.length > 0 ? (rows[0]._value || 0) : 0;
+    const totalDaily = rows.reduce((acc, r) => acc + (r._value || 0), 0);
     
     console.log(`📊 Realtime Daily (Integral): ${totalDaily.toFixed(3)} kWh`);
     return totalDaily;
@@ -1146,7 +1146,7 @@ async function getRealtimeMonthlyUsage(deviceId = 'AI205') {
     `;
     
     const rows = await queryApi.collectRows(fluxQuery);
-    const totalEnergy = rows.length > 0 ? (rows[0]._value || 0) : 0;
+    const totalEnergy = rows.reduce((acc, r) => acc + (r._value || 0), 0);
     
     console.log(`📊 Realtime Monthly (Integral): ${totalEnergy.toFixed(3)} kWh`);
     return totalEnergy;
@@ -1599,10 +1599,11 @@ async function getRangeSummary(deviceId = 'AI205', startDate, endDate, granulari
       queryApi.collectRows(chartQuery)
     ]);
 
-    const totalEnergy = totalRows.length > 0 ? totalRows[0]._value : 0;
-    const peakPower = peakRows.length > 0 ? peakRows[0]._value : 0;
-    const peakTime = peakRows.length > 0 ? peakRows[0]._time : null;
-    const avgPower = avgRows.length > 0 ? avgRows[0]._value : 0;
+    const totalEnergy = totalRows.reduce((acc, r) => acc + (r._value || 0), 0);
+    const peakRow = peakRows.reduce((best, r) => (!best || (r._value || 0) > (best._value || 0)) ? r : best, null);
+    const peakPower = peakRow ? (peakRow._value || 0) : 0;
+    const peakTime = peakRow ? peakRow._time : null;
+    const avgPower = avgRows.length > 0 ? avgRows.reduce((acc, r) => acc + (r._value || 0), 0) / avgRows.length : 0;
 
     // Process chart data - calculate energy per period
     const chartData = chartRows.map((row, index, arr) => {
