@@ -6,9 +6,11 @@
 
 const express = require('express');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const router = express.Router();
 
 const { query, queryOne } = require('../services/db');
+const { sendPasswordResetEmail } = require('../services/mailer');
 const { 
   createSession, 
   invalidateSession, 
@@ -254,6 +256,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       success: true,
+      token: session.token,
       data: session
     });
 
@@ -542,6 +545,113 @@ router.get('/rate-limit-status', authMiddleware('admin'), async (req, res) => {
       success: false,
       error: 'Failed to get rate limit status'
     });
+  }
+});
+
+/**
+ * POST /api/auth/forgot-password
+ * Send password reset email
+ */
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required' });
+    }
+
+    const user = await queryOne('SELECT id, username, email, display_name FROM users WHERE email = ? AND is_active = TRUE', [email]);
+    
+    if (!user) {
+      // Return success even if user not found to prevent email enumeration
+      return res.json({ success: true, message: 'If that email exists in our system, a reset link has been sent.' });
+    }
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+    await query(
+      'INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)',
+      [user.id, token, expiresAt]
+    );
+
+    // Frontend URL for reset
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+
+    await sendPasswordResetEmail(user.email, resetLink, user.username, user.display_name);
+    
+    await logAudit(user.id, 'PASSWORD_RESET_REQUEST', 'users', user.id, null, { email }, req.ip, req.headers['user-agent']);
+
+    res.json({ success: true, message: 'If that email exists in our system, a reset link has been sent.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ success: false, error: 'An error occurred during password reset request' });
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Reset password using token and optional OTP
+ */
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword, otp } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Token and new password are required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters long' });
+    }
+
+    // Fetch the reset request and user details
+    const resetRequest = await queryOne(
+      `SELECT pr.*, u.email, u.username 
+       FROM password_resets pr 
+       JOIN users u ON pr.user_id = u.id 
+       WHERE pr.token = ? AND pr.used = FALSE AND pr.expires_at > NOW()`,
+      [token]
+    );
+
+    if (!resetRequest) {
+      return res.status(400).json({ success: false, error: 'Invalid or expired reset token' });
+    }
+
+    const { sendPasswordResetOtpEmail } = require('../services/mailer');
+
+    if (!otp) {
+      // Step 1: Generate and send OTP
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+      
+      await query('UPDATE password_resets SET otp_code = ? WHERE id = ?', [generatedOtp, resetRequest.id]);
+      
+      await sendPasswordResetOtpEmail(resetRequest.email, resetRequest.username, generatedOtp);
+      
+      return res.json({ success: true, requireOtp: true, message: 'Verification code sent to your email.' });
+    } else {
+      // Step 2: Verify OTP and reset password
+      if (resetRequest.otp_code !== otp) {
+        return res.status(400).json({ success: false, error: 'Invalid verification code.' });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+
+      // Start transaction if possible, or execute sequentially
+      await query('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, resetRequest.user_id]);
+      await query('UPDATE password_resets SET used = TRUE WHERE id = ?', [resetRequest.id]);
+      
+      // Invalidate all active sessions for this user for security
+      await query('DELETE FROM sessions WHERE user_id = ?', [resetRequest.user_id]);
+
+      await logAudit(resetRequest.user_id, 'PASSWORD_RESET_SUCCESS', 'users', resetRequest.user_id, null, {}, req.ip, req.headers['user-agent']);
+
+      res.json({ success: true, message: 'Password has been successfully reset. Please log in with your new password.' });
+    }
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ success: false, error: 'Failed to reset password' });
   }
 });
 

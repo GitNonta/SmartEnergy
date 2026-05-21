@@ -224,16 +224,37 @@ async function initDatabase() {
     // Update role ENUM to include 'Administrator', 'superadmin', 'Superadmin'
     try {
       await connection.execute(`
-        ALTER TABLE users 
+        ALTER TABLE users
         MODIFY COLUMN role ENUM('admin', 'user', 'viewer', 'Administrator', 'Superadmin') DEFAULT 'user'
       `);
       console.log('  ➕ Updated role ENUM values');
-    } catch (e) { 
+    } catch (e) {
       console.warn('  ⚠️ Could not update role ENUM:', e.message);
     }
-    
-    console.log('✅ Users table ready');
 
+    // Create password_resets table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        token VARCHAR(255) NOT NULL,
+        otp_code VARCHAR(6),
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        used BOOLEAN DEFAULT FALSE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_token (token)
+      )
+    `);
+    
+    try {
+      await connection.execute(`ALTER TABLE password_resets ADD COLUMN otp_code VARCHAR(6) AFTER token`);
+      console.log('  ➕ Added otp_code column to password_resets');
+    } catch (e) { /* Column exists */ }
+    
+    console.log('✅ Password resets table ready');
+
+    console.log('✅ Users table ready');
     // Create sessions table
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS sessions (

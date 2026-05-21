@@ -191,7 +191,12 @@ mqttClient.on('reconnect', () => {
 // Store recent alerts in memory (last 100)
 const recentAlerts = [];
 function storeAlert(alert) {
-  recentAlerts.unshift(alert);
+  const alertWithId = {
+    id: alert.id || `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    read: alert.read === undefined ? false : alert.read,
+    ...alert
+  };
+  recentAlerts.unshift(alertWithId);
   if (recentAlerts.length > 100) {
     recentAlerts.pop();
   }
@@ -1025,22 +1030,105 @@ app.post('/api/mqtt/publish', (req, res) => {
 // Alerts API Endpoints
 // ===================================
 
-// GET /api/alerts - Get recent alerts
-app.get('/api/alerts', (req, res) => {
-  const { limit = 50, severity } = req.query;
-  let filtered = recentAlerts;
-  
-  if (severity) {
-    filtered = recentAlerts.filter(a => a.severity === severity);
+// GET /api/alerts - Get recent alerts (Merged RAM + InfluxDB)
+app.get('/api/alerts', async (req, res) => {
+  try {
+    const { limit = 50, severity, read } = req.query;
+    const limitInt = parseInt(limit) || 50;
+
+    // 1. Get historical alerts from InfluxDB
+    let historicalAlerts = [];
+    if (influxService) {
+      try {
+        const result = await influxService.queryAlertHistory({
+          limit: limitInt,
+          severity: severity || null,
+          startTime: '-24h' // Last 24 hours for "recent"
+        });
+        if (result.success) {
+          historicalAlerts = result.alerts;
+        }
+      } catch (err) {
+        console.warn('⚠️ Failed to fetch historical alerts for merge:', err.message);
+      }
+    }
+
+    // 2. Merge with recentAlerts (RAM)
+    // Map RAM alerts by ID for fast lookup
+    const ramAlertsMap = new Map();
+    recentAlerts.forEach(a => ramAlertsMap.set(a.id || a._id, a));
+
+    // Combine - prioritization: RAM > Influx
+    const mergedMap = new Map();
+    
+    // Add historical first
+    historicalAlerts.forEach(a => {
+      const id = a.id || a._id;
+      mergedMap.set(id, { ...a, read: false }); // Default historical to unread
+    });
+
+    // Overwrite/Add with RAM alerts (which have the current 'read' state)
+    recentAlerts.forEach(a => {
+      const id = a.id || a._id;
+      mergedMap.set(id, a);
+    });
+
+    let combined = Array.from(mergedMap.values());
+
+    // 3. Filter and Sort
+    if (severity) {
+      combined = combined.filter(a => a.severity === severity);
+    }
+
+    if (read !== undefined) {
+      const isRead = read === 'true';
+      combined = combined.filter(a => !!a.read === isRead);
+    }
+
+    // Sort by timestamp desc
+    combined.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    res.json({
+      success: true,
+      count: combined.length,
+      total: combined.length,
+      unreadCount: combined.filter(a => !a.read).length,
+      alerts: combined.slice(0, limitInt),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Error in GET /api/alerts:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
-  
-  res.json({
-    success: true,
-    count: filtered.length,
-    total: recentAlerts.length,
-    alerts: filtered.slice(0, parseInt(limit)),
-    timestamp: new Date().toISOString()
-  });
+});
+
+// POST /api/alerts/:id/read - Mark an alert as read
+app.post('/api/alerts/:id/read', (req, res) => {
+  const { id } = req.params;
+  const alert = recentAlerts.find(a => a.id === id || a._id === id);
+  if (alert) {
+    alert.read = true;
+    return res.json({ success: true, message: `Alert ${id} marked as read`, alert });
+  }
+  // Return success even if not found in RAM to prevent frontend 404 errors
+  res.json({ success: true, message: `Alert ${id} acknowledged`, note: 'Alert not found in current session memory' });
+});
+
+// POST /api/alerts/:id/unread - Mark an alert as unread
+app.post('/api/alerts/:id/unread', (req, res) => {
+  const { id } = req.params;
+  const alert = recentAlerts.find(a => a.id === id || a._id === id);
+  if (alert) {
+    alert.read = false;
+    return res.json({ success: true, message: `Alert ${id} marked as unread`, alert });
+  }
+  res.json({ success: true, message: `Alert ${id} status updated`, note: 'Alert not found in current session memory' });
+});
+
+// POST /api/alerts/mark-all-read - Mark all alerts as read
+app.post('/api/alerts/mark-all-read', (req, res) => {
+  recentAlerts.forEach(a => { a.read = true; });
+  res.json({ success: true, message: 'All alerts marked as read' });
 });
 
 // GET /api/alerts/thresholds - Get current alert thresholds

@@ -15,7 +15,14 @@
         "disconnected": "ขาดการเชื่อมต่อ",
         "lastUpdate": "อัพเดทล่าสุด",
         "live": "สด",
-        "phase": "เฟส"
+        "phase": "เฟส",
+        "phaseMode": "โหมดเฟสไฟฟ้า",
+        "auto": "อัตโนมัติ",
+        "singlePhase": "เฟสเดียว",
+        "threePhase": "3 เฟส",
+        "autoTooltip": "ตรวจจับโหมดเฟสโดยอัตโนมัติจาก ESP32",
+        "singlePhaseTooltip": "บังคับแสดงผลระบบเฟสเดียว (1 เฟส)",
+        "threePhaseTooltip": "บังคับแสดงผลระบบสามเฟส (3 เฟส)"
     },
     "energy": {
         "title": "พลังงานสะสม",
@@ -125,6 +132,15 @@
         "refresh": "รีเฟรช",
         "filter": "กรอง",
         "value": "ค่า",
+        "unread": "ยังไม่ได้อ่าน",
+        "read": "อ่านแล้ว",
+        "markAllRead": "ทำเครื่องหมายอ่านแล้วทั้งหมด",
+        "markAsRead": "ทำเครื่องหมายอ่านแล้ว",
+        "unreadBadge": "ยังไม่ได้อ่าน",
+        "readBadge": "อ่านแล้ว",
+        "troubleshooting": "การวิเคราะห์และแก้ไขปัญหา",
+        "cause": "สาเหตุที่อาจเกิดขึ้น",
+        "solution": "แนวทางแก้ไขปัญหา",
         "messages": {
             "voltageLow": "แรงดันไฟฟ้าต่ำ",
             "phaseMissing": "เฟสหาย",
@@ -366,9 +382,13 @@
         "today": "วันนี้",
         "yesterday": "เมื่อวาน",
         "last7Days": "7 วันที่แล้ว",
-        "last30Days": "30 วันที่แล้ว"
+        "last30Days": "30 วันที่แล้ว",
+        "peak": "สูงสุด",
+        "variance": "ค่าความแปรปรวน"
     },
     "status": {
+        "c_connect": "เชื่อมต่อแล้ว",
+        "disconnect": "ขาดการเชื่อมต่อ",
         "title": "สถานะระบบ",
         "realtimeMonitoring": "ติดตามแบบเรียลไทม์",
         "connecting": "กำลังเชื่อมต่อ...",

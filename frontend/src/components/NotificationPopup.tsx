@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
     Bell,
     MoreHorizontal,
@@ -9,6 +10,8 @@ import {
     AlertCircle,
     X
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { useWebSocket } from '../context/WebSocketContext';
 
 export interface AlertItem {
     id: string;
@@ -28,14 +31,13 @@ interface NotificationPopupProps {
     alerts: any[];
 }
 
-import { useLanguage } from '../context/LanguageContext';
-
 export const NotificationPopup: React.FC<NotificationPopupProps> = ({
     isOpen,
     onClose,
     alerts
 }) => {
     const { t } = useLanguage();
+    const { markAlertAsRead } = useWebSocket();
     const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
     const popupRef = useRef<HTMLDivElement>(null);
 
@@ -57,51 +59,21 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
 
     // Process alerts
     const processedAlerts: AlertItem[] = alerts.map((a: any) => {
-        // Map backend type to translation key (camelCase)
-        const typeKey = a.type?.replace(/_/g, '') || 'system'; // e.g., voltageLow, phaseMissing
-        // Try to get translation, fallback to raw type or system alert
-        // We need to check if existing key exists to avoid showing mapped key as text.
-        // But t() returns key if missing? No, usually t() returns key or default.
-        // Let's assume keys in 'alerts.messages' match expected types (camelCase).
-        // If 'a.type' is 'voltage_low', we convert to 'voltageLow'.
-        const camelType = a.type?.replace(/_([a-z])/g, (g: string) => g[1].toUpperCase()) || '';
-
-        // This logic might be complex if we don't know exact backend types.
-        // Assuming backend sends keys that match our `alerts.messages` keys (like 'voltageLow').
-        // If not, we might need a mapping.
-        // Let's just try t(`alerts.messages.${camelType}`) || t('notifications.systemAlert')
-        // Actually simpler: t(`alerts.messages.${a.type}`) if keys match.
-        // Let's stick to the previous code's logic but use t().
-
         let title = t('notifications.systemAlert');
         if (a.type) {
-            const key = `alerts.messages.${a.type.replace(/_/g, '')}`; // Try to match simple removal of _?
-            // Or better, backend should send codes.
-            // Given user context (STEP 1002), user wants translation.
-            // Let's try to translate.
-            // Existing code: title: a.type?.replace(/_/g, ' ') || t('notifications.systemAlert'),
-
-            // I will use a helper or direct lookup.
-            // Since I can't verify backend types easily, I'll rely on text replacement or known keys.
-            // Known keys: voltageLow, phaseMissing, undervoltage.
-            // If a.type is 'voltage_low', camelCase it?
             const camel = a.type.replace(/_([a-z])/g, (g: string) => g[1].toUpperCase());
             title = t(`alerts.messages.${camel}`);
             if (title === `alerts.messages.${camel}`) {
                 title = a.type.replace(/_/g, ' ');
             }
-
-            // If t() returns key string when missing, we might see 'alerts.messages.foo'.
-            // I'll stick to a safe approach:
-            // If t returns key, fallback to formatted type.
         }
 
         return {
-            id: a.id || Math.random().toString(),
+            id: a.id || a._id || Math.random().toString(),
             title: title,
             message: a.message,
             timestamp: new Date(a.timestamp),
-            read: false, // Mock read status
+            read: a.read || false,
             type: a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'warning' : 'info',
             source: a.device_id
         };
@@ -153,7 +125,15 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
     };
 
     const renderAlertItem = (alert: AlertItem) => (
-        <div key={alert.id} className="relative group overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer">
+        <Link 
+            key={alert.id} 
+            to="/alerts" 
+            onClick={() => {
+                if (!alert.read) markAlertAsRead(alert.id);
+                onClose();
+            }}
+            className="block relative group overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+        >
             <div className={`flex gap-4 p-4 ${alert.read ? 'bg-white/5 dark:bg-white/5' : 'bg-white/20 dark:bg-white/10'} backdrop-blur-md border border-white/10 group-hover:border-white/30 transition-all`}>
                 {/* Icon */}
                 <div className="flex-shrink-0 mt-0.5 relative">
@@ -188,7 +168,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
                     </div>
                 )}
             </div>
-        </div>
+        </Link>
     );
 
     return (
@@ -266,7 +246,13 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
                             <div className="mb-4">
                                 <div className="flex items-center justify-between px-3 py-2 mb-2">
                                     <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">{t('notifications.new')}</h3>
-                                    <button className="text-[10px] font-black text-slate-400 hover:text-blue-500 uppercase transition-colors">{t('notifications.seeAll')}</button>
+                                    <Link 
+                                        to="/alerts" 
+                                        onClick={onClose}
+                                        className="text-[10px] font-black text-slate-400 hover:text-blue-500 uppercase transition-colors"
+                                    >
+                                        {t('notifications.seeAll')}
+                                    </Link>
                                 </div>
                                 <div className="space-y-2">
                                     {newAlerts.map(renderAlertItem)}

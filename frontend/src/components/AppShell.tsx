@@ -195,7 +195,7 @@ const AppShellLayout: React.FC<AppShellProps> = ({ children }) => {
   // Get real-time alerts from WebSocket
   const { alerts } = useWebSocket();
   const alertCount = alerts?.filter((a: any) =>
-    a.severity === 'critical' || a.severity === 'warning' || a.level === 'critical' || a.level === 'warning'
+    !a.read && (a.severity === 'critical' || a.severity === 'warning' || a.level === 'critical' || a.level === 'warning')
   ).length || 0;
 
   // State Initialization

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Plug, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
@@ -96,26 +96,26 @@ const LoginPage: React.FC = () => {
     };
 
     return (
-        <div className="login-container">
+        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 font-['Inter',system-ui,sans-serif]">
             {/* Lockout Popup Overlay */}
             {error && error.includes('contact administrator') && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-800 border border-red-500/30 rounded-lg p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+                <div className="fixed inset-0 bg-[#0f172a]/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#1e293b] border border-[#7f1d1d] rounded-lg p-6 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-200">
                         <div className="flex flex-col items-center text-center space-y-4">
-                            <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
-                                <AlertCircle className="w-8 h-8 text-red-500" />
+                            <div className="w-12 h-12 bg-[#450a0a] rounded-full flex items-center justify-center border border-[#7f1d1d]">
+                                <AlertCircle className="w-6 h-6 text-[#ef4444]" />
                             </div>
-                            <h3 className="text-xl font-bold text-white">{t('auth.lockedTitle') || 'Access Temporarily Locked'}</h3>
-                            <p className="text-slate-300 text-sm">
+                            <h3 className="text-xl font-bold text-[#f8fafc] uppercase tracking-wide">{t('auth.lockedTitle') || 'Access Temporarily Locked'}</h3>
+                            <p className="text-[#94a3b8] text-sm">
                                 {t('auth.lockedMessage') || 'Too many failed attempts. Please contact administrator.'}
                             </p>
 
                             {/* Cooldown Timer */}
-                            <div className="text-2xl font-mono font-bold text-yellow-400 my-2">
+                            <div className="text-2xl font-mono font-bold text-[#eab308] my-2">
                                 {String(Math.floor(cooldown / 60)).padStart(2, '0')}:{String(cooldown % 60).padStart(2, '0')}
                             </div>
 
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-[#64748b] uppercase tracking-wide">
                                 {t('auth.waitMessage') || 'Please wait before trying again'}
                             </p>
                         </div>
@@ -123,33 +123,30 @@ const LoginPage: React.FC = () => {
                 </div>
             )}
 
-            <div className="login-card">
+            <div className="w-full max-w-md bg-[#1e293b] border border-[#334155] rounded-lg p-8 shadow-xl relative z-10">
                 {/* Logo */}
-                <div className="login-logo">
-                    <div className="logo-icon">
-                        <Plug className="w-8 h-8 text-yellow-300" />
+                <div className="text-center mb-8">
+                    <div className="w-16 h-16 bg-[#0f172a] rounded-lg border border-[#334155] flex items-center justify-center mx-auto mb-4">
+                        <Plug className="w-8 h-8 text-[#3b82f6]" />
                     </div>
-                    <h1 className="logo-text">
-                        ENERGY<span className="logo-text-light">SYSTEM</span>
+                    <h1 className="text-2xl font-black text-[#f8fafc] uppercase tracking-widest">
+                        ENERGY<span className="text-[#94a3b8] font-normal">SYSTEM</span>
                     </h1>
+                    <p className="text-[#94a3b8] text-sm mt-2">{t('auth.loginSubtitle')}</p>
                 </div>
-
-                {/* Title */}
-                <h2 className="login-title">{t('auth.welcome')}</h2>
-                <p className="login-subtitle">{t('auth.loginSubtitle')}</p>
 
                 {/* Error Message */}
                 {error && !error.includes('contact administrator') && (
-                    <div className="login-error">
-                        <AlertCircle className="w-4 h-4" />
-                        <span>{error}</span>
+                    <div className="mb-6 p-3 bg-[#450a0a] border border-[#7f1d1d] rounded-md flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-[#fca5a5]" />
+                        <span className="text-xs font-semibold text-[#fca5a5] uppercase tracking-wide">{error}</span>
                     </div>
                 )}
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="login-form">
-                    <div className="form-group">
-                        <label htmlFor="username">{t('auth.username')}</label>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                        <label htmlFor="username" className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide block">{t('auth.username')}</label>
                         <input
                             id="username"
                             type="text"
@@ -160,13 +157,13 @@ const LoginPage: React.FC = () => {
                             autoFocus
                             required
                             disabled={cooldown > 0}
-                            className={cooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                            className={`w-full bg-[#0f172a] border border-[#334155] rounded-md py-3 px-4 text-[#f8fafc] placeholder-[#64748b] focus:outline-none focus:border-[#3b82f6] transition-colors font-medium text-sm ${cooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                     </div>
 
-                    <div className="form-group">
-                        <label htmlFor="password">{t('auth.password')}</label>
-                        <div className="password-input">
+                    <div className="space-y-2">
+                        <label htmlFor="password" className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide block">{t('auth.password')}</label>
+                        <div className="relative">
                             <input
                                 id="password"
                                 type={showPassword ? 'text' : 'password'}
@@ -176,22 +173,31 @@ const LoginPage: React.FC = () => {
                                 autoComplete="current-password"
                                 required
                                 disabled={cooldown > 0}
-                                className={cooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                                className={`w-full bg-[#0f172a] border border-[#334155] rounded-md py-3 pl-4 pr-10 text-[#f8fafc] placeholder-[#64748b] focus:outline-none focus:border-[#3b82f6] transition-colors font-medium text-sm font-mono tracking-wider ${cooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                             />
                             <button
                                 type="button"
-                                className="password-toggle"
                                 onClick={() => setShowPassword(!showPassword)}
                                 disabled={cooldown > 0}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#f8fafc] transition-colors disabled:opacity-50"
                             >
-                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
                     </div>
 
+                    <div className="flex justify-end mb-2 mt-1">
+                        <Link 
+                            to="/forgot-password" 
+                            className="text-[11px] font-bold text-[#3b82f6] hover:text-[#60a5fa] transition-colors uppercase tracking-widest"
+                        >
+                            Forgot Password?
+                        </Link>
+                    </div>
+
                     <button
                         type="submit"
-                        className={`login-button ${cooldown > 0 ? 'bg-slate-700 cursor-not-allowed hover:bg-slate-700' : ''}`}
+                        className={`w-full py-3 ${cooldown > 0 ? 'bg-[#334155] text-[#94a3b8] cursor-not-allowed' : 'bg-[#2563eb] hover:bg-[#1d4ed8] text-white'} rounded-md font-semibold uppercase tracking-wide text-sm transition-colors flex items-center justify-center gap-2`}
                         disabled={isSubmitting || !username || !password || cooldown > 0}
                     >
                         {isSubmitting ? (
@@ -200,14 +206,14 @@ const LoginPage: React.FC = () => {
                                 <span>{t('common.loading')}</span>
                             </>
                         ) : (
-                            <span>{cooldown > 0 ? `Try again in ${cooldown}s` : t('auth.loginButton')}</span>
+                            <span>{cooldown > 0 ? `Wait ${cooldown}s` : t('auth.loginButton')}</span>
                         )}
                     </button>
                 </form>
 
                 {/* Footer */}
-                <div className="login-footer">
-                    <p>SMART Energy Monitoring System</p>
+                <div className="mt-8 text-center border-t border-[#334155] pt-6">
+                    <p className="text-[10px] text-[#64748b] uppercase tracking-widest font-semibold">SMART Energy Monitoring System</p>
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react';
 import webSocketClient, { WebSocketMessage } from '../services/webSocketClient';
-import { getWsUrl, detectBackendPort } from '../config/api';
+import { getWsUrl, detectBackendPort, getApiBase } from '../config/api';
 
 export interface EnergyData {
   timestamp: string;
@@ -31,6 +31,7 @@ export interface EnergyData {
     phase2: number;
     phase3: number;
   };
+  phaseMode?: number; // 1 = Single-Phase, 3 = Three-Phase
 }
 
 interface WebSocketContextType {
@@ -39,6 +40,9 @@ interface WebSocketContextType {
   energyData: EnergyData | null;
   lastUpdate: Date | null;
   alerts: any[];
+  fetchAlerts: () => Promise<void>;
+  markAlertAsRead: (id: string) => Promise<void>;
+  markAllAlertsAsRead: () => Promise<void>;
   history: Array<{
     ts: number;
     f1?: number; f2?: number; f3?: number;
@@ -57,15 +61,26 @@ interface WebSocketContextType {
     cpu_freq_mhz?: number;
     uptime_sec?: number;
     timestamp?: number | string;
+    phaseMode?: number;
     receivedAt?: Date;
   } | null;
   connect: () => void;
   disconnect: () => void;
   sendCommand: (topic: string, payload: any) => void;
   error: string | null;
+  phaseMode: number;
+  phaseModeOverride: 'auto' | 1 | 3;
+  setPhaseModeOverride: (mode: 'auto' | 1 | 3) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
+
+// Helper for mapping severity for internal alerts
+function mapSeverity(severity: string): string {
+  if (severity === 'critical' || severity === 'error') return 'critical';
+  if (severity === 'warning') return 'warning';
+  return 'info';
+}
 
 interface WebSocketProviderProps {
   children: ReactNode;
@@ -85,6 +100,66 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   const [history, setHistory] = useState<WebSocketContextType['history']>([]);
   const lastSampleRef = useRef<number>(0);
   const [espStatus, setEspStatus] = useState<WebSocketContextType['espStatus']>(null);
+
+  // --- Alert Management ---
+
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const response = await fetch(`${getApiBase()}/api/alerts?limit=100`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.alerts) {
+          setAlerts(data.alerts);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch alerts:', error);
+    }
+  }, []);
+
+  const markAlertAsRead = useCallback(async (id: string) => {
+    try {
+      // Optimistic update
+      setAlerts(prev => prev.map(a => (a.id === id || a._id === id) ? { ...a, read: true } : a));
+      await fetch(`${getApiBase()}/api/alerts/${id}/read`, { method: 'POST' });
+    } catch (error) {
+      console.error('Failed to mark alert as read:', error);
+    }
+  }, []);
+
+  const markAllAlertsAsRead = useCallback(async () => {
+    try {
+      setAlerts(prev => prev.map(a => ({ ...a, read: true })));
+      await fetch(`${getApiBase()}/api/alerts/mark-all-read`, { method: 'POST' });
+    } catch (error) {
+      console.error('Failed to mark all alerts as read:', error);
+    }
+  }, []);
+
+  // Fetch initial alerts on mount
+  useEffect(() => {
+    fetchAlerts();
+  }, [fetchAlerts]);
+
+  const [phaseModeOverride, setPhaseModeOverrideState] = useState<'auto' | 1 | 3>(() => {
+    const saved = localStorage.getItem('dashboard_phase_mode_override');
+    if (saved === '1') return 1;
+    if (saved === '3') return 3;
+    return 'auto';
+  });
+
+  const setPhaseModeOverride = (mode: 'auto' | 1 | 3) => {
+    setPhaseModeOverrideState(mode);
+    if (mode === 'auto') {
+      localStorage.removeItem('dashboard_phase_mode_override');
+    } else {
+      localStorage.setItem('dashboard_phase_mode_override', mode.toString());
+    }
+  };
+
+  const activePhaseMode = phaseModeOverride !== 'auto'
+    ? phaseModeOverride
+    : (energyData?.phaseMode || espStatus?.phaseMode || 3);
 
   const retentionHours = parseInt(import.meta.env.VITE_HISTORY_RETENTION_HOURS || '24');
 
@@ -142,6 +217,9 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   // Normalize incoming data
   const normalizeData = (data: any): any => {
     const out = { ...data };
+
+    // Parse phaseMode
+    out.phaseMode = typeof data.phaseMode === 'number' ? data.phaseMode : (data.phaseMode ? parseInt(data.phaseMode) : undefined);
 
     // Voltage
     out.f1 = out.f1 ?? out.F1 ?? out.V1 ?? out.voltage?.f1 ?? out.voltage?.F1 ?? out.voltage?.V1;
@@ -254,6 +332,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
 
         setEnergyData(prev => ({
           timestamp: normalized.timestamp || new Date().toISOString(),
+          phaseMode: normalized.phaseMode ?? prev?.phaseMode ?? 3,
           voltage: {
             f1: normalized.f1 ?? prev?.voltage?.f1 ?? 0,
             f2: normalized.f2 ?? prev?.voltage?.f2 ?? 0,
@@ -288,11 +367,17 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
       } else if (message.messageType === 'alert' && message.data) {
         setAlerts(prev => {
           const newAlert = {
-            id: Date.now().toString(),
+            id: message.data.id || Date.now().toString(),
             ...message.data,
+            severity: mapSeverity(message.data.severity || 'warning'),
+            read: false,
             timestamp: message.data.timestamp || new Date().toISOString()
           };
-          return [newAlert, ...prev].slice(0, 10);
+          // Prevent duplicates
+          if (prev.some(a => a.id === newAlert.id || (a._id && a._id === newAlert.id))) {
+            return prev;
+          }
+          return [newAlert, ...prev].slice(0, 100);
         });
       } else if (
         (message.messageType === 'esp_status' && message.data) ||
@@ -310,6 +395,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
             cpu_freq_mhz: data.cpu_freq_mhz,
             uptime_sec: data.uptime_sec,
             timestamp: data.timestamp,
+            phaseMode: typeof data.phaseMode === 'number' ? data.phaseMode : (data.phaseMode ? parseInt(data.phaseMode) : 3),
             receivedAt: new Date()
           });
         } catch (e) {
@@ -464,7 +550,13 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     connect,
     disconnect,
     sendCommand,
-    error
+    error,
+    phaseMode: activePhaseMode,
+    phaseModeOverride,
+    setPhaseModeOverride,
+    fetchAlerts,
+    markAlertAsRead,
+    markAllAlertsAsRead
   };
 
   return (

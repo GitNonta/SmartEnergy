@@ -15,7 +15,14 @@
         "disconnected": "Disconnected",
         "lastUpdate": "Last Update",
         "live": "LIVE",
-        "phase": "Phase"
+        "phase": "Phase",
+        "phaseMode": "Phase Mode",
+        "auto": "Auto",
+        "singlePhase": "1-Phase",
+        "threePhase": "3-Phase",
+        "autoTooltip": "Auto Detect Phase Mode from ESP32",
+        "singlePhaseTooltip": "Force Single-Phase (1-Phase) Display Mode",
+        "threePhaseTooltip": "Force Three-Phase (3-Phase) Display Mode"
     },
     "energy": {
         "title": "Energy Accumulated",
@@ -125,6 +132,15 @@
         "refresh": "Refresh",
         "filter": "Filter",
         "value": "Value",
+        "unread": "Unread",
+        "read": "Read",
+        "markAllRead": "Mark All as Read",
+        "markAsRead": "Mark as Read",
+        "unreadBadge": "UNREAD",
+        "readBadge": "READ",
+        "troubleshooting": "Troubleshooting Details",
+        "cause": "Possible Cause",
+        "solution": "Recommended Action",
         "messages": {
             "voltageLow": "Voltage Low",
             "phaseMissing": "Phase Missing",
@@ -366,9 +382,13 @@
         "today": "Today",
         "yesterday": "Yesterday",
         "last7Days": "Last 7 Days",
-        "last30Days": "Last 30 Days"
+        "last30Days": "Last 30 Days",
+        "peak": "Peak",
+        "variance": "Variance"
     },
     "status": {
+        "c_connect": "Connected",
+        "disconnect": "Disconnected",
         "title": "System Status",
         "realtimeMonitoring": "Real-time monitoring",
         "connecting": "Connecting...",
