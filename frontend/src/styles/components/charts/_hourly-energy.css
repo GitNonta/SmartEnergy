@@ -1,419 +1,180 @@
-/* ============================================================
-   Energy Consumption Chart — Modern Redesign
-   ============================================================ */
+/* Hourly Energy Chart Styles - Minimal Industrial Edition */
 
 .energy-chart-quality {
-    background: #ffffff;
-    border-radius: 20px;
-    border: 1px solid #e2e8f0;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
     padding: 1.5rem;
-    color: #1e293b;
-    font-family: 'Inter', sans-serif;
-    box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.06),
-        0 8px 24px rgba(0, 0, 0, 0.06);
-    position: relative;
-    overflow: hidden;
-    transition: box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #f8fafc;
 }
 
-.energy-chart-quality::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #06b6d4, #3b82f6, #8b5cf6);
-    border-radius: 20px 20px 0 0;
-}
-
-html.dark .energy-chart-quality {
-    background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    color: #f1f5f9;
-    box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.3),
-        0 8px 24px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-/* ── Header ── */
+/* Header */
 .chart-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1.25rem;
-    flex-wrap: wrap;
-    gap: 0.75rem;
+    align-items: center;
 }
 
 .title-section {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 1rem;
 }
 
 .icon-box {
-    width: 44px;
-    height: 44px;
-    background: linear-gradient(135deg, #cffafe, #e0f2fe);
-    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #0891b2;
-    box-shadow: 0 2px 8px rgba(8, 145, 178, 0.2);
-    flex-shrink: 0;
-}
-
-html.dark .icon-box {
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(59, 130, 246, 0.1));
-    color: #22d3ee;
-    box-shadow: 0 2px 8px rgba(34, 211, 238, 0.15);
+    color: #3b82f6;
 }
 
 .chart-title {
-    font-size: 0.9rem;
+    margin: 0;
+    font-size: 1.1rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    margin: 0 0 2px;
-    color: #0f172a;
-}
-
-html.dark .chart-title {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: #f8fafc;
 }
 
 .chart-subtitle {
-    font-size: 0.72rem;
-    color: #64748b;
+    font-size: 0.8rem;
+    color: #94a3b8;
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 4px;
+    gap: 0.5rem;
 }
 
-html.dark .chart-subtitle {
-    color: #94a3b8;
-}
-
-.chart-subtitle .highlight {
-    color: #0891b2;
-    font-family: 'Roboto Mono', 'Courier New', monospace;
+.highlight {
+    color: #3b82f6;
     font-weight: 700;
-    font-size: 0.85em;
-    background: rgba(8, 145, 178, 0.08);
-    padding: 1px 6px;
-    border-radius: 4px;
-}
-
-html.dark .chart-subtitle .highlight {
-    color: #22d3ee;
-    background: rgba(34, 211, 238, 0.1);
 }
 
 .estimated-warning {
-    margin-left: 6px;
-    color: #d97706;
-    display: inline-flex;
+    color: #f59e0b;
+    display: flex;
     align-items: center;
-    gap: 3px;
-    font-size: 0.7rem;
-    background: rgba(217, 119, 6, 0.08);
-    padding: 2px 6px;
-    border-radius: 4px;
+    gap: 0.25rem;
+    font-weight: 600;
 }
 
-html.dark .estimated-warning {
-    color: #fbbf24;
-    background: rgba(251, 191, 36, 0.1);
-}
-
-/* ── Controls ── */
+/* Controls */
 .controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 1rem;
 }
 
 .tabs {
     display: flex;
-    background: #f1f5f9;
-    padding: 3px;
-    border-radius: 10px;
-    gap: 2px;
-}
-
-html.dark .tabs {
-    background: rgba(255, 255, 255, 0.05);
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 0.25rem;
 }
 
 .tab {
+    padding: 0.4rem 0.8rem;
     border: none;
     background: transparent;
-    color: #64748b;
-    padding: 5px 11px;
-    font-size: 0.72rem;
-    font-weight: 600;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 700;
     cursor: pointer;
-    border-radius: 7px;
-    transition: all 0.18s ease;
-    letter-spacing: 0.01em;
-}
-
-.tab:hover {
-    color: #334155;
-    background: rgba(0, 0, 0, 0.04);
-}
-
-html.dark .tab:hover {
-    color: #e2e8f0;
-    background: rgba(255, 255, 255, 0.07);
+    text-transform: uppercase;
+    border-radius: 2px;
 }
 
 .tab.active {
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
-}
-
-html.dark .tab.active {
-    background: rgba(255, 255, 255, 0.1);
-    color: #f1f5f9;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-.tab.active.hourly {
-    color: #0891b2;
-    background: linear-gradient(135deg, #e0f9ff, #cffafe);
-    box-shadow: 0 1px 4px rgba(8, 145, 178, 0.2);
-}
-
-html.dark .tab.active.hourly {
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(6, 182, 212, 0.15));
-    color: #22d3ee;
-}
-
-.tab.active.daily {
-    color: #2563eb;
-    background: linear-gradient(135deg, #eff6ff, #dbeafe);
-    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.2);
-}
-
-html.dark .tab.active.daily {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.15));
-    color: #60a5fa;
-}
-
-.tab.active.monthly {
-    color: #7c3aed;
-    background: linear-gradient(135deg, #faf5ff, #ede9fe);
-    box-shadow: 0 1px 4px rgba(124, 58, 237, 0.2);
-}
-
-html.dark .tab.active.monthly {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.15));
-    color: #a78bfa;
+    background: #334155;
+    color: #ffffff;
 }
 
 .refresh-btn {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    color: #64748b;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.18s ease;
-    flex-shrink: 0;
-}
-
-html.dark .refresh-btn {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: #0f172a;
+    border: 1px solid #334155;
     color: #94a3b8;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
 .refresh-btn:hover {
-    background: #e2e8f0;
-    color: #0f172a;
-    border-color: #cbd5e1;
-    transform: rotate(15deg);
+    color: #ffffff;
+    border-color: #475569;
 }
 
-html.dark .refresh-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #f1f5f9;
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-.refresh-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.refresh-btn .spin {
-    animation: spin 0.8s linear infinite;
+.spin {
+    animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
     from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* ── Quality Legend ── */
+/* Chart Container */
+.chart-container {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+
+/* Quality Legend */
 .quality-legend {
     display: flex;
-    gap: 6px;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.7rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 600;
+    justify-content: center;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 5px;
-    color: #64748b;
-    font-size: 0.68rem;
-    font-weight: 500;
-    padding: 3px 8px 3px 6px;
-    border-radius: 20px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    gap: 0.4rem;
 }
 
-html.dark .legend-item {
-    color: #94a3b8;
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.07);
-}
-
-.legend-item .dot {
+.dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
+    border-radius: 2px;
 }
 
-.dot.measured {
-    background: linear-gradient(135deg, #06b6d4, #0891b2);
-    box-shadow: 0 0 4px rgba(8, 145, 178, 0.5);
-}
+.dot.measured { background: #22d3ee; }
+.dot.estimated { background: #94a3b8; }
+.dot.invalid { background: #ef4444; }
 
-html.dark .dot.measured {
-    background: linear-gradient(135deg, #22d3ee, #06b6d4);
-    box-shadow: 0 0 4px rgba(34, 211, 238, 0.5);
-}
-
-.dot.estimated {
-    background: #94a3b8;
-    box-shadow: 0 0 4px rgba(148, 163, 184, 0.4);
-}
-
-html.dark .dot.estimated {
-    background: #64748b;
-}
-
-.dot.invalid {
-    background: linear-gradient(135deg, #f87171, #dc2626);
-    box-shadow: 0 0 4px rgba(220, 38, 38, 0.5);
-}
-
-html.dark .dot.invalid {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
-}
-
-/* ── Chart Container ── */
-.chart-container {
-    min-height: 300px;
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-/* Loading skeleton */
-.loading {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-.loading::before {
-    content: '';
-    width: 32px;
-    height: 32px;
-    border: 3px solid #e2e8f0;
-    border-top-color: #06b6d4;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-.loading::after {
-    content: attr(data-text);
-    font-size: 0.75rem;
-    color: #94a3b8;
-}
-
-html.dark .loading::before {
-    border-color: rgba(255, 255, 255, 0.1);
-    border-top-color: #22d3ee;
-}
-
-/* ── Footer ── */
+/* Footer */
 .chart-footer {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid #f1f5f9;
-    font-size: 0.67rem;
+    border-top: 1px solid #334155;
+    padding-top: 1rem;
+    font-size: 0.7rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
-html.dark .chart-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+/* Light Mode */
+html:not(.dark) .energy-chart-quality {
+    background: #ffffff;
+    border-color: #e2e8f0;
 }
 
-.source-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: linear-gradient(135deg, #e0f9ff, #cffafe);
-    color: #0891b2;
-    padding: 3px 8px;
-    border-radius: 20px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    border: 1px solid rgba(8, 145, 178, 0.15);
-}
-
-html.dark .source-badge {
-    background: rgba(34, 211, 238, 0.08);
-    color: #22d3ee;
-    border-color: rgba(34, 211, 238, 0.15);
-}
-
-/* ── Responsive ── */
-@media (max-width: 600px) {
-    .chart-header {
-        flex-direction: column;
-    }
-
-    .controls {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .quality-legend {
-        gap: 4px;
-    }
-}
+html:not(.dark) .chart-title { color: #0f172a; }
+html:not(.dark) .icon-box { background: #f8fafc; border-color: #e2e8f0; }
+html:not(.dark) .tabs { background: #f1f5f9; border-color: #e2e8f0; }
+html:not(.dark) .tab.active { background: #cbd5e1; color: #0f172a; }
+html:not(.dark) .chart-container { background: #f8fafc; border-color: #e2e8f0; }
